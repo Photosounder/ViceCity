@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #include "WorldLogic.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "WorldSectors.h"
 #include "config.h"
 #include <math.h>
@@ -28,7 +29,7 @@ void World_ClearScanCodesInList(CPtrList *list)
 		((CEntityStruct *)node->item)->entity.m_scanCode = 0;
 }
 
-void World_SetAllCarsCanBeDamaged(const CPool *vehiclePool, bool toggle)
+void WorldLogic_SetAllCarsCanBeDamaged(const CPool *vehiclePool, bool toggle)
 {
 	// Set the damage flag of every occupied vehicle slot
 	int poolSize = CPool_GetSize(vehiclePool);
@@ -40,7 +41,7 @@ void World_SetAllCarsCanBeDamaged(const CPool *vehiclePool, bool toggle)
 	}
 }
 
-void World_StopAllLawEnforcersInTheirTracks(const CPool *vehiclePool)
+void WorldLogic_StopAllLawEnforcersInTheirTracks(const CPool *vehiclePool)
 {
 	// Zero the move speed of every law enforcement vehicle, walking the pool backwards
 	int poolSize = CPool_GetSize(vehiclePool);
@@ -114,7 +115,7 @@ void World_FindObjectsOfTypeInRangeInList(uint32_t modelId, CPtrList *list, uint
 	}
 }
 
-void World_FindObjectsIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const float start[3], const float end[3], int16_t *numIntersecting, int16_t maxToFind, void **entities)
+void World_FindObjectsIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const CVector *start, const CVector *end, int16_t *numIntersecting, int16_t maxToFind, void **entities)
 {
 	CPtrNode *node;
 	for (node = list->first; node; node = node->next) {
@@ -128,9 +129,9 @@ void World_FindObjectsIntersectingCubeInList(CPtrList *list, uint16_t scanCode, 
 			x = entity->placeable.m_matrix.px;
 			y = entity->placeable.m_matrix.py;
 			z = entity->placeable.m_matrix.pz;
-			if (fRadius + x >= start[0] && x - fRadius <= end[0] &&
-			    fRadius + y >= start[1] && y - fRadius <= end[1] &&
-			    fRadius + z >= start[2] && z - fRadius <= end[2] &&
+			if (fRadius + x >= start->x && x - fRadius <= end->x &&
+			    fRadius + y >= start->y && y - fRadius <= end->y &&
+			    fRadius + z >= start->z && z - fRadius <= end->z &&
 			    *numIntersecting < maxToFind) {
 				if (entities)
 					entities[*numIntersecting] = entity;
@@ -165,7 +166,7 @@ void World_FindObjectsKindaCollidingInList(CPtrList *list, uint16_t scanCode, fl
 	}
 }
 
-void World_FindMissionEntitiesIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const float start[3], const float end[3], int16_t *numIntersecting, int16_t maxToFind, void **entities, bool isVehicleList, bool isPedList)
+void World_FindMissionEntitiesIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const CVector *start, const CVector *end, int16_t *numIntersecting, int16_t maxToFind, void **entities, bool isVehicleList, bool isPedList)
 {
 	CPtrNode *node;
 	for (node = list->first; node; node = node->next) {
@@ -186,10 +187,10 @@ void World_FindMissionEntitiesIntersectingCubeInList(CPtrList *list, uint16_t sc
 			x = entity->placeable.m_matrix.px;
 			y = entity->placeable.m_matrix.py;
 			z = entity->placeable.m_matrix.pz;
-			if (isMissionEntity && fRadius + x >= start[0] &&
-			    x - fRadius <= end[0] && fRadius + y >= start[1] &&
-			    y - fRadius <= end[1] && fRadius + z >= start[2] &&
-			    z - fRadius <= end[2] && *numIntersecting < maxToFind) {
+			if (isMissionEntity && fRadius + x >= start->x &&
+			    x - fRadius <= end->x && fRadius + y >= start->y &&
+			    y - fRadius <= end->y && fRadius + z >= start->z &&
+			    z - fRadius <= end->z && *numIntersecting < maxToFind) {
 				if (entities)
 					entities[*numIntersecting] = entity;
 				++*numIntersecting;
@@ -411,7 +412,7 @@ int World_SelectFallenCars(const CPool *vehiclePool, float lowLimit, const void 
 	return n;
 }
 
-void World_UseDetonator(const CPool *vehiclePool, void *entity)
+void WorldLogic_UseDetonator(const CPool *vehiclePool, void *entity)
 {
 	int32_t i = CPool_GetSize(vehiclePool);
 	while (--i >= 0) {
@@ -561,17 +562,17 @@ float World_ExplosionDamageMultiplier(float radius, float magnitude)
 	return v < 1.0f ? v : 1.0f;
 }
 
-void World_ExplosionForce(const float distance[3], float power, float mass, float damageMultiplier, float magnitude, bool isPlayer, float force[3])
+void World_ExplosionForce(const CVector *distance, float power, float mass, float damageMultiplier, float magnitude, bool isPlayer, CVector *force)
 {
 	float m = magnitude > 0.01f ? magnitude : 0.01f;
 	float k = power * mass / 1400.0f * damageMultiplier / m;
 
-	force[0] = distance[0] * k;
-	force[1] = distance[1] * k;
-	force[2] = distance[2] * k;
-	force[2] = force[2] > 0.0f ? force[2] : 0.0f;
+	force->x = distance->x * k;
+	force->y = distance->y * k;
+	force->z = distance->z * k;
+	force->z = force->z > 0.0f ? force->z : 0.0f;
 	if (isPlayer)
-		force[2] = force[2] < 1.0f ? force[2] : 1.0f;
+		force->z = force->z < 1.0f ? force->z : 1.0f;
 }
 
 float World_ExplosionTurnPointZ(float distanceZ, float boundRadius)

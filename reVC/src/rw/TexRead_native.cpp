@@ -210,7 +210,7 @@ void TexRead_HostSpriteInit(void)
 void TexRead_HostFontInit(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::InitPerFrame();
+    Font_InitPerFrame();
 }
 #endif
 #if defined(GTA_PC)
@@ -251,77 +251,77 @@ void TexRead_HostDrawRect(CRect rect,uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 void TexRead_HostFontBackgroundOff(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontPropOn(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontScale(float x,float y)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetScale(x,y);
+    Font_SetScale(x,y);
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontCentreOff(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetCentreOff();
+    Font_SetCentreOff();
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontWrap(float x)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetWrapx(x);
+    Font_SetWrapx(x);
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontJustifyOff(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetJustifyOff();
+    Font_SetJustifyOff();
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetColor(CRGBA(r,g,b,a));
+    Font_SetColor(CRGBA(r,g,b,a));
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontBackgroundTextOff(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetBackGroundOnlyTextOff();
+    Font_SetBackGroundOnlyTextOff();
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontStyle(int16_t style)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::SetFontStyle(style);
+    Font_SetFontStyle(style);
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostFontPrint(float x,float y,uint16_t *text)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::PrintString(x,y,text);
+    Font_PrintString(x,y,text);
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostDrawFonts(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CFont::DrawFonts();
+    Font_DrawFonts();
 }
 #endif
 #if defined(GTA_PC)
@@ -461,7 +461,7 @@ void TexRead_HostRequestTxd(int32_t slot,int32_t flags)
 void TexRead_HostRequestModelStream(int32_t channel)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CStreaming::RequestModelStream(channel);
+    Streaming_RequestModelStream(channel);
 }
 #endif
 #if defined(GTA_PC)

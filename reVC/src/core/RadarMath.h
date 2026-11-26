@@ -8,19 +8,19 @@
 extern "C" {
 #endif
 // Opacity of a blip by its distance in radar units
-uint8_t Radar_CalculateBlipAlpha(bool menuMapActive, float dist);
+uint8_t RadarMath_CalculateBlipAlpha(bool menuMapActive, float dist);
 // Clip a quad of four xy points to the radar square, poly receives up to eight xy points and the number of points is returned
-int Radar_ClipRadarPoly(float *poly, const float *rect);
+int RadarMath_ClipRadarPoly(float *poly, const float *rect);
 // RGBA colour of a trace colour index or the colour itself
-uint32_t Radar_GetRadarTraceColour(uint32_t color, bool bright);
+uint32_t RadarMath_GetRadarTraceColour(uint32_t color, bool bright);
 // Pull a point inside the unit circle, returns the distance from the centre before that
-float Radar_LimitRadarPoint(float *point, bool menuMapActive);
+float RadarMath_LimitRadarPoint(float *point, bool menuMapActive);
 // Convert between world space and radar space, with the rotation as sine and cosine
-void Radar_TransformRealWorldPointToRadarSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange);
-void Radar_TransformRadarPointToRealWorldSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange);
+void RadarMath_TransformRealWorldPointToRadarSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange);
+void RadarMath_TransformRadarPointToRealWorldSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange);
 // Blip handles hold the array index in the low 16 bits and a counter in the high 16 bits that tells a stale handle from the current one
-int32_t Radar_GetActualBlipArrayIndex(const sRadarTraceData *traces, int32_t handle);
-int32_t Radar_GetNewUniqueBlipIndex(sRadarTraceData *traces, int32_t index);
+int32_t RadarMath_GetActualBlipArrayIndex(const sRadarTraceData *traces, int32_t handle);
+int32_t RadarMath_GetNewUniqueBlipIndex(sRadarTraceData *traces, int32_t index);
 // Shape of a blip without a sprite from the heights of the blip and the player: 0 triangle up for blips above the player, 1 triangle down for blips well below, 2 square for the others
 int Radar_BlipHeightMode(float blipZ, float playerZ);
 // Radius of the debug marker of a blip after a step, it starts over at 5 when it gets below 1

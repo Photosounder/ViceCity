@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include <stdint.h>
 #include "VectorMath.h"
@@ -49,7 +50,7 @@ int CameraMath_AdvanceSplineMarker(const float *pathData, int marker, uint32_t t
 // Smoothed fraction of a transition of the camera between 0 and 1, from the part of the transition that is done (numerator) and the length of the transition (denominator), 0 when the denominator is 0
 float Camera_SmoothInterpolation(float numerator, float denominator);
 // Direction from the player in which a fixed camera of the cinematic camera is placed: the speed of the player (flattened and normalised first when flatten is set) turned by an angle and normalised, dir receives x, y and z
-void Camera_ObbeOffsetDirection(float speedX, float speedY, float speedZ, float angleOffset, bool flatten, float dir[3]);
+void Camera_ObbeOffsetDirection(float speedX, float speedY, float speedZ, float angleOffset, bool flatten, CVector *dir);
 // How much of a shake is felt at a distance from the camera, from the vector between the camera and the source of the shake: 1 on the camera down to 0 at 100 units
 float Camera_ShakeDistanceMultiplier(float dx, float dy, float dz);
 // Whether a new shake replaces the current one, from the multiplier of the distance (1 when there is none), the force of the current shake, the time in milliseconds since it started and the strength of the new one
@@ -59,7 +60,7 @@ void Camera_FrustumNormals(float halfFov, float aspectRatio, float normals[4][3]
 // Direction the camera looks in on the ground, normalised, from the x and y of its forward vector, x is 1 when it is null
 void Camera_FrontNormalised(float frontX, float frontY, float *normX, float *normY);
 // Direction from the camera to its target and the distance between them, for the avoidance of the geometry: from the vector between the camera and the target and the forward vector of the camera, which is used when the vector points straight up or down
-void Camera_AvoidFront(float distX, float distY, float distZ, float forwardX, float forwardY, float front[3], float *dist);
+void Camera_AvoidFront(float distX, float distY, float distZ, float forwardX, float forwardY, CVector *front, float *dist);
 // Near clip plane the camera needs to keep a geometry that is in front of it out of the view, from the distance to that geometry along the view, the closest the plane may get, the default plane and the current plane: it is only moved closer
 float Camera_AvoidNearClip(float frontDist, float closeLimit, float defaultNear, float currentNear);
 // Width of the view plane the camera keeps free of geometry, from the field of view in degrees, the aspect ratio and the tweak of the field of view
@@ -69,9 +70,9 @@ float Camera_GeomProbsTimer(float timer, float targetNormalDir, float timeStep);
 // Offset on the ground of a camera that orbits its target at a distance and an angle (x with the cosine, y with the sine)
 void Camera_OrbitOffset(float distance, float angle, float *x, float *y);
 // Direction of the camera from its vertical angle (alpha) and its horizontal angle (beta): (cos a cos b, cos a sin b, sin a)
-void Camera_SphericalDirection(float alpha, float beta, float dir[3]);
+void Camera_SphericalDirection(float alpha, float beta, CVector *dir);
 // Up vector of a camera that is rolled by an angle: (cos(roll + half a turn), 0, sin(roll + half a turn)) with the roll in radians
-void Camera_UpFromRoll(float roll, float up[3]);
+void Camera_UpFromRoll(float roll, CVector *up);
 // Roll the camera of a car tilts to, from whether the pad rolls it (dPad), whether it rolls to the left, the speed of the car along its forward vector, the x of the left stick, the overshoot of the tilt of the vehicle type, the largest roll angle and the dot product of the forward vector of the car with the direction of the camera
 float Camera_CarTargetRoll(bool dPad, bool dPadLeft, float moveSpeedAlongForward, float leftStickX, float tiltOvershoot, float maxRollAngle, float forwardDotFront);
 // Change of the vertical angle of the ped camera that brings it back to its default angle by at most 0.05 a frame, from the angle and the default angle
@@ -91,7 +92,7 @@ float Camera_PedAverageSpeed(float average, float speedSum);
 // Height the top down camera zooms out to for a ped that moves at an average speed: 0 when it stands still, higher the faster it moves
 float Camera_TopDownHeightTarget(float pedAverageSpeed);
 // Point 3 units away from the camera in the direction given by a vertical angle (alpha) and a horizontal angle (beta), from the position of the camera
-void Camera_LookPoint(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float point[3]);
+void Camera_LookPoint(float alpha, float beta, float sourceX, float sourceY, float sourceZ, CVector *point);
 // Change of an angle of a first person camera from the movement of the mouse, from the acceleration of the mouse, the movement and the field of view
 float Camera_MouseLookDelta(float mouseAccel, float look, float fov);
 // Change of an angle of a first person camera from a pad stick, which grows with the square of the stick, from the stick value, its divisor, the sign of the stick, the scale of the axis, the field of view and the time step
@@ -109,7 +110,7 @@ float Camera_ClampBetween(float value, float low, float high);
 // Vertical angle of a camera limited to between a lower and an upper limit, the speed of the angle is set to 0 when it hits a limit; the upper limit is tested first
 float Camera_ClampAlphaStop(float alpha, float low, float high, float *alphaSpeed);
 // Position behind a target the camera of a car would be at, from the target, the horizontal angle (beta), the vertical angle (alpha) of the camera and its distance from the target
-void Camera_TargetHistoryPos(const float target[3], float beta, float alpha, float distance, float pos[3]);
+void Camera_TargetHistoryPos(const CVector *target, float beta, float alpha, float distance, CVector *pos);
 // Angle a turret turns to in a frame to face where the camera looks: the angle it should face is wrapped to within half a turn of the current angle of the turret (gunLR) and the turn is limited to turnPerFrame
 float Camera_TurretFace(float angleToFace, float gunLR, float turnPerFrame);
 // Vertical angle of a firetruck turret after a frame, from the angle it should face, the current angle and the step per frame: it moves by at most the step and stays within 20 degrees
@@ -123,9 +124,9 @@ float Camera_VehicleSpeedVar(float forwardX, float forwardY, float moveSpeedX, f
 // Horizontal angle the syphon camera has to turn by to see past something that is between it and the target: from how far the line to the collision is from the line to the target, the distance of the collision from the target, the distance of the player from the target and the distance of the camera on the ground
 float Camera_SyphonBetaOffset(float lineDist, float colDist, float playerToTargetDist, float groundDist);
 // Direction a camera looks in from its vertical (alpha) and horizontal (beta) angles, with the horizontal angle pointing from the target to the camera: (-(cos b cos a), -(sin b cos a), sin a)
-void Camera_FrontFromAngles(float alpha, float beta, float front[3]);
+void Camera_FrontFromAngles(float alpha, float beta, CVector *front);
 // Point the debug and editor cameras look at, 7 units ahead on the ground and zScale units up, from the vertical (alpha) and horizontal (beta) angles, with beta measured from the y axis, and the position of the camera
-void Camera_DebugTarget(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float zScale, float target[3]);
+void Camera_DebugTarget(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float zScale, CVector *target);
 // Horizontal angle of a vector, 0 for a vector that has no horizontal part
 float Camera_BetaOfVector(float x, float y);
 // Step of a buffered value that follows a target: the speed accelerates towards the target speed (proportionally to the distance) without overshooting it and the value moves by the speed over the time step (limited to 10)
@@ -157,7 +158,7 @@ float Camera_ZoomStep(float zoom, float target, float timeStep);
 // Strength of the shake of the camera, from the force and the start and current times in milliseconds: it decays over time and is limited to 0..2
 float Camera_ShakeStrength(float force, uint32_t startMs, uint32_t nowMs);
 // Offsets of the camera position by the shake, from its strength and a random number (4 bits for each axis)
-void Camera_ShakeOffsets(float strength, int rand, float offsets[3]);
+void Camera_ShakeOffsets(float strength, int rand, CVector *offsets);
 // Multiplier of the draw distances from the field of view of the camera: 70 over the field of view, scaled by the altitude when the camera is high up in a plane or helicopter, limited to 2.2
 float Camera_LODDistMultiplier(float fov, bool highAltitude, float cameraZ);
 // Smoothing factor of a frame for a smoothing constant per time unit: one minus the constant raised to the power of the time step
@@ -177,31 +178,31 @@ void Camera_WheelCamRoll(uint32_t timeMs, float *cosine, float *sine);
 // Brightness of the colour of the water seen from underwater, from the red, green and blue of the water
 float Camera_WaterLuminance(float red, float green, float blue);
 // Up vector of a camera with a fixed position looking along a front vector: the world up plus an offset, made perpendicular to the front vector (the result is up = cross(cross(front, up), front))
-void Camera_FixedModeUp(const float front[3], const float upOffset[3], float up[3]);
+void Camera_FixedModeUp(const CVector *front, const CVector *upOffset, CVector *up);
 // Up and front vectors of the syphon camera: the up vector plus an offset is normalised, then the front vector is made perpendicular to it and normalised (the up vector is updated in place)
-void Camera_SyphonBasis(float up[3], const float upOffset[3], float front[3]);
+void Camera_SyphonBasis(CVector *up, const CVector *upOffset, CVector *front);
 // Up vector of a camera made perpendicular to its front vector: left = cross(up, front) (normalised when normaliseLeft is set), up = cross(front, left), normalised
-void Camera_PerpendicularUp(const float front[3], const float up[3], bool normaliseLeft, float outUp[3]);
+void Camera_PerpendicularUp(const CVector *front, const CVector *up, bool normaliseLeft, CVector *outUp);
 // Right and up vectors of a camera from its front and up vectors: right = normalised cross(front, up), up = cross(right, front) (normalised when normaliseUp is set)
-void Camera_RightAndUp(const float front[3], const float up[3], bool normaliseUp, float right[3], float outUp[3]);
+void Camera_RightAndUp(const CVector *front, const CVector *up, bool normaliseUp, CVector *right, CVector *outUp);
 // Direction the fixed-pitch camera of the end-of-game or dead scene looks in from its horizontal angle, with a fixed downward pitch of 0.3: (cos 0.3 sin a, cos 0.3 cos a, -sin 0.3)
-void Camera_FixedPitchFront(float angle, float front[3]);
+void Camera_FixedPitchFront(float angle, CVector *front);
 // Right vector on the ground of the dead camera from the forward vector of its target: cross(forward, up) with z cleared, normalised
-void Camera_DeadCamRight(const float forward[3], float right[3]);
+void Camera_DeadCamRight(const CVector *forward, CVector *right);
 // Front vector of the dead camera as it wafts, from the time since the change and the right vector: looking down, tilted by the cosine of the time, normalised
-void Camera_DeadCamFront(float time, float waftRate, float tiltAmp, const float right[3], float front[3]);
+void Camera_DeadCamFront(float time, float waftRate, float tiltAmp, const CVector *right, CVector *front);
 // Offset of the dead camera target as it wafts along the right vector, from the time since the change
-void Camera_DeadCamWaftOffset(float time, float waftAmplitude, float waftRate, const float right[3], float offset[3]);
+void Camera_DeadCamWaftOffset(float time, float waftAmplitude, float waftRate, const CVector *right, CVector *offset);
 // Position of the arrest camera that looks over the shoulder of a cop at the target, from the positions of the cop and the target, the distance to the right of the cop, the distance behind the cop and the minimum distance from the target
-void Camera_OverShoulderPos(const float cop[3], const float target[3], float rightOfCop, float behindCop, float minFromTarget, float out[3]);
+void Camera_OverShoulderPos(const CVector *cop, const CVector *target, float rightOfCop, float behindCop, float minFromTarget, CVector *out);
 // Position before the ground height test of the arrest camera that looks along the ground, from the target and the cop: beside the target and 5 units above it
-void Camera_AlongGroundPos(const float target[3], const float cop[3], float alongGround, float sideGround, float out[3]);
+void Camera_AlongGroundPos(const CVector *target, const CVector *cop, float alongGround, float sideGround, CVector *out);
 // Variant of the arrest camera that looks along the ground, from a random number between 0 and 5: 0 straight, 1 right, 2 right and up, 3 left, 4 left and up
 int Camera_ArrestVariantIndex(float rnd);
 // Direction on the ground the arrest camera moves in when it circles around the target from a lamp post: the direction to the target turned to the right by an amount and made flat and normalised; also returns the (flat, normalised) direction to the target in up
-void Camera_LampPostFront(const float target[3], const float camSource[3], float rotateDist, float front[3], float up[3]);
+void Camera_LampPostFront(const CVector *target, const CVector *camSource, float rotateDist, CVector *front, CVector *up);
 // Vector from the target to a camera dragged along at a distance between a minimum and a maximum: scaled to the limit when too close or too far (or a default direction when it is at the target); returns the resulting distance
-float Camera_DragDistance(float dist[3], float minDist, float maxDist);
+float Camera_DragDistance(CVector *dist, float minDist, float maxDist);
 // Horizontal angle of a camera during a transition that points from the target to the camera: the angle of the direction (-cos b, -sin b)
 float Camera_TransitionBetaAngle(float transitionBeta);
 // Near clip plane when a ped is very close to the camera: the distance to the ped minus 0.3 but at least 0.05
@@ -243,9 +244,9 @@ bool Camera_ScriptDistanceEnds(float distance, float speedTowardsDir, float farL
 // Whether the distance to the player is beyond the far limit or closer than the near limit
 bool Camera_ScriptDistanceOutOfRange(float distance, float farLimit, float nearLimit);
 // Position ahead of the given coordinates along the horizontal direction of a speed, by a distance
-void Camera_AheadPosition(const float coors[3], const float speed[3], float ahead, float out[3]);
+void Camera_AheadPosition(const CVector *coors, const CVector *speed, float ahead, CVector *out);
 // Same as Camera_AheadPosition and then moved sideways, to the right of the direction of the speed, by a distance
-void Camera_AheadAndSidePosition(const float coors[3], const float speed[3], float ahead, float side, float out[3]);
+void Camera_AheadAndSidePosition(const CVector *coors, const CVector *speed, float ahead, float side, CVector *out);
 // What to do when starting a fixed script camera from the distance to the player: 0 give up (the player is beyond the far limit and moves away), 1 stop without taking control (closer than the near limit), 2 go on
 int Camera_ScriptStartVerdict(float distance, float speedTowardsDir, float farLimit, float nearLimit);
 // Whether a police car is behind the player (the offset to it points against the player forward direction) and heads nearly the same way (dot product of the forward directions above 0.8)
@@ -257,15 +258,15 @@ float Camera_RaisedAboveWater(float camZ, float waterZ, bool isBoat);
 // Height of a camera kept above the ground: moved to half a unit above the ground when it is under it
 float Camera_RaisedAboveGround(float camZ, float groundZ);
 // Angle of the horizontal part of a forward direction that is normalised in 3D first
-float Camera_TargetForwardOrientation(const float forward[3]);
+float Camera_TargetForwardOrientation(const CVector *forward);
 // Up and side directions of a target when looking to a side: the up and forward directions are normalised, the side direction is their cross product (negated when asked) normalised
-void Camera_SideFront(const float upIn[3], const float forwardIn[3], bool negate, float upOut[3], float frontOut[3]);
+void Camera_SideFront(const CVector *upIn, const CVector *forwardIn, bool negate, CVector *upOut, CVector *frontOut);
 // Normalised direction of the difference a - b of two positions
-void Camera_NormalisedDifference(const float a[3], const float b[3], float out[3]);
+void Camera_NormalisedDifference(const CVector *a, const CVector *b, CVector *out);
 // Orthonormal camera basis from a front and an up direction: both are normalised, right is their cross product normalised, up is the cross product of right and front normalised
-void Camera_OrthonormalBasis(const float frontIn[3], const float upIn[3], float frontOut[3], float rightOut[3], float upOut[3]);
+void Camera_OrthonormalBasis(const CVector *frontIn, const CVector *upIn, CVector *frontOut, CVector *rightOut, CVector *upOut);
 // Camera basis for a top-down view: front normalised, right fixed at (-1, 0, 0), up the cross product of front and right normalised
-void Camera_TopDownBasis(const float frontIn[3], float frontOut[3], float rightOut[3], float upOut[3]);
+void Camera_TopDownBasis(const CVector *frontIn, CVector *frontOut, CVector *rightOut, CVector *upOut);
 #ifdef __cplusplus
 }
 #endif

@@ -637,7 +637,7 @@ int32_t
 AudioDispatchHost_Area(void)
 {
     // Read each original current-area field access independently
-    return CGame::currArea;
+    return Game_currArea;
 }
 
 int32_t
@@ -1383,7 +1383,7 @@ CVehicle *
 AudioEnvironmentHost_Remote(void)
 {
     // Capture the focused player's remote vehicle before the player lookup
-    return CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle;
+    return World_Players[World_PlayerInFocus].m_pRemoteVehicle;
 }
 
 int32_t
@@ -1462,19 +1462,19 @@ extern "C" uint8_t
 AudioPedSpeechHost_LineClear(const AudioSoundPosition *position)
 {
     // Keep both vector arguments and the original visibility flags in the game expression
-    return CWorld::GetIsLineOfSightClear(TheCamera.GetPosition(), AudioSoundPosition_ToVector(position), true, false, false, false, false, false);
+    return World_GetIsLineOfSightClear(TheCamera.GetPosition(), AudioSoundPosition_ToVector(position), true, false, false, false, false, false);
 }
 extern "C" uint32_t
 AudioPedSpeechHost_MissionTime(void)
 {
     // Read each original mission-time expression independently
-    return CTheScripts::GetLastMissionPassedTime();
+    return TheScripts_GetLastMissionPassedTime();
 }
 extern "C" void
 AudioPedSpeechHost_SetMissionTime(uint32_t time)
 {
     // Preserve the original reference-returning mission-time assignment
-    CTheScripts::GetLastMissionPassedTime() = time;
+    TheScripts_GetLastMissionPassedTime() = time;
 }
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
@@ -1508,7 +1508,7 @@ extern "C" void
 AudioPedPlaybackHost_DebugPosition(PedCommentPosition *position)
 {
     // Copy the original player-zero position after its live game query
-    const CVector &commentPosition = CWorld::Players[0].m_pPed->GetPosition();
+    const CVector &commentPosition = World_Players[0].m_pPed->GetPosition();
     position->x = commentPosition.x;
     position->y = commentPosition.y;
     position->z = commentPosition.z;
@@ -1656,25 +1656,25 @@ extern "C" uint32_t
 AudioGarageHydrantHost_Count(void)
 {
     // Read the original live garage count at each loop condition
-    return CGarages::NumGarages;
+    return Garages_NumGarages;
 }
 extern "C" uint8_t
 AudioGarageHydrantHost_Type(uint32_t index)
 {
     // Read the original live garage type at each eligibility or sample gate
-    return CGarages::aGarages[index].m_eGarageType;
+    return Garages_aGarages[index].m_eGarageType;
 }
 extern "C" CEntity *
 AudioGarageHydrantHost_Door(uint32_t index)
 {
     // Capture the original first-door pointer before position and distance queries
-    return CGarages::aGarages[index].m_pDoor1;
+    return Garages_aGarages[index].m_pDoor1;
 }
 extern "C" uint8_t
 AudioGarageHydrantHost_State(uint32_t index)
 {
     // Read the original live state without caching subsequent crusher-state queries
-    return CGarages::aGarages[index].m_eGarageState;
+    return Garages_aGarages[index].m_eGarageState;
 }
 extern "C" void
 AudioGarageHydrantHost_Position(void *entity, AudioSoundPosition *position)

@@ -1546,29 +1546,29 @@ int CRunningScript::CollectParameterForDebug(char* buf, bool& var)
 	uint16 varIndex;
 	char tmpstr[24];
 	var = false;
-	switch (CTheScripts::Read1ByteFromScript(&m_nIp))
+	switch (TheScripts_Read1ByteFromScript(&m_nIp))
 	{
 	case ARGUMENT_INT32:
 	case ARGUMENT_FLOAT:
-		return CTheScripts::Read4BytesFromScript(&m_nIp);
+		return TheScripts_Read4BytesFromScript(&m_nIp);
 	case ARGUMENT_GLOBALVAR:
-		varIndex = CTheScripts::Read2BytesFromScript(&m_nIp);
-		script_assert(varIndex >= 8 && varIndex < CTheScripts::GetSizeOfVariableSpace());
+		varIndex = TheScripts_Read2BytesFromScript(&m_nIp);
+		script_assert(varIndex >= 8 && varIndex < TheScripts_GetSizeOfVariableSpace());
 		var = true;
 		sprintf(tmpstr, " $%d", varIndex / 4);
 		strcat(buf, tmpstr);
-		return *((int32*)&CTheScripts::ScriptSpace[varIndex]);
+		return *((int32*)&TheScripts_ScriptSpace[varIndex]);
 	case ARGUMENT_LOCALVAR:
-		varIndex = CTheScripts::Read2BytesFromScript(&m_nIp);
+		varIndex = TheScripts_Read2BytesFromScript(&m_nIp);
 		script_assert(varIndex >= 0 && varIndex < ARRAY_SIZE(m_anLocalVariables));
 		var = true;
 		sprintf(tmpstr, " %d@", varIndex);
 		strcat(buf, tmpstr);
 		return m_anLocalVariables[varIndex];
 	case ARGUMENT_INT8:
-		return CTheScripts::Read1ByteFromScript(&m_nIp);
+		return TheScripts_Read1ByteFromScript(&m_nIp);
 	case ARGUMENT_INT16:
-		return CTheScripts::Read2BytesFromScript(&m_nIp);
+		return TheScripts_Read2BytesFromScript(&m_nIp);
 	default:
 		PrintToLog("%s - script assertion failed in CollectParameterForDebug", buf);
 		script_assert(0);
@@ -1581,14 +1581,14 @@ void CRunningScript::GetStoredParameterForDebug(char* buf)
 {
 	uint16 varIndex;
 	char tmpstr[24];
-	switch (CTheScripts::Read1ByteFromScript(&m_nIp)) {
+	switch (TheScripts_Read1ByteFromScript(&m_nIp)) {
 	case ARGUMENT_GLOBALVAR:
-		varIndex = CTheScripts::Read2BytesFromScript(&m_nIp);
+		varIndex = TheScripts_Read2BytesFromScript(&m_nIp);
 		sprintf(tmpstr, " $%d", varIndex / 4);
 		strcat(buf, tmpstr);
 		break;
 	case ARGUMENT_LOCALVAR:
-		varIndex = CTheScripts::Read2BytesFromScript(&m_nIp);
+		varIndex = TheScripts_Read2BytesFromScript(&m_nIp);
 		sprintf(tmpstr, " %d@", varIndex);
 		strcat(buf, tmpstr);
 		break;
@@ -1598,7 +1598,7 @@ void CRunningScript::GetStoredParameterForDebug(char* buf)
 	}
 }
 
-void CTheScripts::LogAfterScriptInitializing()
+void TheScripts_LogAfterScriptInitializing()
 {
 #if SCRIPT_LOG_FILE_LEVEL == 2
 	FileMgr_SetDirMyDocuments();
@@ -1611,7 +1611,7 @@ void CTheScripts::LogAfterScriptInitializing()
 #endif
 }
 
-void CTheScripts::LogBeforeScriptProcessing()
+void TheScripts_LogBeforeScriptProcessing()
 {
 
 #if SCRIPT_LOG_FILE_LEVEL == 1
@@ -1625,9 +1625,9 @@ void CTheScripts::LogBeforeScriptProcessing()
 	PrintToLog("CTheScripts::Process started, Timer_GetTimeInMilliseconds == %u\n", (*Timer_GetTimeInMilliseconds()));
 }
 
-void CTheScripts::LogAfterScriptProcessing()
+void TheScripts_LogAfterScriptProcessing()
 {
-	PrintToLog("Script processing done, ScriptsUpdated: %d, CommandsExecuted: %d\n", ScriptsUpdated, CommandsExecuted);
+	PrintToLog("Script processing done, ScriptsUpdated: %d, CommandsExecuted: %d\n", TheScripts_ScriptsUpdated, TheScripts_CommandsExecuted);
 #if SCRIPT_LOG_FILE_LEVEL == 1
 	fclose(dbg_log);
 	dbg_log = nil;
@@ -1636,7 +1636,7 @@ void CTheScripts::LogAfterScriptProcessing()
 
 void CRunningScript::LogOnStartProcessing()
 {
-	PrintToLog("\n\nProcessing script %s (id %d)\n\n", m_abScriptName, this - CTheScripts::ScriptsArray);
+	PrintToLog("\n\nProcessing script %s (id %d)\n\n", m_abScriptName, this - TheScripts_ScriptsArray);
 }
 
 void CRunningScript::LogBeforeProcessingCommand(int32 command)
@@ -1661,7 +1661,7 @@ void CRunningScript::LogBeforeProcessingCommand(int32 command)
 			case ARGTYPE_VEHICLE_HANDLE:
 			case ARGTYPE_OBJECT_HANDLE: value = CollectParameterForDebug(commandInfo, var); sprintf(tmp, var ? " (%d)" : " %d", value); break;
 			case ARGTYPE_FLOAT: value = CollectParameterForDebug(commandInfo, var); sprintf(tmp, var ? " (%.3f)" : " %.3f", *(float*)&value); break;
-			case ARGTYPE_STRING: sprintf(tmp, " '%s'", (const char*)&CTheScripts::ScriptSpace[m_nIp]); m_nIp += KEY_LENGTH_IN_SCRIPT; break;
+			case ARGTYPE_STRING: sprintf(tmp, " '%s'", (const char*)&TheScripts_ScriptSpace[m_nIp]); m_nIp += KEY_LENGTH_IN_SCRIPT; break;
 			case ARGTYPE_LABEL: value = CollectParameterForDebug(commandInfo, var); sprintf(tmp, var ? " (%s(%d))" : " %s(%d)", value >= 0 ? "G" : "L", abs(value)); break;
 			case ARGTYPE_BOOL: value = CollectParameterForDebug(commandInfo, var); sprintf(tmp, var ? " (%s)" : " %s", value ? "TRUE" : "FALSE"); break;
 			case ARGTYPE_ANDOR: value = CollectParameterForDebug(commandInfo, var); sprintf(tmp, " %d %ss", (value + 1) % 10, value / 10 == 0 ? "AND" : "OR"); break;
@@ -1715,9 +1715,9 @@ void CRunningScript::LogAfterProcessingCommand(int32 command)
 
 #ifdef MISSION_SWITCHER
 void
-CTheScripts::SwitchToMission(int32 mission)
+TheScripts_SwitchToMission(int32 mission)
 {
-	for (CRunningScript* pScript = CTheScripts::pActiveScripts; pScript != nil; pScript = pScript->GetNext()) {
+	for (CRunningScript* pScript = TheScripts_pActiveScripts; pScript != nil; pScript = pScript->GetNext()) {
 		if (!pScript->m_bIsMissionScript || !pScript->m_bDeatharrestEnabled) {
 			continue;
 		}
@@ -1725,7 +1725,7 @@ CTheScripts::SwitchToMission(int32 mission)
 			--pScript->m_nStackPointer;
 
 		pScript->m_nIp = pScript->m_anStack[pScript->m_nStackPointer];
-		*(int32*)&CTheScripts::ScriptSpace[CTheScripts::OnAMissionFlag] = 0;
+		*(int32*)&TheScripts_ScriptSpace[TheScripts_OnAMissionFlag] = 0;
 		pScript->m_nWakeTime = 0;
 		pScript->m_bDeatharrestExecuted = true;
 
@@ -1734,34 +1734,34 @@ CTheScripts::SwitchToMission(int32 mission)
 		Messages_ClearMessages();
 	}
 
-	if (CTheScripts::NumberOfExclusiveMissionScripts > 0 && mission <= UINT16_MAX - 2)
+	if (TheScripts_NumberOfExclusiveMissionScripts > 0 && mission <= UINT16_MAX - 2)
 		return;
 
 #ifdef MISSION_REPLAY
 	missionRetryScriptIndex = mission;
 #ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
-	if (CTheScripts::MissionSupportsMissionReplay(missionRetryScriptIndex)) {
+	if (TheScripts_MissionSupportsMissionReplay(missionRetryScriptIndex)) {
 		SaveGameForPause(SAVE_TYPE_QUICKSAVE_FOR_SCRIPT);
 	}
 #endif
 #endif
 	Timer_Suspend();
-	int offset = CTheScripts::MultiScriptArray[mission];
+	int offset = TheScripts_MultiScriptArray[mission];
 #ifdef USE_DEBUG_SCRIPT_LOADER
-	int handle = OpenScript();
+	int handle = TheScripts_OpenScript();
 #else
 	FileMgr_ChangeDir("\\");
 	int handle = FileMgr_OpenFile("data\\main.scm", "rb");
 #endif
 	FileMgr_Seek(handle, offset, 0);
-	FileMgr_Read(handle, (const char*)&CTheScripts::ScriptSpace[SIZE_MAIN_SCRIPT], SIZE_MISSION_SCRIPT);
+	FileMgr_Read(handle, (const char*)&TheScripts_ScriptSpace[SIZE_MAIN_SCRIPT], SIZE_MISSION_SCRIPT);
 	FileMgr_CloseFile(handle);
-	CRunningScript* pMissionScript = CTheScripts::StartNewScript(SIZE_MAIN_SCRIPT);
+	CRunningScript* pMissionScript = TheScripts_StartNewScript(SIZE_MAIN_SCRIPT);
 	Timer_Resume();
 	pMissionScript->m_bIsMissionScript = true;
 	pMissionScript->m_bMissionFlag = true;
-	CTheScripts::bAlreadyRunningAMissionScript = true;
-	CGameLogic::ClearShortCut();
+	TheScripts_bAlreadyRunningAMissionScript = true;
+	GameLogic_ClearShortCut();
 }
 #endif
 

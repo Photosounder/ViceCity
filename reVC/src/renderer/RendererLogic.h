@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -34,7 +35,7 @@ bool Visibility_CompCullCheckNeeded(float distToCameraSq, float cullCompsDist, b
 // Whether a component of a vehicle faces away from the camera (dot product above 0) and is hidden, always when it has the angle cull flag and otherwise only when it is far enough
 bool Visibility_CompIsHidden(float dot, bool angleCull, float distToCameraSq);
 // Dot product of the direction from the camera to a vehicle atomic with the forward (front and rear atomics) or right (left and right atomics) vector of the vehicle, negated for left and rear atomics and widened by the same product for doors (flags are the ATOMIC_FLAG_* values, forward and right are the vectors of the clump)
-float Visibility_DotWithCameraVector(const float atomicPos[3], const float cameraPos[3], const float clumpForward[3], const float clumpRight[3], unsigned int flags);
+float Visibility_DotWithCameraVector(const CVector *atomicPos, const CVector *cameraPos, const CVector *clumpForward, const CVector *clumpRight, unsigned int flags);
 
 // Pitch angle from a vehicle to the camera, from the vector between them (camera position minus vehicle position)
 float Visibility_PitchToCamera(float dx, float dy, float dz);

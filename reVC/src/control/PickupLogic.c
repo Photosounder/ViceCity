@@ -2,7 +2,7 @@
 #include <math.h>
 #include "PickupLogic.h"
 
-bool Pickups_TestForPickupsInBubble(const CPickupData *pickups, int count, float x, float y, float z, float range)
+bool PickupLogic_TestForPickupsInBubble(const CPickupData *pickups, int count, float x, float y, float z, float range)
 {
 	// Any pickup closer than the range to the point
 	int i;
@@ -34,7 +34,7 @@ bool Pickups_TryToMerge(CPickupData *pickups, int count, float x, float y, float
 	return false;
 }
 
-bool Pickups_IsPickUpPickedUp(int32_t *collected, int count, int32_t pickupId)
+bool PickupLogic_IsPickUpPickedUp(int32_t *collected, int count, int32_t pickupId)
 {
 	// Consume the collected entry for the pickup
 	int i;
@@ -47,7 +47,7 @@ bool Pickups_IsPickUpPickedUp(int32_t *collected, int count, int32_t pickupId)
 	return false;
 }
 
-void Pickups_PassTime(CPickupData *pickups, int count, uint32_t time)
+void PickupLogic_PassTime(CPickupData *pickups, int count, uint32_t time)
 {
 	// Count the timers down, asset revenue pickups keep theirs
 	int i;
@@ -61,7 +61,7 @@ void Pickups_PassTime(CPickupData *pickups, int count, uint32_t time)
 	}
 }
 
-int32_t Pickups_GetActualPickupIndex(const CPickupData *pickups, int32_t index)
+int32_t PickupLogic_GetActualPickupIndex(const CPickupData *pickups, int32_t index)
 {
 	if (index == -1) return -1;
 

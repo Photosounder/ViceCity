@@ -70,7 +70,7 @@ CObject::~CObject(void)
 {
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CRadar::ClearBlipForEntity(BLIP_OBJECT, CPool_GetIndex(CPools::GetObjectPool(), this));
+	Radar_ClearBlipForEntity(BLIP_OBJECT, CPool_GetIndex(Pools_GetObjectPool(), this));
 	//- rouz edit (ChatGPT)
 
 	if (m_nRefModelIndex != -1)
@@ -187,11 +187,11 @@ CObject::ProcessControl(void)
 void
 CObject::Teleport(CVector vecPos)
 {
-	CWorld::Remove(this);
+	World_Remove(this);
 	GetMatrix().GetPosition() = vecPos;
 	GetMatrix().UpdateRW();
 	UpdateRwFrame();
-	CWorld::Add(this);
+	World_Add(this);
 }
 
 void
@@ -226,7 +226,7 @@ CObject::Render(void)
 			CVector pos = scaleMax * this->GetForward() + 2.25f * this->GetRight() + this->GetPosition();
 
 			float fWaterLevel;
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.75f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 1.2f * moveSpeedMagnitude, color,
@@ -239,7 +239,7 @@ CObject::Render(void)
 
 			pos = scaleMin * this->GetForward() + 4.5f * this->GetRight() + this->GetPosition();
 
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
@@ -247,7 +247,7 @@ CObject::Render(void)
 
 			pos = scaleMin * 1.1f * this->GetForward() + 2.25f * this->GetRight() + this->GetPosition();
 
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
@@ -255,7 +255,7 @@ CObject::Render(void)
 
 			pos = scaleMin * 1.1f * this->GetForward() - 0.05f * this->GetRight() + this->GetPosition();
 
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
@@ -274,7 +274,7 @@ CObject::Render(void)
 			CVector pos = scaleMax * this->GetForward() - 2.25f * this->GetRight() + this->GetPosition();
 
 			float fWaterLevel;
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.75f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 1.2f * moveSpeedMagnitude, color,
@@ -287,7 +287,7 @@ CObject::Render(void)
 
 			pos = scaleMin * this->GetForward() - 4.5f * this->GetRight() + this->GetPosition();
 
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
@@ -295,7 +295,7 @@ CObject::Render(void)
 
 			pos = scaleMin * 1.1f * this->GetForward() - 2.25f * this->GetRight() + this->GetPosition();
 
-			CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
+			WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &fWaterLevel, true);
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
@@ -760,7 +760,7 @@ CObject::Init(void)
 	CColPoint point;
 	CEntity *outEntity = nil;
 	const CVector& vecPos = GetMatrix().GetPosition();
-	if (CWorld::ProcessVerticalLine(vecPos, vecPos.z - 10.0f, point, outEntity, true, false, false, false, false, false, nil))
+	if (World_ProcessVerticalLine(vecPos, vecPos.z - 10.0f, point, outEntity, true, false, false, false, false, false, nil))
 		m_pCurSurface = outEntity;
 	else
 		m_pCurSurface = nil;
@@ -785,13 +785,13 @@ CObject::CanBeDeleted(void)
 void
 CObject::DeleteAllMissionObjects()
 {
-	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObjectPool *objectPool = Pools_GetObjectPool();
 	// The C implementation picks the objects, their removal stays here
 	void *selected[NUMOBJECTS * 2];
 	int numSelected = Object_SelectByCreation(objectPool, MISSION_OBJECT, selected, ARRAY_SIZE(selected));
 	for (int s = 0; s < numSelected; s++) {
 		CObject *pObject = (CObject*)selected[s];
-		CWorld::Remove(pObject);
+		World_Remove(pObject);
 		// Destroy and release the object without invoking C++ delete.
 		pObject->~CObject();
 		// Access raw storage through the C store or pool API
@@ -802,13 +802,13 @@ CObject::DeleteAllMissionObjects()
 void
 CObject::DeleteAllTempObjects()
 {
-	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObjectPool *objectPool = Pools_GetObjectPool();
 	// The C implementation picks the objects, their removal stays here
 	void *selected[NUMOBJECTS * 2];
 	int numSelected = Object_SelectByCreation(objectPool, TEMP_OBJECT, selected, ARRAY_SIZE(selected));
 	for (int s = 0; s < numSelected; s++) {
 		CObject *pObject = (CObject*)selected[s];
-		CWorld::Remove(pObject);
+		World_Remove(pObject);
 		// Destroy and release the object without invoking C++ delete.
 		pObject->~CObject();
 		// Access raw storage through the C store or pool API
@@ -819,13 +819,13 @@ CObject::DeleteAllTempObjects()
 void
 CObject::DeleteAllTempObjectsInArea(CVector point, float fRadius)
 {
-	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObjectPool *objectPool = Pools_GetObjectPool();
 	// The C implementation picks the objects, their removal stays here
 	void *selected[NUMOBJECTS * 2];
 	int numSelected = Object_SelectTempInArea(objectPool, point.x, point.y, point.z, fRadius, selected, ARRAY_SIZE(selected));
 	for (int s = 0; s < numSelected; s++) {
 		CObject *pObject = (CObject*)selected[s];
-		CWorld::Remove(pObject);
+		World_Remove(pObject);
 		// Destroy and release the object without invoking C++ delete.
 		pObject->~CObject();
 		// Access raw storage through the C store or pool API
@@ -840,17 +840,17 @@ IsObjectPointerValid(CObject *pObject)
 		return false;
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), pObject);
+	int index = CPool_GetJustIndex_NoFreeAssert(Pools_GetObjectPool(), pObject);
 	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	if (index < 0 || index >= CPool_GetSize(CPools::GetObjectPool()))
+	if (index < 0 || index >= CPool_GetSize(Pools_GetObjectPool()))
 	//- rouz edit (ChatGPT)
 #else
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	if (index < 0 || index > CPool_GetSize(CPools::GetObjectPool()))
+	if (index < 0 || index > CPool_GetSize(Pools_GetObjectPool()))
 	//- rouz edit (ChatGPT)
 #endif
 		return false;

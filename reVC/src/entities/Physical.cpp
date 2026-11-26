@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "main.h" // rouz edit (Claude)
 #include "CollisionVector_native.h"
 
 #include "World.h"
@@ -103,7 +104,7 @@ void
 CPhysical::Add(void)
 {
 	// Delegate to the C implementation
-	Physical_Add((CPhysicalStruct*)this, CWorld::GetSector(0, 0));
+	Physical_Add((CPhysicalStruct*)this, World_GetSector(0, 0));
 }
 
 void
@@ -117,7 +118,7 @@ void
 CPhysical::RemoveAndAdd(void)
 {
 	// Delegate to the C implementation
-	Physical_RemoveAndAdd((CPhysicalStruct*)this, CWorld::GetSector(0, 0));
+	Physical_RemoveAndAdd((CPhysicalStruct*)this, World_GetSector(0, 0));
 }
 
 CRect
@@ -131,14 +132,14 @@ void
 CPhysical::AddToMovingList(void)
 {
 	// Delegate to the C implementation
-	Physical_AddToMovingList((CPhysicalStruct*)this, &CWorld::GetMovingEntityList());
+	Physical_AddToMovingList((CPhysicalStruct*)this, &World_GetMovingEntityList());
 }
 
 void
 CPhysical::RemoveFromMovingList(void)
 {
 	// Delegate to the C implementation
-	Physical_RemoveFromMovingList((CPhysicalStruct*)this, &CWorld::GetMovingEntityList());
+	Physical_RemoveFromMovingList((CPhysicalStruct*)this, &World_GetMovingEntityList());
 }
 
 void
@@ -191,13 +192,13 @@ CPhysical::PlacePhysicalRelativeToOtherPhysical(CPhysical *other, CPhysical *phy
 	float step = 0.9f * (*Timer_GetTimeStep());
 	CVector pos = other->m_vecMoveSpeed*step + worldPos;
 
-	CWorld::Remove(phys);
+	World_Remove(phys);
 	phys->GetMatrix() = other->GetMatrix();
 	phys->SetPosition(pos);
 	phys->m_vecMoveSpeed = other->m_vecMoveSpeed;
 	phys->GetMatrix().UpdateRW();
 	phys->UpdateRwFrame();
-	CWorld::Add(phys);
+	World_Add(phys);
 }
 
 static void
@@ -208,7 +209,7 @@ ResyncPedsCarriedByVehicle(CPhysical *surface)
 		return;
 
 	// Move each standing ped from its vehicle-local anchor into this vehicle frame.
-	for(CPtrNode *node = CWorld::GetMovingEntityList().first; node; node = node->next) {
+	for(CPtrNode *node = World_GetMovingEntityList().first; node; node = node->next) {
 		CEntity *ent = (CEntity*)node->item;
 		if(!ent->IsPed())
 			continue;
@@ -238,7 +239,7 @@ ResyncPedsCarriedByVehicle(CPhysical *surface)
 int32
 CPhysical::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 {
-	int32 numSpheres = CCollision::ProcessColModels(
+	int32 numSpheres = Collision_ProcessColModels(
 		GetMatrix(), *GetColModel(),
 		ent->GetMatrix(), *ent->GetColModel(),
 		colpoints,
@@ -363,8 +364,6 @@ CPhysical::ApplySpringDampening(float damping, CVector &springDir, CVector &poin
 	return true;
 }
 
-extern int rouz_acceleration_cheats(void *ptr);
-
 void
 CPhysical::ApplyGravity(void)
 {
@@ -379,18 +378,16 @@ CPhysical::ApplyGravity(void)
 		CVector belowCar = GetPosition() - 2.0f*GetUp();
 		CColPoint point;
 		CEntity* entity;
-		if (CWorld::ProcessLineOfSight(GetPosition(), belowCar, point, entity, true, false, false, false, false, false))
+		if (World_ProcessLineOfSight(GetPosition(), belowCar, point, entity, true, false, false, false, false, false))
 			surfaceUp = CollisionVector_ToNative(point.normal);
 		else
 			surfaceUp = CVector(0.0f, 0.0f, 1.0f);
 		// Delegate the blending of the gravity direction to the C implementation
 		{
-			float gIn[3] = { gravityUp.x, gravityUp.y, gravityUp.z };
-			float sIn[3] = { surfaceUp.x, surfaceUp.y, surfaceUp.z };
-			float gOut[3];
+			CVector gOut;
 
-			Physical_BlendGravityUp(gIn, sIn, (*Timer_GetTimeStep()), gOut);
-			gravityUp = CVector(gOut[0], gOut[1], gOut[2]);
+			Physical_BlendGravityUp(&gravityUp, &surfaceUp, (*Timer_GetTimeStep()), &gOut);
+			gravityUp = CVector(gOut.x, gOut.y, gOut.z);
 		}
 		m_vecMoveSpeed -= GRAVITY * (*Timer_GetTimeStep()) * gravityUp;
 		return;
@@ -479,15 +476,15 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					impulseB = impulseA;
 					if(impulseA > Bobj->m_fUprootLimit){
 						if(IsGlass(B->GetModelIndex()))
-							CGlass::WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.point), false);
+							Glass_WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.point), false);
 						else if(!B->bInfiniteMass){
 							B->SetIsStatic(false);
-							CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 2;
+							World_Players[World_PlayerInFocus].m_nHavocLevel += 2;
 							Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(30, 60);
 						}
 					}else{
 						if(IsGlass(B->GetModelIndex()))
-							CGlass::WindowRespondsToSoftCollision(B, impulseA);
+							Glass_WindowRespondsToSoftCollision(B, impulseA);
 						if(!A->bInfiniteMass)
 							A->ApplyMoveForce(CollisionVector_ToNative(*ColPoint_GetNormal(&colpoint)) * (1.0f + A->m_fElasticity) * impulseA);
 						return true;
@@ -529,7 +526,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					if((impulseA > Bobj->m_fUprootLimit || A->bIsStuck) &&
 					   !B->bInfiniteMass){
 						if(IsGlass(B->GetModelIndex()))
-							CGlass::WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.point), false);
+							Glass_WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.point), false);
 						else
 							B->SetIsStatic(false);
 						int16 model = B->GetModelIndex();
@@ -537,26 +534,26 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 							CParticleObject::AddObject(POBJECT_FIRE_HYDRANT, B->GetPosition() - CVector(0.0f, 0.0f, 0.5f), true);
 							Bobj->bHasBeenDamaged = true;
 						}else if((model == MI_PARKINGMETER || model == MI_PARKINGMETER2) && !Bobj->bHasBeenDamaged){
-							CPickups::CreateSomeMoney(GetPosition(), General_GetRandomNumber()%100);
+							Pickups_CreateSomeMoney(GetPosition(), General_GetRandomNumber()%100);
 							Bobj->bHasBeenDamaged = true;
 						}else if(B->IsObject() && !IsExplosiveThingModel(model))
 							Bobj->bHasBeenDamaged = true;
 					}else{
 						if(IsGlass(B->GetModelIndex()))
-							CGlass::WindowRespondsToSoftCollision(B, impulseA);
+							Glass_WindowRespondsToSoftCollision(B, impulseA);
 						CVector f = CollisionVector_ToNative(*ColPoint_GetNormal(&colpoint)) * impulseA;
 						if(A->IsVehicle() && colpoint.normal.z < 0.7f)
 							f.z *= 0.3f;
 						if(!A->bInfiniteMass){
 							A->ApplyMoveForce(f);
-							if(!A->IsVehicle() || !CWorld::bNoMoreCollisionTorque)
+							if(!A->IsVehicle() || !World_bNoMoreCollisionTorque)
 								A->ApplyTurnForce(f, pointposA);
 						}
 						return true;
 					}
 				}else if(!B->bInfiniteMass){
 					B->SetIsStatic(false);
-					CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 2;
+					World_Players[World_PlayerInFocus].m_nHavocLevel += 2;
 					Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(30, 60);
 				}
 			}
@@ -720,7 +717,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					fA.z *= 0.3f;
 				if(A->GetStatus() == STATUS_PLAYER)
 					pointposA *= 0.8f;
-				if(CWorld::bNoMoreCollisionTorque){
+				if(World_bNoMoreCollisionTorque){
 					A->ApplyFrictionMoveForce(fA*-0.3f);
 					A->ApplyFrictionTurnForce(fA*-0.3f, pointposA);
 				}
@@ -732,7 +729,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					fB.z *= 0.3f;
 				if(B->GetStatus() == STATUS_PLAYER)
 					pointposB *= 0.8f;
-				if(CWorld::bNoMoreCollisionTorque){
+				if(World_bNoMoreCollisionTorque){
 #ifdef FIX_BUGS
 					B->ApplyFrictionMoveForce(fB*-0.3f);
 					B->ApplyFrictionTurnForce(fB*-0.3f, pointposB);
@@ -785,7 +782,7 @@ CPhysical::ApplyCollision(CColPoint &colpoint, float &impulse)
 			}
 			if(!bInfiniteMass){
 				ApplyMoveForce(f);
-				if(!IsVehicle() || !CWorld::bNoMoreCollisionTorque)
+				if(!IsVehicle() || !World_bNoMoreCollisionTorque)
 					ApplyTurnForce(f, pointpos);
 			}
 			return true;
@@ -1127,7 +1124,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 				canshift = false;
 
 			if(B == A ||
-			   B->m_scanCode == CWorld::GetCurrentScanCode() ||
+			   B->m_scanCode == World_GetCurrentScanCode() ||
 			   !B->bUsesCollision ||
 			   (A->bHasHitWall && !canshift) ||
 			   !B->GetIsTouching(center, radius))
@@ -1193,7 +1190,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 			if(skipShift)
 				continue;
 
-			B->m_scanCode = CWorld::GetCurrentScanCode();
+			B->m_scanCode = World_GetCurrentScanCode();
 			numCollisions = A->ProcessEntityCollision(B, colpoints);
 			if(numCollisions <= 0)
 				continue;
@@ -1204,7 +1201,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 					mostColliding = j;
 
 			// Delegate the factor of the shift to the C implementation
-			float shiftFactor = Physical_ShiftFactor(CWorld::bSecondShift, false);
+			float shiftFactor = Physical_ShiftFactor(World_bSecondShift, false);
 			for(j = 0; j < numCollisions; j++)
 				shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[j])) * ColPoint_GetDepth(&colpoints[j]) * shiftFactor / numCollisions;
 
@@ -1232,7 +1229,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 					B->ProcessEntityCollision(A, colpoints);
 			}else{
 				// Delegate the factor of the shift to the C implementation
-				shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[mostColliding])) * ColPoint_GetDepth(&colpoints[mostColliding]) * Physical_ShiftFactor(CWorld::bSecondShift, true);
+				shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[mostColliding])) * ColPoint_GetDepth(&colpoints[mostColliding]) * Physical_ShiftFactor(World_bSecondShift, true);
 			}
 
 			doShift = true;
@@ -1284,10 +1281,10 @@ CPhysical::ProcessCollisionSectorList_SimpleCar(CPtrList *lists)
 			B = (CPhysical*)listnode->item;
 			if(B != A &&
 			   !(B->IsObject() && ((CObject*)B)->bIsStreetLight && B->GetUp().z < 0.66f) &&
-			   B->m_scanCode != CWorld::GetCurrentScanCode() &&
+			   B->m_scanCode != World_GetCurrentScanCode() &&
 			   B->bUsesCollision &&
 			   B->GetIsTouching(center, radius)){
-				B->m_scanCode = CWorld::GetCurrentScanCode();
+				B->m_scanCode = World_GetCurrentScanCode();
 				numCollisions = A->ProcessEntityCollision(B, aColPoints);
 				if(numCollisions > 0)
 					goto collision;
@@ -1407,7 +1404,7 @@ collision:
 	if(B->GetStatus() == STATUS_SIMPLE){
 		B->SetStatus(STATUS_PHYSICS);
 		if(B->IsVehicle())
-			CCarCtrl::SwitchVehicleToRealPhysics((CVehicle*)B);
+			CarCtrl_SwitchVehicleToRealPhysics((CVehicle*)B);
 	}
 
 	return true;
@@ -1449,7 +1446,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 
 			bool isTouching = true;
 			if(!B->bUsesCollision ||
-			   B->m_scanCode == CWorld::GetCurrentScanCode() ||
+			   B->m_scanCode == World_GetCurrentScanCode() ||
 			   B == A)
 				continue;
 			if(!B->GetIsTouching(center, radius)){
@@ -1542,7 +1539,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 
 
 			if(!A->bUsesCollision || skipCollision){
-				B->m_scanCode = CWorld::GetCurrentScanCode();
+				B->m_scanCode = World_GetCurrentScanCode();
 				numCollisions = A->ProcessEntityCollision(B, aColPoints);
 				if(A->bJustCheckCollision && numCollisions > 0)
 					return true;
@@ -1551,7 +1548,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 			}else if(B->IsBuilding() || B->bIsStuck || B->m_phy_flagA08 || altcollision){
 				// This is the case where B doesn't move
 
-				B->m_scanCode = CWorld::GetCurrentScanCode();
+				B->m_scanCode = World_GetCurrentScanCode();
 				numCollisions = A->ProcessEntityCollision(B, aColPoints);
 				if(numCollisions <= 0)
 					continue;
@@ -1643,7 +1640,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 				if(numResponses){
 					m_vecMoveSpeed += moveSpeed / numResponses;
 					m_vecTurnSpeed += turnSpeed / numResponses;
-					if(!CWorld::bNoMoreCollisionTorque &&
+					if(!World_bNoMoreCollisionTorque &&
 					   A->GetStatus() == STATUS_PLAYER && A->IsVehicle() &&
 					   General_AbsBothAbove(A->m_vecMoveSpeed.x, A->m_vecMoveSpeed.y, 0.2f) && !A->bIsInWater){
 						A->m_vecMoveFriction.x += moveSpeed.x * -0.3f / numCollisions;
@@ -1654,7 +1651,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 					if(B->IsObject() && Bobj->m_nCollisionDamageEffect && maxImpulseA > 20.0f)
 						Bobj->ObjectDamage(maxImpulseA);
 
-					if(!CWorld::bSecondShift)
+					if(!World_bSecondShift)
 						return true;
 					ret = true;
 				}
@@ -1662,7 +1659,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 
 				// B can move
 
-				B->m_scanCode = CWorld::GetCurrentScanCode();
+				B->m_scanCode = World_GetCurrentScanCode();
 				numCollisions = A->ProcessEntityCollision(B, aColPoints);
 				if(numCollisions <= 0)
 					continue;
@@ -1824,10 +1821,10 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 				if(B->GetStatus() == STATUS_SIMPLE){
 					B->SetStatus(STATUS_PHYSICS);
 					if(B->IsVehicle())
-						CCarCtrl::SwitchVehicleToRealPhysics((CVehicle*)B);
+						CarCtrl_SwitchVehicleToRealPhysics((CVehicle*)B);
 				}
 
-				if(!CWorld::bSecondShift)
+				if(!World_bSecondShift)
 					return true;
 				ret = true;
 			}
@@ -1844,7 +1841,7 @@ CPhysical::CheckCollision(void)
 	CEntryInfoNode *node;
 
 	bCollisionProcessed = false;
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	for(node = m_entryInfoList.first; node; node = node->next)
 		if(ProcessCollisionSectorList(node->sector->m_lists))
 			return true;
@@ -1857,7 +1854,7 @@ CPhysical::CheckCollision_SimpleCar(void)
 	CEntryInfoNode *node;
 
 	bCollisionProcessed = false;
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	for(node = m_entryInfoList.first; node; node = node->next)
 		if(ProcessCollisionSectorList_SimpleCar(node->sector->m_lists))
 			return true;
@@ -1877,7 +1874,7 @@ CPhysical::ProcessShift(void)
 	}else{
 		// Delegate the test for the damping of the speed to the C implementation
 		CPhysical *surf = IsPed() ? ((CPed*)this)->m_pCurrentPhysSurface : nil;
-		if(Physical_ShiftIsDamped(bHasHitWall, IsPed(), surf != nil, surf && surf->bInfiniteMass, surf && surf->m_phy_flagA08, CWorld::bSecondShift)){
+		if(Physical_ShiftIsDamped(bHasHitWall, IsPed(), surf != nil, surf && surf->bInfiniteMass, surf && surf->m_phy_flagA08, World_bSecondShift)){
 			// Delegate the damping of the speeds to the C implementation
 			m_vecMoveSpeed *= Physical_ShiftDamping(PHYSICAL_SHIFT_SPEED_DAMP, (*Timer_GetTimeStep()));
 			m_vecTurnSpeed *= Physical_ShiftDamping(PHYSICAL_SHIFT_SPEED_DAMP, (*Timer_GetTimeStep()));
@@ -1891,7 +1888,7 @@ CPhysical::ProcessShift(void)
 		if(IsVehicle())
 			ResyncPedsCarriedByVehicle(this);
 		
-		CWorld::AdvanceCurrentScanCode();
+		World_AdvanceCurrentScanCode();
 
 		if(IsVehicle())
 			m_bIsVehicleBeingShifted = true;
@@ -1902,11 +1899,11 @@ CPhysical::ProcessShift(void)
 			hasshifted |= ProcessShiftSectorList(node->sector->m_lists);
 		m_bIsVehicleBeingShifted = false;
 		if(hasshifted){
-			CWorld::AdvanceCurrentScanCode();
+			World_AdvanceCurrentScanCode();
 			bool hadCollision = false;
 			for(node = m_entryInfoList.first; node; node = node->next)
 				if(ProcessCollisionSectorList(node->sector->m_lists)){
-					if(!CWorld::bSecondShift){
+					if(!World_bSecondShift){
 						GetMatrix() = matrix;
 												// Return carried peds with the vehicle when the shift is rolled back.
 						if(IsVehicle())
@@ -1957,7 +1954,7 @@ CPhysical::ProcessCollision(void)
 		if(CheckCollision_SimpleCar() && GetStatus() == STATUS_SIMPLE){
 			SetStatus(STATUS_PHYSICS);
 			if(IsVehicle())
-				CCarCtrl::SwitchVehicleToRealPhysics((CVehicle*)this);
+				CarCtrl_SwitchVehicleToRealPhysics((CVehicle*)this);
 		}
 		bIsStuck = false;
 		bIsInSafePosition = true;

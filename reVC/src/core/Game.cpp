@@ -112,22 +112,22 @@
 #include "TexturePools.h"
 #endif
 
-eLevelName CGame::currLevel;
-int32 CGame::currArea;
-bool CGame::bDemoMode = true;
-bool CGame::nastyGame = true;
-bool CGame::frenchGame;
-bool CGame::germanGame;
-bool CGame::noProstitutes;
-bool CGame::playingIntro;
-char CGame::aDatFile[32];
+eLevelName Game_currLevel;
+int32 Game_currArea;
+bool Game_bDemoMode = true;
+bool Game_nastyGame = true;
+bool Game_frenchGame;
+bool Game_germanGame;
+bool Game_noProstitutes;
+bool Game_playingIntro;
+char Game_aDatFile[32];
 #ifdef MORE_LANGUAGES
-bool CGame::russianGame = false;
-bool CGame::japaneseGame = false;
+bool Game_russianGame = false;
+bool Game_japaneseGame = false;
 #endif
 #ifndef MASTER
-CVector CGame::PlayerCoords;
-bool8 CGame::VarUpdatePlayerCoords;
+CVector Game_PlayerCoords;
+bool8 Game_VarUpdatePlayerCoords;
 #endif
 
 int gameTxdSlot;
@@ -150,7 +150,7 @@ void MessageScreen(char *msg)
 	
 	// Preserve the original operation through the C sprite interface
 	Sprite2d_InitPerFrame();
-	CFont::InitPerFrame();
+	Font_InitPerFrame();
 	DefinedState();
 
 	Sprite2d *splash = LoadSplash(NULL);
@@ -160,26 +160,26 @@ void MessageScreen(char *msg)
 })(splash,rect, color, color, color, color);
 	splash->DrawRect(Rect_Make(SCREEN_SCALE_X(20.0f), SCREEN_SCALE_Y(110.0f), SCREEN_SCALE_X(620.0f), SCREEN_SCALE_Y(300.0f)), CRGBA(50, 50, 50, 192));
 	
-	CFont::SetFontStyle(FONT_BANK);
-	CFont::SetBackgroundOff();
-	CFont::SetWrapx(SCREEN_SCALE_FROM_RIGHT(190.0f)); // 450.0f
-	CFont::SetScale(SCREEN_SCALE_X(1.0f), SCREEN_SCALE_Y(1.0f));
-	CFont::SetCentreOn();
-	CFont::SetCentreSize(SCREEN_SCALE_X(450.0f));
-	CFont::SetJustifyOff();
-	CFont::SetColor(CRGBA(255, 255, 255, 255));
-	CFont::SetDropColor(CRGBA(32, 32, 32, 255));
-	CFont::SetDropShadowPosition(3);
-	CFont::SetPropOn();
-	CFont::PrintString(SCREEN_SCALE_X(320.0f), SCREEN_SCALE_Y(130.0f), Text_Get(&TheText,msg));
-	CFont::DrawFonts();
+	Font_SetFontStyle(FONT_BANK);
+	Font_SetBackgroundOff();
+	Font_SetWrapx(SCREEN_SCALE_FROM_RIGHT(190.0f)); // 450.0f
+	Font_SetScale(SCREEN_SCALE_X(1.0f), SCREEN_SCALE_Y(1.0f));
+	Font_SetCentreOn();
+	Font_SetCentreSize(SCREEN_SCALE_X(450.0f));
+	Font_SetJustifyOff();
+	Font_SetColor(CRGBA(255, 255, 255, 255));
+	Font_SetDropColor(CRGBA(32, 32, 32, 255));
+	Font_SetDropShadowPosition(3);
+	Font_SetPropOn();
+	Font_PrintString(SCREEN_SCALE_X(320.0f), SCREEN_SCALE_Y(130.0f), Text_Get(&TheText,msg));
+	Font_DrawFonts();
 	
 	DoRWStuffEndOfFrame();
 }
 #endif
 
 bool
-CGame::InitialiseOnceBeforeRW(void)
+Game_InitialiseOnceBeforeRW(void)
 {
 	FileMgr_Initialise();
 	CdStreamInit(MAX_CDCHANNELS);
@@ -210,7 +210,7 @@ void ReplaceAtomicPipeCallback();
 #endif // !LIBRW
 
 bool
-CGame::InitialiseRenderWare(void)
+Game_InitialiseRenderWare(void)
 {
 	ValidateVersion();
 #ifdef USE_TEXTURE_POOL
@@ -290,8 +290,8 @@ CGame::InitialiseRenderWare(void)
 #endif // LIBRW
 
 	PUSH_MEMID(MEMID_TEXTURES);
-	CFont::Initialise();
-	CHud::Initialise();
+	Font_Initialise();
+	Hud_Initialise();
 	PlayerSkin_Initialise(); // rouz edit (ChatGPT)
 	POP_MEMID();
 
@@ -305,7 +305,7 @@ CGame::InitialiseRenderWare(void)
 	return (true);
 }
 
-void CGame::ShutdownRenderWare(void)
+void Game_ShutdownRenderWare(void)
 {
 #ifdef SCREEN_DROPLETS
 	ScreenDroplets::Shutdown();
@@ -315,11 +315,11 @@ void CGame::ShutdownRenderWare(void)
 #endif
 
 	DestroySplashScreen();
-	CHud::Shutdown();
-	CFont::Shutdown();
+	Hud_Shutdown();
+	Font_Shutdown();
 	
 	for ( int32 i = 0; i < NUMPLAYERS; i++ )
-		CWorld::Players[i].DeletePlayerSkin();
+		World_Players[i].DeletePlayerSkin();
 
 	PlayerSkin_Shutdown(); // rouz edit (ChatGPT)
 	
@@ -345,11 +345,11 @@ void CGame::ShutdownRenderWare(void)
 #endif
 }
 
-bool CGame::InitialiseOnceAfterRW(void)
+bool Game_InitialiseOnceAfterRW(void)
 {
 	Text_Load(&TheText);
 	Timer_Initialise();
-	CTempColModels::Initialise();
+	TempColModels_Initialise();
 	mod_HandlingManager.Initialise();
 	SurfaceTable_Initialise("DATA\\SURFACE.DAT"); // rouz edit (ChatGPT)
 	PedStats_Initialise();
@@ -383,7 +383,7 @@ bool CGame::InitialiseOnceAfterRW(void)
 }
 
 void
-CGame::FinalShutdown(void)
+Game_FinalShutdown(void)
 {	
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_Shutdown();
@@ -391,16 +391,16 @@ CGame::FinalShutdown(void)
 	CdStreamShutdown();
 }
 
-bool CGame::Initialise(const char* datFile)
+bool Game_Initialise(const char* datFile)
 {
 	ResetLoadingScreenBar();
-	strcpy(aDatFile, datFile);
+	strcpy(Game_aDatFile, datFile);
 
 #ifdef GTA_PS2
 	// TODO: upload VU0 collision code here
 #endif
 
-	CPools::Initialise();
+	Pools_Initialise();
 
 #ifndef GTA_PS2
 #ifdef PED_CAR_DENSITY_SLIDERS
@@ -412,8 +412,8 @@ bool CGame::Initialise(const char* datFile)
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(false);
 #endif
-	currLevel = LEVEL_BEACH;
-	currArea = AREA_MAIN_MAP;
+	Game_currLevel = LEVEL_BEACH;
+	Game_currArea = AREA_MAIN_MAP;
 
 	PUSH_MEMID(MEMID_TEXTURES);
 	LoadingScreen("Loading the Game", "Loading generic textures", GetRandomSplashScreen());
@@ -445,7 +445,7 @@ bool CGame::Initialise(const char* datFile)
 	CDma::SyncChannel(0, true);
 #endif
 
-	CGameLogic::InitAtStartOfGame();
+	GameLogic_InitAtStartOfGame();
 	References_Init();
 	TheCamera.Init();
 	TheCamera.SetRwCamera(Scene.camera);
@@ -456,8 +456,8 @@ bool CGame::Initialise(const char* datFile)
 	ScriptPaths_Init();
 	Weather_Init();
 	CullZones_Init();
-	COcclusion::Init();
-	CCollision::Init();
+	Occlusion_Init();
+	Collision_Init();
 	SetPieces_Init(); // rouz edit (ChatGPT)
 	Zones_Init();
 	UserDisplay_Init();
@@ -467,7 +467,7 @@ bool CGame::Initialise(const char* datFile)
 	Restart_Initialise(); // rouz edit (ChatGPT)
 
 	PUSH_MEMID(MEMID_WORLD);
-	CWorld::Initialise();
+	World_Initialise();
 	POP_MEMID();
 
 	PUSH_MEMID(MEMID_TEXTURES);
@@ -477,26 +477,26 @@ bool CGame::Initialise(const char* datFile)
 	PUSH_MEMID(MEMID_ANIMATION);
 	// Use the complete C animation manager at the original call boundary
 	AnimManager_Initialise();
-	CCutsceneMgr::Initialise();
+	CutsceneMgr_Initialise();
 	POP_MEMID();
 
 	PUSH_MEMID(MEMID_CARS);
-	CCarCtrl::Init();
+	CarCtrl_Init();
 	POP_MEMID();
 
 	PUSH_MEMID(MEMID_DEF_MODELS);
 	InitModelIndices();
 	ModelRegistry_Initialise(); // rouz edit (ChatGPT)
-	CPickups::Init();
-	CTheCarGenerators::Init();
+	Pickups_Init();
+	TheCarGenerators_Init();
 
 	CdStreamAddImage("MODELS\\GTA3.IMG");
 
-	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
-	CFileLoader::LoadLevel(datFile);
+	FileLoader_LoadLevel("DATA\\DEFAULT.DAT");
+	FileLoader_LoadLevel(datFile);
 
 	LoadingScreen("Loading the Game", "Add Particles", nil);
-	CWorld::AddParticles();
+	World_AddParticles();
 	CVehicleModelInfo::LoadVehicleColours();
 	CVehicleModelInfo::LoadEnvironmentMaps();
 	Zones_PostZoneCreation();
@@ -505,23 +505,23 @@ bool CGame::Initialise(const char* datFile)
 	LoadingScreen("Loading the Game", "Setup paths", nil);
 	ThePaths.PreparePathData();
 	for (int i = 0; i < NUMPLAYERS; i++)
-		CWorld::Players[i].Clear();
-	CWorld::Players[0].LoadPlayerSkin();
+		World_Players[i].Clear();
+	World_Players[0].LoadPlayerSkin();
 	TestModelIndices();
 
 	LoadingScreen("Loading the Game", "Setup water", nil);
-	CWaterLevel::Initialise("DATA\\WATER.DAT");
+	WaterLevel_Initialise("DATA\\WATER.DAT");
 	// Enter the complete C console implementation with the original singleton
 	Console_Init(&TheConsole);
 	Draw_SetFOV(120.0f);
 	Draw_ms_fLODDistance = 500.0f;
 
 	LoadingScreen("Loading the Game", "Setup streaming", nil);
-	CStreaming::LoadInitialVehicles();
-	CStreaming::LoadInitialPeds();
-	CStreaming::RequestBigBuildings(LEVEL_GENERIC);
-	CStreaming::LoadAllRequestedModels(false);
-	CStreaming::RemoveIslandsNotUsed(currLevel);
+	Streaming_LoadInitialVehicles();
+	Streaming_LoadInitialPeds();
+	Streaming_RequestBigBuildings(LEVEL_GENERIC);
+	Streaming_LoadAllRequestedModels(false);
+	Streaming_RemoveIslandsNotUsed(Game_currLevel);
 	printf("Streaming uses %zuK of its memory", Streaming_memoryUsed / 1024); // original modifier was %d // rouz edit (ChatGPT)
 
 	LoadingScreen("Loading the Game", "Load animations", GetRandomSplashScreen());
@@ -530,8 +530,8 @@ bool CGame::Initialise(const char* datFile)
 	AnimManager_LoadAnimFiles();
 	POP_MEMID();
 
-	CStreaming::LoadInitialWeapons();
-	CStreaming::LoadAllRequestedModels(0);
+	Streaming_LoadInitialWeapons();
+	Streaming_LoadAllRequestedModels(0);
 	CPed::Initialise();
 	PedRoutes_Initialise();
 	Events_Initialise();
@@ -539,11 +539,11 @@ bool CGame::Initialise(const char* datFile)
 	ScreenDroplets::Initialise();
 #endif
 	LoadingScreen("Loading the Game", "Find big buildings", nil);
-	CRenderer::Init();
+	Renderer_Init();
 
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
-	CRadar::Initialise();
-	CRadar::LoadTextures();
+	Radar_Initialise();
+	Radar_LoadTextures();
 	CWeapon::InitialiseWeapons();
 
 	LoadingScreen("Loading the Game", "Setup traffic lights", nil);
@@ -552,7 +552,7 @@ bool CGame::Initialise(const char* datFile)
 
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
 	Population_Initialise(); // rouz edit (ChatGPT)
-	CWorld::PlayerInFocus = 0;
+	World_PlayerInFocus = 0;
 	CCoronas::Init();
 	CShadows::Init();
 	// Enter the complete C weapon effect operation
@@ -561,27 +561,27 @@ bool CGame::Initialise(const char* datFile)
 	Skidmarks_Init();
 	// Initialize the C antenna pool
 	Antennas_Init();
-	CGlass::Init();
+	Glass_Init();
 	gPhoneInfo.Initialise();
 #ifdef GTA_SCENE_EDIT
-	CSceneEdit::Initialise();
+	SceneEdit_Initialise();
 #endif
 
 	LoadingScreen("Loading the Game", "Load scripts", nil);
 	PUSH_MEMID(MEMID_SCRIPT);
-	CTheScripts::Init();
+	TheScripts_Init();
 	Gangs_Initialise();
 	POP_MEMID();
 
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
 	Clock_Initialise(1000);
 	CHeli::InitHelis();
-	CCranes::InitCranes();
+	Cranes_InitCranes();
 	// Enter the C moving-scenery algorithm at the original call point
 	MovingThings_Init();
 	Darkel_Init();
 	Stats_Init();
-	CPacManPickups::Init();
+	PacManPickups_Init();
 	// Enter the C rubbish algorithm with the original owner expressions
 	Rubbish_Init();
 	// Enter the complete C cloud effect with the original arguments
@@ -593,7 +593,7 @@ bool CGame::Initialise(const char* datFile)
 	// Enter the C water-cannon algorithm with the original owner expressions
 	WaterCannons_Init();
 	Bridge_Init();
-	CGarages::Init();
+	Garages_Init();
 
 	LoadingScreen("Loading the Game", "Position dynamic objects", nil);
 	LoadingScreen("Loading the Game", "Initialise vehicle paths", nil);
@@ -610,13 +610,13 @@ bool CGame::Initialise(const char* datFile)
 	if ( !TheMemoryCard.m_bWantToLoad )
 #endif
 	{
-		CTheScripts::StartTestScript();
-		CTheScripts::Process();
+		TheScripts_StartTestScript();
+		TheScripts_Process();
 		TheCamera.Process();
 	}
 
 	LoadingScreen("Loading the Game", "Load scene", nil);
-	CCollision::ms_collisionInMemory = currLevel;
+	Collision_ms_collisionInMemory = Game_currLevel;
 	for (int i = 0; i < MAX_PADS; i++)
 		CPad::GetPad(i)->Clear(true);
 #ifdef USE_TEXTURE_POOL
@@ -624,11 +624,11 @@ bool CGame::Initialise(const char* datFile)
 #endif
 
 #ifndef MASTER
-	PlayerCoords = FindPlayerCoors();
-	VarConsole_AddFloat(&VarConsole,"X PLAYER COORD", &PlayerCoords.x, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
-	VarConsole_AddFloat(&VarConsole,"Y PLAYER COORD", &PlayerCoords.y, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
-	VarConsole_AddFloat(&VarConsole,"Z PLAYER COORD", &PlayerCoords.z, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
-	VarConsole_AddBool8(&VarConsole,"UPDATE PLAYER COORD", &VarUpdatePlayerCoords, true); // rouz edit (ChatGPT)
+	Game_PlayerCoords = FindPlayerCoors();
+	VarConsole_AddFloat(&VarConsole,"X PLAYER COORD", &Game_PlayerCoords.x, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
+	VarConsole_AddFloat(&VarConsole,"Y PLAYER COORD", &Game_PlayerCoords.y, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
+	VarConsole_AddFloat(&VarConsole,"Z PLAYER COORD", &Game_PlayerCoords.z, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
+	VarConsole_AddBool8(&VarConsole,"UPDATE PLAYER COORD", &Game_VarUpdatePlayerCoords, true); // rouz edit (ChatGPT)
 #endif
 
 
@@ -637,7 +637,7 @@ bool CGame::Initialise(const char* datFile)
 	return true;
 }
 
-bool CGame::ShutDown(void)
+bool Game_ShutDown(void)
 {
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(false);
@@ -651,7 +651,7 @@ bool CGame::ShutDown(void)
 	WaterCreatures_RemoveAll(); // rouz edit (ChatGPT)
 	// Enter the C special-effects controller with the original arguments
 	SpecialFX_Shutdown();
-	CGarages::Shutdown();
+	Garages_Shutdown();
 	// Enter the C moving-scenery algorithm at the original call point
 	MovingThings_Shutdown();
 	gPhoneInfo.Shutdown();
@@ -660,34 +660,34 @@ bool CGame::ShutDown(void)
 	
 	for (int32 i = 0; i < NUMPLAYERS; i++)
 	{
-		if ( CWorld::Players[i].m_pPed )
+		if ( World_Players[i].m_pPed )
 		{
-			CWorld::Remove(CWorld::Players[i].m_pPed);
+			World_Remove(World_Players[i].m_pPed);
 			// Destroy and release the player ped without invoking C++ delete.
-			CWorld::Players[i].m_pPed->~CPlayerPed();
+			World_Players[i].m_pPed->~CPlayerPed();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetPedPool(), CWorld::Players[i].m_pPed);
-						CWorld::Players[i].m_pPed = nil;
+			CPool_Delete(Pools_GetPedPool(), World_Players[i].m_pPed);
+						World_Players[i].m_pPed = nil;
 		}
 		
-		CWorld::Players[i].Clear();
+		World_Players[i].Clear();
 	}
 	
-	CRenderer::Shutdown();
-	CWorld::ShutDown();
+	Renderer_Shutdown();
+	World_ShutDown();
 	DMAudio_DestroyAllGameCreatedEntities();
 	ModelRegistry_Shutdown(); // rouz edit (ChatGPT)
 	// Use the complete C animation manager at the original call boundary
 	AnimManager_Shutdown();
-	CCutsceneMgr::Shutdown();
+	CutsceneMgr_Shutdown();
 	CVehicleModelInfo::DeleteVehicleColourTextures();
 	CVehicleModelInfo::ShutdownEnvironmentMaps();
-	CRadar::Shutdown();
-	CStreaming::Shutdown();
+	Radar_Shutdown();
+	Streaming_Shutdown();
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_GameShutdown();
-	CCollision::Shutdown();
-	CWaterLevel::Shutdown();
+	Collision_Shutdown();
+	WaterLevel_Shutdown();
 	// Enter the C rubbish algorithm with the original owner expressions
 	Rubbish_Shutdown();
 	// Enter the complete C cloud effect with the original arguments
@@ -699,8 +699,8 @@ bool CGame::ShutDown(void)
 	// Enter the complete C weapon effect operation
 	WeaponEffects_Shutdown();
 	CParticle::Shutdown();
-	CPools::ShutDown();
-	CHud::ReInitialise();
+	Pools_ShutDown();
+	Hud_ReInitialise();
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_RemoveTxdSlot(gameTxdSlot);
 	// Use the complete C motion-blur owner and its live shared state
@@ -712,9 +712,9 @@ bool CGame::ShutDown(void)
 	return true;
 }
 
-void CGame::ReInitGameObjectVariables(void)
+void Game_ReInitGameObjectVariables(void)
 {
-	CGameLogic::InitAtStartOfGame();
+	GameLogic_InitAtStartOfGame();
 #ifdef PS2_MENU
 	if ( !TheMemoryCard.m_bWantToLoad )
 #endif
@@ -727,18 +727,18 @@ void CGame::ReInitGameObjectVariables(void)
 	UserDisplay_Init();
 	Messages_Init();
 	Restart_Initialise(); // rouz edit (ChatGPT)
-	CWorld::bDoingCarCollisions = false;
-	CHud::ReInitialise();
-	CRadar::Initialise();
-	CCarCtrl::ReInit();
+	World_bDoingCarCollisions = false;
+	Hud_ReInitialise();
+	Radar_Initialise();
+	CarCtrl_ReInit();
 	TimeCycle_Initialise();
 	Draw_SetFOV(120.0f);
 	Draw_ms_fLODDistance = 500.0f;
-	CStreaming::RequestBigBuildings(LEVEL_GENERIC);
-	CStreaming::RemoveIslandsNotUsed(LEVEL_BEACH);
-	CStreaming::RemoveIslandsNotUsed(LEVEL_MAINLAND);
-	CStreaming::LoadAllRequestedModels(false);
-	currArea = AREA_MAIN_MAP;
+	Streaming_RequestBigBuildings(LEVEL_GENERIC);
+	Streaming_RemoveIslandsNotUsed(LEVEL_BEACH);
+	Streaming_RemoveIslandsNotUsed(LEVEL_MAINLAND);
+	Streaming_LoadAllRequestedModels(false);
+	Game_currArea = AREA_MAIN_MAP;
 	CPed::Initialise();
 	Events_Initialise();
 #ifdef SCREEN_DROPLETS
@@ -748,30 +748,30 @@ void CGame::ReInitGameObjectVariables(void)
 	Population_Initialise(); // rouz edit (ChatGPT)
 	
 	for (int i = 0; i < NUMPLAYERS; i++)
-		CWorld::Players[i].Clear();
+		World_Players[i].Clear();
 	
-	CWorld::PlayerInFocus = 0;
+	World_PlayerInFocus = 0;
 	// Initialize the C antenna pool
 	Antennas_Init();
-	CGlass::Init();
+	Glass_Init();
 	gPhoneInfo.Initialise();
 
 	PUSH_MEMID(MEMID_SCRIPT);
-	CTheScripts::Init();
+	TheScripts_Init();
 	Gangs_Initialise();
 	POP_MEMID();
 
 	Timer_Initialise();
 	Clock_Initialise(1000);
-	CTheCarGenerators::Init();
+	TheCarGenerators_Init();
 	CHeli::InitHelis();
 	// Enter the C moving-scenery algorithm at the original call point
 	MovingThings_Init();
 	Darkel_Init();
 	Stats_Init();
-	CPickups::Init();
-	CPacManPickups::Init();
-	CGarages::Init();
+	Pickups_Init();
+	PacManPickups_Init();
+	Garages_Init();
 	// Enter the C special-effects controller with the original arguments
 	SpecialFX_Init();
 	// Enter the C rope algorithm with the original owner expressions
@@ -788,9 +788,9 @@ void CGame::ReInitGameObjectVariables(void)
 	if ( !FrontEndMenuManager.m_bWantToLoad )
 #endif
 	{
-		CCranes::InitCranes();
-		CTheScripts::StartTestScript();
-		CTheScripts::Process();
+		Cranes_InitCranes();
+		TheScripts_StartTestScript();
+		TheScripts_Process();
 		TheCamera.Process();
 		CTrain::InitTrains();
 		CPlane::InitPlanes();
@@ -800,12 +800,12 @@ void CGame::ReInitGameObjectVariables(void)
 		CPad::GetPad(i)->Clear(true);
 }
 
-void CGame::ReloadIPLs(void)
+void Game_ReloadIPLs(void)
 {
 	// Empty and unused
 }
 
-void CGame::ShutDownForRestart(void)
+void Game_ShutDownForRestart(void)
 {
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(false);
@@ -817,16 +817,16 @@ void CGame::ShutDownForRestart(void)
 	MovingThings_Shutdown();
 	
 	for (int i = 0; i < NUMPLAYERS; i++)
-		CWorld::Players[i].Clear();
+		World_Players[i].Clear();
 
-	CGarages::SetAllDoorsBackToOriginalHeight();
-	CTheScripts::UndoBuildingSwaps();
-	CTheScripts::UndoEntityInvisibilitySettings();
-	CWorld::ClearForRestart();
-	CGameLogic::ClearShortCut();
+	Garages_SetAllDoorsBackToOriginalHeight();
+	TheScripts_UndoBuildingSwaps();
+	TheScripts_UndoEntityInvisibilitySettings();
+	World_ClearForRestart();
+	GameLogic_ClearShortCut();
 	Timer_Shutdown();
-	CStreaming::ReInit();
-	CRadar::RemoveRadarSections();
+	Streaming_ReInit();
+	Radar_RemoveRadarSections();
 	FrontEndMenuManager.UnloadTextures();
 	CParticleObject::RemoveAllExpireableParticleObjects();
 	WaterCreatures_RemoveAll();  // rouz edit (ChatGPT)
@@ -836,7 +836,7 @@ void CGame::ShutDownForRestart(void)
 	SpecialFX_Shutdown();
 }
 
-void CGame::InitialiseWhenRestarting(void)
+void Game_InitialiseWhenRestarting(void)
 {
 	CRect rect = Rect_Make(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 	CRGBA color(255, 255, 255, 255);
@@ -865,14 +865,14 @@ void CGame::InitialiseWhenRestarting(void)
 		DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 0);
 		// Preserve the original operation through the C sprite interface
 		Sprite2d_InitPerFrame();
-		CFont::InitPerFrame();
+		Font_InitPerFrame();
 		FrontEndMenuManager.DrawOverlays();
 		DoRWStuffEndOfFrame();
 #endif
 		RestoreForStartLoad();
 	}
 	
-	ReInitGameObjectVariables();
+	Game_ReInitGameObjectVariables();
 	
 	if ( FrontEndMenuManager.m_bWantToLoad == true )
 	{
@@ -893,13 +893,13 @@ void CGame::InitialiseWhenRestarting(void)
 			}
 			
 			TheCamera.SetFadeColour(0, 0, 0);
-			ShutDownForRestart();
+			Game_ShutDownForRestart();
 			Timer_Stop();
 			Timer_Initialise();
 			FrontEndMenuManager.m_bWantToLoad = false;
-			ReInitGameObjectVariables();
-			currLevel = LEVEL_GENERIC;
-			CCollision::SortOutCollisionAfterLoad();
+			Game_ReInitGameObjectVariables();
+			Game_currLevel = LEVEL_GENERIC;
+			Collision_SortOutCollisionAfterLoad();
 		}
 #ifdef XBOX_MESSAGE_SCREEN
 		FrontEndMenuManager.ProcessDialogTimer();
@@ -914,16 +914,16 @@ void CGame::InitialiseWhenRestarting(void)
 #endif
 }
 
-void CGame::Process(void) 
+void Game_Process(void) 
 {
 	CPad::UpdatePads();
 #ifdef USE_CUSTOM_ALLOCATOR
-	ProcessTidyUpMemory();
+	Game_ProcessTidyUpMemory();
 #endif
 #ifdef DEBUGMENU
 	DebugMenuProcess();
 #endif
-	CCutsceneMgr::Update();
+	CutsceneMgr_Update();
 
 	if (!Cutscene_IsProcessing() && !Timer_GetIsCodePaused()) // rouz edit (ChatGPT)
 		FrontEndMenuManager.Process();
@@ -938,23 +938,23 @@ void CGame::Process(void)
 	}
 #endif
 	uint32 startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
-	CStreaming::Update();
+	Streaming_Update();
 	uint32 processTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond() - startTime;
 	WindModifiers_Number = 0;
 	rouz_update();
 	if (!Timer_GetIsPaused())
 	{
 #ifndef MASTER
-		if (VarUpdatePlayerCoords) {
-			FindPlayerPed()->Teleport(PlayerCoords);
-			VarUpdatePlayerCoords = false;
+		if (Game_VarUpdatePlayerCoords) {
+			FindPlayerPed()->Teleport(Game_PlayerCoords);
+			Game_VarUpdatePlayerCoords = false;
 		}
 #endif
 		// Preserve the original operation through the C sprite interface
 		Sprite2d_SetRecipNearClip();
 		// Preserve the original operation through the C sprite interface
 		Sprite2d_InitPerFrame();
-		CFont::InitPerFrame();
+		Font_InitPerFrame();
 		RecordGame_SaveOrRetrieveDataForThisFrame(); // rouz edit (ChatGPT)
 		RecordChase_SaveOrRetrieveDataForThisFrame(); // rouz edit (ChatGPT)
 		CPad::DoCheats();
@@ -962,10 +962,10 @@ void CGame::Process(void)
 		Weather_Update();
 
 		PUSH_MEMID(MEMID_SCRIPT);
-		CTheScripts::Process();
+		TheScripts_Process();
 		POP_MEMID();
 
-		CCollision::Update();
+		Collision_Update();
 		// Enter the C scripted-path operation at the original call point
 		ScriptPaths_Update();
 		CTrain::UpdateTrains();
@@ -976,9 +976,9 @@ void CGame::Process(void)
 		Skidmarks_Update();
 		// Advance the C antenna frame state
 		Antennas_Update();
-		CGlass::Update();
+		Glass_Update();
 #ifdef GTA_SCENE_EDIT
-		CSceneEdit::Update();
+		SceneEdit_Update();
 #endif
 		SetPieces_Update(); // rouz edit (ChatGPT)
 		Events_Update();
@@ -999,9 +999,9 @@ void CGame::Process(void)
 		}
 		CWeapon::UpdateWeapons();
 		if (!Cutscene_IsRunning()) // rouz edit (ChatGPT)
-			CTheCarGenerators::Process();
+			TheCarGenerators_Process();
 		if (!Replay_IsPlayingBack()) // rouz edit (ChatGPT)
-			CCranes::UpdateCranes();
+			Cranes_UpdateCranes();
 		// Enter the complete C cloud effect with the original arguments
 		Clouds_Update();
 		// Enter the C moving-scenery algorithm at the original call point
@@ -1012,13 +1012,13 @@ void CGame::Process(void)
 		CReplay::Update();
 
 		PUSH_MEMID(MEMID_WORLD);
-		CWorld::Process();
+		World_Process();
 		POP_MEMID();
 
 		AccidentManager_Update(&gAccidentManager);
-		CPacManPickups::Update();
-		CPickups::Update();
-		CGarages::Update();
+		PacManPickups_Update();
+		Pickups_Update();
+		Garages_Update();
 		// Enter the C rubbish algorithm with the original owner expressions
 		Rubbish_Update();
 		// Enter the C special-effects controller with the original arguments
@@ -1030,7 +1030,7 @@ void CGame::Process(void)
 			TheCamera.Process();
 		CullZones_Update();
 		if (!Replay_IsPlayingBack()) // rouz edit (ChatGPT)
-			CGameLogic::Update();
+			GameLogic_Update();
 		Bridge_Update();
 		CCoronas::DoSunAndMoon();
 		CCoronas::Update();
@@ -1041,10 +1041,10 @@ void CGame::Process(void)
 		{
 			PUSH_MEMID(MEMID_CARS);
 			if (processTime < 2)
-				CCarCtrl::GenerateRandomCars();
+				CarCtrl_GenerateRandomCars();
 			RoadBlocks_GenerateRoadBlocks();
-			CCarCtrl::RemoveDistantCars();
-			CCarCtrl::RemoveCarsIfThePoolGetsFull();
+			CarCtrl_RemoveDistantCars();
+			CarCtrl_RemoveCarsIfThePoolGetsFull();
 			POP_MEMID();
 		}
 	}
@@ -1269,49 +1269,49 @@ TidyUpModelInfo(CBaseModelInfo* modelInfo, bool onlyone)
 #endif
 
 
-void CGame::DrasticTidyUpMemory(bool flushDraw)
+void Game_DrasticTidyUpMemory(bool flushDraw)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
 	bool removedCol = false;
 
-	TidyUpMemory(true, flushDraw);
+	Game_TidyUpMemory(true, flushDraw);
 
 	// Use the complete C heap operation with the original live owner
-	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !playingIntro) {
-		CStreaming::RemoveIslandsNotUsed(LEVEL_INDUSTRIAL);
-		CStreaming::RemoveIslandsNotUsed(LEVEL_COMMERCIAL);
-		CStreaming::RemoveIslandsNotUsed(LEVEL_SUBURBAN);
-		TidyUpMemory(true, flushDraw);
+	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !Game_playingIntro) {
+		Streaming_RemoveIslandsNotUsed(LEVEL_INDUSTRIAL);
+		Streaming_RemoveIslandsNotUsed(LEVEL_COMMERCIAL);
+		Streaming_RemoveIslandsNotUsed(LEVEL_SUBURBAN);
+		Game_TidyUpMemory(true, flushDraw);
 	}
 
 	// Use the complete C heap operation with the original live owner
-	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !playingIntro) {
+	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !Game_playingIntro) {
 		CModelInfo::RemoveColModelsFromOtherLevels(LEVEL_GENERIC);
-		TidyUpMemory(true, flushDraw);
+		Game_TidyUpMemory(true, flushDraw);
 		removedCol = true;
 	}
 
 	// Use the complete C heap operation with the original live owner
-	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !playingIntro) {
-		CStreaming::RemoveBigBuildings(LEVEL_INDUSTRIAL);
-		CStreaming::RemoveBigBuildings(LEVEL_COMMERCIAL);
-		CStreaming::RemoveBigBuildings(LEVEL_SUBURBAN);
-		TidyUpMemory(true, flushDraw);
+	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !Game_playingIntro) {
+		Streaming_RemoveBigBuildings(LEVEL_INDUSTRIAL);
+		Streaming_RemoveBigBuildings(LEVEL_COMMERCIAL);
+		Streaming_RemoveBigBuildings(LEVEL_SUBURBAN);
+		Game_TidyUpMemory(true, flushDraw);
 	}
 
 	if (removedCol) {
 		// different on PS2
-		CFileLoader::LoadCollisionFromDatFile(CCollision::ms_collisionInMemory);
+		CFileLoader::LoadCollisionFromDatFile(Collision_ms_collisionInMemory);
 	}
 
-	if (!playingIntro)
-		CStreaming::RequestBigBuildings(currLevel);
+	if (!Game_playingIntro)
+		Streaming_RequestBigBuildings(Game_currLevel);
 
-	CStreaming::LoadAllRequestedModels(true);
+	Streaming_LoadAllRequestedModels(true);
 #endif
 }
 
-void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
+void Game_TidyUpMemory(bool moveTextures, bool flushDraw)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
 	// Use the complete C heap operation with the original live owner
@@ -1367,7 +1367,7 @@ void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
 #endif
 	}
 
-void CGame::ProcessTidyUpMemory(void)
+void Game_ProcessTidyUpMemory(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
 	static int32 modelIndex = 0;
@@ -1429,7 +1429,7 @@ void CGame::ProcessTidyUpMemory(void)
 }
 
 void
-CGame::InitAfterFocusLoss()
+Game_InitAfterFocusLoss()
 {
 	FrontEndMenuManager.m_nPrefsAudio3DProviderIndex = FrontEndMenuManager.m_lastWorking3DAudioProvider;
 	DMAudio_SetCurrent3DProvider(FrontEndMenuManager.m_lastWorking3DAudioProvider);
@@ -1439,17 +1439,17 @@ CGame::InitAfterFocusLoss()
 }
 
 bool
-CGame::CanSeeWaterFromCurrArea(void)
+Game_CanSeeWaterFromCurrArea(void)
 {
-	return currArea == AREA_MAIN_MAP || currArea == AREA_MANSION
-		|| currArea == AREA_HOTEL;
+	return Game_currArea == AREA_MAIN_MAP || Game_currArea == AREA_MANSION
+		|| Game_currArea == AREA_HOTEL;
 }
 
 bool
-CGame::CanSeeOutSideFromCurrArea(void)
+Game_CanSeeOutSideFromCurrArea(void)
 {
-	return currArea == AREA_MAIN_MAP || currArea == AREA_MALL ||
-		currArea == AREA_MANSION || currArea == AREA_HOTEL;
+	return Game_currArea == AREA_MAIN_MAP || Game_currArea == AREA_MALL ||
+		Game_currArea == AREA_MANSION || Game_currArea == AREA_HOTEL;
 }
 
 //- rouz edit (ChatGPT)

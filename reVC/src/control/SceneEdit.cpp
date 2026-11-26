@@ -23,34 +23,34 @@
 #include "World.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 
-bool CSceneEdit::m_bEditOn;
-int32 CSceneEdit::m_bCameraFollowActor;
-bool CSceneEdit::m_bRecording;
-CVector CSceneEdit::m_vecCurrentPosition;
-CVector CSceneEdit::m_vecCamHeading;
-CVector CSceneEdit::m_vecGotoPosition;
-int32 CSceneEdit::m_nVehicle;
-int32 CSceneEdit::m_nVehicle2;
-int32 CSceneEdit::m_nActor;
-int32 CSceneEdit::m_nActor2;
-int32 CSceneEdit::m_nVehiclemodelId;
-int32 CSceneEdit::m_nPedmodelId;
-int16 CSceneEdit::m_nCurrentMovieCommand;
-int16 CSceneEdit::m_nNumActors;
-int16 CSceneEdit::m_nNumMovieCommands;
-int16 CSceneEdit::m_nCurrentCommand;
-int16 CSceneEdit::m_nCurrentVehicle;
-int16 CSceneEdit::m_nCurrentActor;
-int16 CSceneEdit::m_nWeaponType;
-bool CSceneEdit::m_bCommandActive;
-bool CSceneEdit::m_bActorSelected;
-bool CSceneEdit::m_bActor2Selected;
-bool CSceneEdit::m_bVehicleSelected;
-int16 CSceneEdit::m_nNumVehicles;
-CPed* CSceneEdit::pActors[NUM_ACTORS_IN_MOVIE];
-CVehicle* CSceneEdit::pVehicles[NUM_VEHICLES_IN_MOVIE];
-bool CSceneEdit::m_bDrawGotoArrow;
-CMovieCommand CSceneEdit::Movie[NUM_COMMANDS_IN_MOVIE];
+bool SceneEdit_m_bEditOn;
+int32 SceneEdit_m_bCameraFollowActor;
+bool SceneEdit_m_bRecording;
+CVector SceneEdit_m_vecCurrentPosition;
+CVector SceneEdit_m_vecCamHeading;
+CVector SceneEdit_m_vecGotoPosition;
+int32 SceneEdit_m_nVehicle;
+int32 SceneEdit_m_nVehicle2;
+int32 SceneEdit_m_nActor;
+int32 SceneEdit_m_nActor2;
+int32 SceneEdit_m_nVehiclemodelId;
+int32 SceneEdit_m_nPedmodelId;
+int16 SceneEdit_m_nCurrentMovieCommand;
+int16 SceneEdit_m_nNumActors;
+int16 SceneEdit_m_nNumMovieCommands;
+int16 SceneEdit_m_nCurrentCommand;
+int16 SceneEdit_m_nCurrentVehicle;
+int16 SceneEdit_m_nCurrentActor;
+int16 SceneEdit_m_nWeaponType;
+bool SceneEdit_m_bCommandActive;
+bool SceneEdit_m_bActorSelected;
+bool SceneEdit_m_bActor2Selected;
+bool SceneEdit_m_bVehicleSelected;
+int16 SceneEdit_m_nNumVehicles;
+CPed* SceneEdit_pActors[NUM_ACTORS_IN_MOVIE];
+CVehicle* SceneEdit_pVehicles[NUM_VEHICLES_IN_MOVIE];
+bool SceneEdit_m_bDrawGotoArrow;
+CMovieCommand SceneEdit_Movie[NUM_COMMANDS_IN_MOVIE];
 
 #define SHADOW_OFFSET (2.0f)
 #define ACTION_MESSAGE_X_RIGHT (60.0f)
@@ -72,7 +72,7 @@ static const char* pCommandStrings[] = {
 };
 
 #ifdef CHECK_STRUCT_SIZES
-static_assert(ARRAY_SIZE(pCommandStrings) == CSceneEdit::MOVIE_TOTAL_COMMANDS, "Scene edit: not all commands have names");
+static_assert(ARRAY_SIZE(pCommandStrings) == MOVIE_TOTAL_COMMANDS, "Scene edit: not all commands have names");
 #endif
 
 static int32 NextValidModelId(int32 mi, int32 step)
@@ -104,292 +104,292 @@ static int32 NextValidModelId(int32 mi, int32 step)
 	return result;
 }
 
-void CSceneEdit::LoadMovie(void)
+void SceneEdit_LoadMovie(void)
 {
-	ReInitialise();
+	SceneEdit_ReInitialise();
 	FileMgr_SetDir("DATA");
 	int fid = FileMgr_OpenFile("movie.dat", "r");
 #ifdef FIX_BUGS
 	if (fid >= 0)
 #endif
 	{
-		FileMgr_Read(fid, (char*)&Movie, sizeof(Movie));
-		FileMgr_Read(fid, (char*)&m_nNumMovieCommands, sizeof(m_nNumMovieCommands));
+		FileMgr_Read(fid, (char*)&SceneEdit_Movie, sizeof(SceneEdit_Movie));
+		FileMgr_Read(fid, (char*)&SceneEdit_m_nNumMovieCommands, sizeof(SceneEdit_m_nNumMovieCommands));
 		FileMgr_CloseFile(fid);
 	}
 	FileMgr_SetDir("");
-	m_bCommandActive = false;
+	SceneEdit_m_bCommandActive = false;
 }
 
-void CSceneEdit::SaveMovie(void)
+void SceneEdit_SaveMovie(void)
 {
 	FileMgr_SetDir("DATA");
 	int fid = FileMgr_OpenFileForWriting("movie.dat");
 	if (fid >= 0) {
-		FileMgr_Write(fid, (char*)&Movie, sizeof(Movie));
-		FileMgr_Write(fid, (char*)&m_nNumMovieCommands, sizeof(m_nNumMovieCommands));
+		FileMgr_Write(fid, (char*)&SceneEdit_Movie, sizeof(SceneEdit_Movie));
+		FileMgr_Write(fid, (char*)&SceneEdit_m_nNumMovieCommands, sizeof(SceneEdit_m_nNumMovieCommands));
 		FileMgr_CloseFile(fid);
 	}
 	FileMgr_SetDir("");
-	m_bCommandActive = false;
+	SceneEdit_m_bCommandActive = false;
 }
 
-void CSceneEdit::Initialise(void)
+void SceneEdit_Initialise(void)
 {
-	m_nActor = -1;
-	m_nActor2 = -1;
-	m_nVehicle = -1;
-	m_nVehicle2 = -1;
-	m_nCurrentCommand = MOVIE_NEW_ACTOR;
-	m_nVehiclemodelId = MI_INFERNUS;
-	m_nPedmodelId = MI_MALE01;
-	m_nNumVehicles = 0;
-	m_nNumActors = 0;
-	m_nNumMovieCommands = 0;
-	m_bCommandActive = false;
-	m_bRecording = true;
-	m_bEditOn = false;
+	SceneEdit_m_nActor = -1;
+	SceneEdit_m_nActor2 = -1;
+	SceneEdit_m_nVehicle = -1;
+	SceneEdit_m_nVehicle2 = -1;
+	SceneEdit_m_nCurrentCommand = MOVIE_NEW_ACTOR;
+	SceneEdit_m_nVehiclemodelId = MI_INFERNUS;
+	SceneEdit_m_nPedmodelId = MI_MALE01;
+	SceneEdit_m_nNumVehicles = 0;
+	SceneEdit_m_nNumActors = 0;
+	SceneEdit_m_nNumMovieCommands = 0;
+	SceneEdit_m_bCommandActive = false;
+	SceneEdit_m_bRecording = true;
+	SceneEdit_m_bEditOn = false;
 	for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++)
-		pActors[i] = nil;
+		SceneEdit_pActors[i] = nil;
 	for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++)
-		pVehicles[i] = nil;
-	m_vecCamHeading = TheCamera.Cams[TheCamera.ActiveCam].Front;
-	m_vecGotoPosition = CVector(0.0f, 0.0f, 0.0f);
-	m_bCameraFollowActor = false;
+		SceneEdit_pVehicles[i] = nil;
+	SceneEdit_m_vecCamHeading = TheCamera.Cams[TheCamera.ActiveCam].Front;
+	SceneEdit_m_vecGotoPosition = CVector(0.0f, 0.0f, 0.0f);
+	SceneEdit_m_bCameraFollowActor = false;
 	TheCamera.Cams[TheCamera.ActiveCam].ResetStatics = true;
-	m_bDrawGotoArrow = false;
+	SceneEdit_m_bDrawGotoArrow = false;
 }
 
-void CSceneEdit::InitPlayback(void)
+void SceneEdit_InitPlayback(void)
 {
-	m_nVehiclemodelId = MI_INFERNUS;
-	m_nPedmodelId = MI_MALE01;
-	m_bCommandActive = false;
-	m_nNumActors = 0;
-	m_nNumVehicles = 0;
-	m_nActor = -1;
-	m_nActor2 = -1;
-	m_nVehicle = -1;
-	m_nVehicle2 = -1;
+	SceneEdit_m_nVehiclemodelId = MI_INFERNUS;
+	SceneEdit_m_nPedmodelId = MI_MALE01;
+	SceneEdit_m_bCommandActive = false;
+	SceneEdit_m_nNumActors = 0;
+	SceneEdit_m_nNumVehicles = 0;
+	SceneEdit_m_nActor = -1;
+	SceneEdit_m_nActor2 = -1;
+	SceneEdit_m_nVehicle = -1;
+	SceneEdit_m_nVehicle2 = -1;
 	TheCamera.Cams[TheCamera.ActiveCam].ResetStatics = true;
-	m_vecCamHeading = TheCamera.Cams[TheCamera.ActiveCam].Front;
+	SceneEdit_m_vecCamHeading = TheCamera.Cams[TheCamera.ActiveCam].Front;
 	for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-		if (pActors[i]) {
-			CPopulation::RemovePed(pActors[i]);
-			pActors[i] = nil;
+		if (SceneEdit_pActors[i]) {
+			Population_RemovePed(SceneEdit_pActors[i]);
+			SceneEdit_pActors[i] = nil;
 		}
 	}
-	m_nCurrentActor = 0;
+	SceneEdit_m_nCurrentActor = 0;
 	for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++) {
-		if (pVehicles[i]) {
-			CWorld::Remove(pVehicles[i]);
+		if (SceneEdit_pVehicles[i]) {
+			World_Remove(SceneEdit_pVehicles[i]);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the scene vehicle without invoking C++ delete.
-			pVehicles[i]->~CVehicle();
+			SceneEdit_pVehicles[i]->~CVehicle();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicles[i]);
+			CPool_Delete(Pools_GetVehiclePool(), SceneEdit_pVehicles[i]);
 			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
-			pVehicles[i] = nil;
+			SceneEdit_pVehicles[i] = nil;
 		}
 	}
-	m_nCurrentVehicle = 0;
-	m_vecGotoPosition = CVector(0.0f, 0.0f, 0.0f);
-	m_nCurrentMovieCommand = MOVIE_DO_NOTHING;
-	m_bDrawGotoArrow = false;
+	SceneEdit_m_nCurrentVehicle = 0;
+	SceneEdit_m_vecGotoPosition = CVector(0.0f, 0.0f, 0.0f);
+	SceneEdit_m_nCurrentMovieCommand = MOVIE_DO_NOTHING;
+	SceneEdit_m_bDrawGotoArrow = false;
 }
 
-void CSceneEdit::ReInitialise(void)
+void SceneEdit_ReInitialise(void)
 {
-	m_nVehiclemodelId = MI_INFERNUS;
-	m_nPedmodelId = MI_MALE01;
-	m_nCurrentCommand = MOVIE_NEW_ACTOR;
-	m_bEditOn = true;
-	m_bRecording = true;
-	m_bCommandActive = false;
+	SceneEdit_m_nVehiclemodelId = MI_INFERNUS;
+	SceneEdit_m_nPedmodelId = MI_MALE01;
+	SceneEdit_m_nCurrentCommand = MOVIE_NEW_ACTOR;
+	SceneEdit_m_bEditOn = true;
+	SceneEdit_m_bRecording = true;
+	SceneEdit_m_bCommandActive = false;
 #ifdef FIX_BUGS
-	m_bCameraFollowActor = false;
+	SceneEdit_m_bCameraFollowActor = false;
 	TheCamera.Cams[TheCamera.ActiveCam].ResetStatics = true; // not enough...
 #endif
-	m_nActor = -1;
-	m_nActor2 = -1;
-	m_nVehicle = -1;
-	m_nVehicle2 = -1;
-	m_nNumMovieCommands = 0;
-	m_nCurrentMovieCommand = MOVIE_DO_NOTHING;
-	m_nNumActors = 0;
-	m_nNumVehicles = 0;
+	SceneEdit_m_nActor = -1;
+	SceneEdit_m_nActor2 = -1;
+	SceneEdit_m_nVehicle = -1;
+	SceneEdit_m_nVehicle2 = -1;
+	SceneEdit_m_nNumMovieCommands = 0;
+	SceneEdit_m_nCurrentMovieCommand = MOVIE_DO_NOTHING;
+	SceneEdit_m_nNumActors = 0;
+	SceneEdit_m_nNumVehicles = 0;
 	for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-		if (pActors[i]) {
-			CPopulation::RemovePed(pActors[i]);
-			pActors[i] = nil;
+		if (SceneEdit_pActors[i]) {
+			Population_RemovePed(SceneEdit_pActors[i]);
+			SceneEdit_pActors[i] = nil;
 		}
 	}
 	for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++) {
-		if (pVehicles[i]) {
-			CWorld::Remove(pVehicles[i]);
+		if (SceneEdit_pVehicles[i]) {
+			World_Remove(SceneEdit_pVehicles[i]);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the scene vehicle without invoking C++ delete.
-			pVehicles[i]->~CVehicle();
+			SceneEdit_pVehicles[i]->~CVehicle();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicles[i]);
+			CPool_Delete(Pools_GetVehiclePool(), SceneEdit_pVehicles[i]);
 			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
-			pVehicles[i] = nil;
+			SceneEdit_pVehicles[i] = nil;
 		}
 	}
 	for (int i = 0; i < NUM_COMMANDS_IN_MOVIE; i++) {
-		Movie[i].m_nCommandId = MOVIE_DO_NOTHING;
-		Movie[i].m_vecPosition = CVector(0.0f, 0.0f, 0.0f);
-		Movie[i].m_vecCamera = CVector(0.0f, 0.0f, 0.0f);
-		Movie[i].m_nActorId = -1;
-		Movie[i].m_nActor2Id = -1;
-		Movie[i].m_nVehicleId = -1;
-		Movie[i].m_nModelIndex = 0;
+		SceneEdit_Movie[i].m_nCommandId = MOVIE_DO_NOTHING;
+		SceneEdit_Movie[i].m_vecPosition = CVector(0.0f, 0.0f, 0.0f);
+		SceneEdit_Movie[i].m_vecCamera = CVector(0.0f, 0.0f, 0.0f);
+		SceneEdit_Movie[i].m_nActorId = -1;
+		SceneEdit_Movie[i].m_nActor2Id = -1;
+		SceneEdit_Movie[i].m_nVehicleId = -1;
+		SceneEdit_Movie[i].m_nModelIndex = 0;
 	}
-	m_vecGotoPosition = CVector(0.0f, 0.0f, 0.0f);
-	m_bDrawGotoArrow = false;
+	SceneEdit_m_vecGotoPosition = CVector(0.0f, 0.0f, 0.0f);
+	SceneEdit_m_bDrawGotoArrow = false;
 }
 
-void CSceneEdit::Update(void)
+void SceneEdit_Update(void)
 {
-	if (!m_bEditOn)
+	if (!SceneEdit_m_bEditOn)
 		return;
-	if (m_bRecording)
-		ProcessCommand();
+	if (SceneEdit_m_bRecording)
+		SceneEdit_ProcessCommand();
 	else {
-		if (m_bCameraFollowActor && m_nActor != -1) {
-			if (pActors[m_nActor]->bInVehicle)
-				TheCamera.TakeControl(pActors[m_nActor]->m_pMyVehicle, CCam::MODE_BEHINDCAR, JUMP_CUT, CAMCONTROL_SCRIPT);
+		if (SceneEdit_m_bCameraFollowActor && SceneEdit_m_nActor != -1) {
+			if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle)
+				TheCamera.TakeControl(SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle, CCam::MODE_BEHINDCAR, JUMP_CUT, CAMCONTROL_SCRIPT);
 			else
-				TheCamera.TakeControl(pActors[m_nActor], CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
+				TheCamera.TakeControl(SceneEdit_pActors[SceneEdit_m_nActor], CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
 		}
-		PlayBack();
+		SceneEdit_PlayBack();
 	}
 }
 
-void CSceneEdit::Draw(void)
+void SceneEdit_Draw(void)
 {
 	char str[200];
 	wchar wstr[200];
 	if (TheCamera.m_WideScreenOn)
 		return;
 #ifndef FIX_BUGS
-	CFont::SetPropOff();
+	Font_SetPropOff();
 #endif
-	CFont::SetBackgroundOff();
-	CFont::SetScale(SCREEN_SCALE_X(0.8f), SCREEN_SCALE_Y(1.35f));
-	CFont::SetCentreOn();
-	CFont::SetRightJustifyOn();
-	CFont::SetRightJustifyWrap(0.0f);
-	CFont::SetBackGroundOnlyTextOff();
+	Font_SetBackgroundOff();
+	Font_SetScale(SCREEN_SCALE_X(0.8f), SCREEN_SCALE_Y(1.35f));
+	Font_SetCentreOn();
+	Font_SetRightJustifyOn();
+	Font_SetRightJustifyWrap(0.0f);
+	Font_SetBackGroundOnlyTextOff();
 #ifdef FIX_BUGS
-	CFont::SetFontStyle(FONT_STANDARD);
-	CFont::SetPropOn();
-	CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-	CFont::SetDropShadowPosition(1);
+	Font_SetFontStyle(FONT_STANDARD);
+	Font_SetPropOn();
+	Font_SetDropColor(CRGBA(0, 0, 0, 255));
+	Font_SetDropShadowPosition(1);
 #else
-	CFont::SetFontStyle(FONT_HEADING);
-	CFont::SetPropOff();
+	Font_SetFontStyle(FONT_HEADING);
+	Font_SetPropOff();
 #endif
 	sprintf(str, "Action");
 	AsciiToUnicode(str, wstr);
-	CFont::SetColor(CRGBA(0, 0, 0, 255));
+	Font_SetColor(CRGBA(0, 0, 0, 255));
 #ifdef FIX_BUGS
-	CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(ACTION_MESSAGE_X_RIGHT - SHADOW_OFFSET), SCREEN_SCALE_Y(ACTION_MESSAGE_Y + SHADOW_OFFSET), wstr);
+	Font_PrintString(SCREEN_SCALE_FROM_RIGHT(ACTION_MESSAGE_X_RIGHT - SHADOW_OFFSET), SCREEN_SCALE_Y(ACTION_MESSAGE_Y + SHADOW_OFFSET), wstr);
 #else
-	CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-ACTION_MESSAGE_X_RIGHT) + SHADOW_OFFSET, SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-ACTION_MESSAGE_Y) + SHADOW_OFFSET, wstr);
+	Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-ACTION_MESSAGE_X_RIGHT) + SHADOW_OFFSET, SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-ACTION_MESSAGE_Y) + SHADOW_OFFSET, wstr);
 #endif
-	CFont::SetColor(CRGBA(193, 164, 120, 255));
+	Font_SetColor(CRGBA(193, 164, 120, 255));
 #ifdef FIX_BUGS
-	CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(ACTION_MESSAGE_X_RIGHT), SCREEN_SCALE_Y(ACTION_MESSAGE_Y), wstr);
+	Font_PrintString(SCREEN_SCALE_FROM_RIGHT(ACTION_MESSAGE_X_RIGHT), SCREEN_SCALE_Y(ACTION_MESSAGE_Y), wstr);
 #else
-	CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-ACTION_MESSAGE_X_RIGHT), SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-ACTION_MESSAGE_Y), wstr);
+	Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-ACTION_MESSAGE_X_RIGHT), SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-ACTION_MESSAGE_Y), wstr);
 #endif
 	sprintf(str, "Selected");
 	AsciiToUnicode(str, wstr);
-	CFont::SetColor(CRGBA(0, 0, 0, 255));
+	Font_SetColor(CRGBA(0, 0, 0, 255));
 #ifdef FIX_BUGS
-	CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(SELECTED_MESSAGE_X_RIGHT - SHADOW_OFFSET), SCREEN_SCALE_Y(SELECTED_MESSAGE_Y + SHADOW_OFFSET), wstr);
+	Font_PrintString(SCREEN_SCALE_FROM_RIGHT(SELECTED_MESSAGE_X_RIGHT - SHADOW_OFFSET), SCREEN_SCALE_Y(SELECTED_MESSAGE_Y + SHADOW_OFFSET), wstr);
 #else
-	CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-SELECTED_MESSAGE_X_RIGHT) + SHADOW_OFFSET, SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-SELECTED_MESSAGE_Y) + SHADOW_OFFSET, wstr);
+	Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-SELECTED_MESSAGE_X_RIGHT) + SHADOW_OFFSET, SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-SELECTED_MESSAGE_Y) + SHADOW_OFFSET, wstr);
 #endif
-	CFont::SetColor(CRGBA(193, 164, 120, 255));
+	Font_SetColor(CRGBA(193, 164, 120, 255));
 #ifdef FIX_BUGS
-	CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(SELECTED_MESSAGE_X_RIGHT), SCREEN_SCALE_Y(SELECTED_MESSAGE_Y), wstr);
+	Font_PrintString(SCREEN_SCALE_FROM_RIGHT(SELECTED_MESSAGE_X_RIGHT), SCREEN_SCALE_Y(SELECTED_MESSAGE_Y), wstr);
 #else
-	CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-SELECTED_MESSAGE_X_RIGHT), SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-SELECTED_MESSAGE_Y), wstr);
+	Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-SELECTED_MESSAGE_X_RIGHT), SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-SELECTED_MESSAGE_Y), wstr);
 #endif
-	CFont::SetCentreOff();
+	Font_SetCentreOff();
 #ifdef FIX_BUGS
-	CFont::SetScale(SCREEN_SCALE_X(0.7f), SCREEN_SCALE_Y(0.7f));
+	Font_SetScale(SCREEN_SCALE_X(0.7f), SCREEN_SCALE_Y(0.7f));
 #else
-	CFont::SetScale(0.7f, 0.7f);
+	Font_SetScale(0.7f, 0.7f);
 #endif
 #ifdef FIX_BUGS
-	CFont::SetFontStyle(FONT_STANDARD);
+	Font_SetFontStyle(FONT_STANDARD);
 #else
-	CFont::SetFontStyle(FONT_HEADING);
+	Font_SetFontStyle(FONT_HEADING);
 #endif
-	CFont::SetColor(CRGBA(0, 0, 0, 255));
+	Font_SetColor(CRGBA(0, 0, 0, 255));
 	for (int i = 0; i < NUM_COMMANDS_TO_DRAW; i++) {
-		int16 nCommandDrawn = m_nCurrentCommand + i - NUM_COMMANDS_TO_DRAW / 2;
+		int16 nCommandDrawn = SceneEdit_m_nCurrentCommand + i - NUM_COMMANDS_TO_DRAW / 2;
 		if (nCommandDrawn >= MOVIE_TOTAL_COMMANDS)
 			nCommandDrawn -= (MOVIE_TOTAL_COMMANDS - 1);
 		if (nCommandDrawn <= MOVIE_DO_NOTHING)
 			nCommandDrawn += (MOVIE_TOTAL_COMMANDS - 1);
 		sprintf(str, "%s", pCommandStrings[nCommandDrawn]);
 		AsciiToUnicode(str, wstr);
-		CFont::SetColor(CRGBA(0, 0, 0, 255));
+		Font_SetColor(CRGBA(0, 0, 0, 255));
 #ifdef FIX_BUGS
-		CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(COMMAND_NAME_X_RIGHT - SHADOW_OFFSET), SCREEN_SCALE_Y(COMMAND_NAME_Y + SHADOW_OFFSET + i * COMMAND_NAME_HEIGHT), wstr);
+		Font_PrintString(SCREEN_SCALE_FROM_RIGHT(COMMAND_NAME_X_RIGHT - SHADOW_OFFSET), SCREEN_SCALE_Y(COMMAND_NAME_Y + SHADOW_OFFSET + i * COMMAND_NAME_HEIGHT), wstr);
 #else
-		CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-COMMAND_NAME_X_RIGHT) + SHADOW_OFFSET, SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-COMMAND_NAME_Y) + SHADOW_OFFSET + i * COMMAND_NAME_HEIGHT, wstr);
+		Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-COMMAND_NAME_X_RIGHT) + SHADOW_OFFSET, SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-COMMAND_NAME_Y) + SHADOW_OFFSET + i * COMMAND_NAME_HEIGHT, wstr);
 #endif
-		if (nCommandDrawn == m_nCurrentCommand)
-			CFont::SetColor(CRGBA(156, 91, 40, 255));
+		if (nCommandDrawn == SceneEdit_m_nCurrentCommand)
+			Font_SetColor(CRGBA(156, 91, 40, 255));
 		else
-			CFont::SetColor(CRGBA(193, 164, 120, 255));
+			Font_SetColor(CRGBA(193, 164, 120, 255));
 #ifdef FIX_BUGS
-		CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(COMMAND_NAME_X_RIGHT), SCREEN_SCALE_Y(COMMAND_NAME_Y + i * COMMAND_NAME_HEIGHT), wstr);
+		Font_PrintString(SCREEN_SCALE_FROM_RIGHT(COMMAND_NAME_X_RIGHT), SCREEN_SCALE_Y(COMMAND_NAME_Y + i * COMMAND_NAME_HEIGHT), wstr);
 #else
-		CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-COMMAND_NAME_X_RIGHT), SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-COMMAND_NAME_Y) + i * COMMAND_NAME_HEIGHT, wstr);
+		Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH-COMMAND_NAME_X_RIGHT), SCREEN_SCALE_FROM_BOTTOM(DEFAULT_SCREEN_HEIGHT-COMMAND_NAME_Y) + i * COMMAND_NAME_HEIGHT, wstr);
 #endif
 	}
 }
 
-void CSceneEdit::ProcessCommand(void)
+void SceneEdit_ProcessCommand(void)
 {
-	if (!m_bCommandActive) {
-		ClearForNewCommand();
+	if (!SceneEdit_m_bCommandActive) {
+		SceneEdit_ClearForNewCommand();
 		if (CPad::GetPad(1)->GetDPadUpJustDown()) {
-			if (--m_nCurrentCommand == MOVIE_DO_NOTHING)
-				m_nCurrentCommand = MOVIE_END;
+			if (--SceneEdit_m_nCurrentCommand == MOVIE_DO_NOTHING)
+				SceneEdit_m_nCurrentCommand = MOVIE_END;
 		}
 		if (CPad::GetPad(1)->GetDPadDownJustDown()) {
-			if (++m_nCurrentCommand == MOVIE_TOTAL_COMMANDS)
-				m_nCurrentCommand = MOVIE_NEW_ACTOR;
+			if (++SceneEdit_m_nCurrentCommand == MOVIE_TOTAL_COMMANDS)
+				SceneEdit_m_nCurrentCommand = MOVIE_NEW_ACTOR;
 		}
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			if (m_nCurrentCommand != MOVIE_DO_NOTHING)
-				m_bCommandActive = true;
+			if (SceneEdit_m_nCurrentCommand != MOVIE_DO_NOTHING)
+				SceneEdit_m_bCommandActive = true;
 		}
 		return;
 	}
-	switch (m_nCurrentCommand) {
+	switch (SceneEdit_m_nCurrentCommand) {
 	case MOVIE_DO_NOTHING:
-		m_bCommandActive = false;
+		SceneEdit_m_bCommandActive = false;
 		break;
 	case MOVIE_NEW_ACTOR:
-		if (m_nActor == -1) {
-			if (m_nNumActors == NUM_ACTORS_IN_MOVIE)
+		if (SceneEdit_m_nActor == -1) {
+			if (SceneEdit_m_nNumActors == NUM_ACTORS_IN_MOVIE)
 				break;
-			if (!Streaming_HasModelLoaded(m_nPedmodelId)) { // rouz edit (ChatGPT)
-				Streaming_RequestModel(m_nPedmodelId, 0); // rouz edit (ChatGPT)
+			if (!Streaming_HasModelLoaded(SceneEdit_m_nPedmodelId)) { // rouz edit (ChatGPT)
+				Streaming_RequestModel(SceneEdit_m_nPedmodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-				CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
+				Streaming_LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
 				break;
 			}
@@ -397,123 +397,123 @@ void CSceneEdit::ProcessCommand(void)
 			// Allocate the scene actor without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_New(CPools::GetPedPool()));
+			CPed* pPed = ((CPed*)CPool_New(Pools_GetPedPool()));
 			//- rouz edit (ChatGPT)
 			assert(pPed);
-			std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, m_nPedmodelId);
+			std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, SceneEdit_m_nPedmodelId);
 //- rouz edit (ChatGPT)
 			pPed->CharCreatedBy = MISSION_CHAR;
-			pPed->SetPosition(m_vecCurrentPosition);
+			pPed->SetPosition(SceneEdit_m_vecCurrentPosition);
 			pPed->SetOrientation(0.0f, 0.0f, 0.0f);
-			CWorld::Add(pPed);
+			World_Add(pPed);
 			pPed->bUsesCollision = false;
 			pPed->bAffectedByGravity = false;
 			for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-				if (pActors[i] == nil) {
-					m_nActor = i;
-					pActors[i] = pPed;
+				if (SceneEdit_pActors[i] == nil) {
+					SceneEdit_m_nActor = i;
+					SceneEdit_pActors[i] = pPed;
 					break;
 				}
 			}
 		}
 		else {
-			pActors[m_nActor]->SetPosition(m_vecCurrentPosition);
-			pActors[m_nActor]->SetOrientation(0.0f, 0.0f, 0.0f);
-			int32 mi = m_nPedmodelId;
+			SceneEdit_pActors[SceneEdit_m_nActor]->SetPosition(SceneEdit_m_vecCurrentPosition);
+			SceneEdit_pActors[SceneEdit_m_nActor]->SetOrientation(0.0f, 0.0f, 0.0f);
+			int32 mi = SceneEdit_m_nPedmodelId;
 			if (CPad::GetPad(1)->GetLeftShoulder1JustDown())
-				mi = NextValidModelId(m_nPedmodelId, -1);
+				mi = NextValidModelId(SceneEdit_m_nPedmodelId, -1);
 			else if (CPad::GetPad(1)->GetRightShoulder1JustDown())
-				mi = NextValidModelId(m_nPedmodelId, 1);
-			if (mi == m_nPedmodelId) {
+				mi = NextValidModelId(SceneEdit_m_nPedmodelId, 1);
+			if (mi == SceneEdit_m_nPedmodelId) {
 				if (CPad::GetPad(1)->GetTriangleJustDown()) {
-					pActors[m_nActor]->bUsesCollision = true;
-					pActors[m_nActor]->bAffectedByGravity = true;
-					++m_nNumActors;
-					Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_NEW_ACTOR;
-					Movie[m_nNumMovieCommands].m_vecPosition = m_vecCurrentPosition;
-					Movie[m_nNumMovieCommands].m_nModelIndex = m_nPedmodelId;
-					Movie[m_nNumMovieCommands++].m_nActorId = m_nActor;
-					m_nActor = -1;
-					m_bCommandActive = false;
+					SceneEdit_pActors[SceneEdit_m_nActor]->bUsesCollision = true;
+					SceneEdit_pActors[SceneEdit_m_nActor]->bAffectedByGravity = true;
+					++SceneEdit_m_nNumActors;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_NEW_ACTOR;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_vecPosition = SceneEdit_m_vecCurrentPosition;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nModelIndex = SceneEdit_m_nPedmodelId;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nActorId = SceneEdit_m_nActor;
+					SceneEdit_m_nActor = -1;
+					SceneEdit_m_bCommandActive = false;
 				}
 				if (CPad::GetPad(1)->GetCircleJustDown()) {
-					CWorld::Remove(pActors[m_nActor]);
+					World_Remove(SceneEdit_pActors[SceneEdit_m_nActor]);
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene actor without invoking C++ delete.
-					pActors[m_nActor]->~CPed();
+					SceneEdit_pActors[SceneEdit_m_nActor]->~CPed();
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetPedPool(), pActors[m_nActor]);
+					CPool_Delete(Pools_GetPedPool(), SceneEdit_pActors[SceneEdit_m_nActor]);
 					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
-					pActors[m_nActor] = nil;
-					m_nActor = -1;
-					m_bCommandActive = false;
+					SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+					SceneEdit_m_nActor = -1;
+					SceneEdit_m_bCommandActive = false;
 				}
 			}
 			else {
-				m_nPedmodelId = mi;
-				if (pActors[m_nActor]) {
-					CWorld::Remove(pActors[m_nActor]);
+				SceneEdit_m_nPedmodelId = mi;
+				if (SceneEdit_pActors[SceneEdit_m_nActor]) {
+					World_Remove(SceneEdit_pActors[SceneEdit_m_nActor]);
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene actor without invoking C++ delete.
-					pActors[m_nActor]->~CPed();
+					SceneEdit_pActors[SceneEdit_m_nActor]->~CPed();
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetPedPool(), pActors[m_nActor]);
+					CPool_Delete(Pools_GetPedPool(), SceneEdit_pActors[SceneEdit_m_nActor]);
 					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
-				pActors[m_nActor] = nil;
-				m_nActor = -1;
+				SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+				SceneEdit_m_nActor = -1;
 			}
 		}
 		break;
 	case MOVIE_MOVE_ACTOR:
-		SelectActor();
-		if (m_bCommandActive)
+		SceneEdit_SelectActor();
+		if (SceneEdit_m_bCommandActive)
 			break;
-		pActors[m_nActor]->SetPosition(m_vecCurrentPosition);
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetPosition(SceneEdit_m_vecCurrentPosition);
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			m_bCommandActive = false;
+			SceneEdit_m_bCommandActive = false;
 #ifndef FIX_BUGS // why? it crashes, also makes no sense
-			pActors[m_nActor] = nil;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
 #endif
-			SelectActor();
+			SceneEdit_SelectActor();
 		}
 		break;
 	case MOVIE_SELECT_ACTOR:
-		SelectActor();
+		SceneEdit_SelectActor();
 		break;
 	case MOVIE_DELETE_ACTOR:
-		SelectActor();
-		if (m_bActorSelected) {
-			CPopulation::RemovePed(pActors[m_nActor]);
-			m_nCurrentActor = 0;
-			--m_nNumActors;
+		SceneEdit_SelectActor();
+		if (SceneEdit_m_bActorSelected) {
+			Population_RemovePed(SceneEdit_pActors[SceneEdit_m_nActor]);
+			SceneEdit_m_nCurrentActor = 0;
+			--SceneEdit_m_nNumActors;
 #ifdef FIX_BUGS
-			pActors[m_nActor] = nil;
-			m_nActor = -1;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
 #else
-			m_nActor = -1;
-			pActors[m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
 #endif
-			SelectActor();
-			m_bCommandActive = false;
+			SceneEdit_SelectActor();
+			SceneEdit_m_bCommandActive = false;
 		}
 		else if (CPad::GetPad(1)->GetCircleJustDown()) {
-			m_nActor = -1;
-			m_bCommandActive = false;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_NEW_VEHICLE:
-		if (m_nVehicle == -1) {
-			if (m_nNumVehicles == NUM_VEHICLES_IN_MOVIE)
+		if (SceneEdit_m_nVehicle == -1) {
+			if (SceneEdit_m_nNumVehicles == NUM_VEHICLES_IN_MOVIE)
 				break;
-			if (!Streaming_HasModelLoaded(m_nVehiclemodelId)) { // rouz edit (ChatGPT)
-				Streaming_RequestModel(m_nVehiclemodelId, 0); // rouz edit (ChatGPT)
+			if (!Streaming_HasModelLoaded(SceneEdit_m_nVehiclemodelId)) { // rouz edit (ChatGPT)
+				Streaming_RequestModel(SceneEdit_m_nVehiclemodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-				CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
+				Streaming_LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
 				break;
 			}
@@ -521,345 +521,345 @@ void CSceneEdit::ProcessCommand(void)
 			// Allocate the scene vehicle without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CVehicle* pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			CVehicle* pVehicle = ((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 			//- rouz edit (ChatGPT)
 			assert(pVehicle);
-			std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nVehiclemodelId, MISSION_VEHICLE);
+			std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, SceneEdit_m_nVehiclemodelId, MISSION_VEHICLE);
 //- rouz edit (ChatGPT)
 			pVehicle->SetStatus(STATUS_PHYSICS);
-			pVehicle->SetPosition(m_vecCurrentPosition);
+			pVehicle->SetPosition(SceneEdit_m_vecCurrentPosition);
 			pVehicle->SetOrientation(0.0f, 0.0f, 0.0f);
-			CWorld::Add(pVehicle);
+			World_Add(pVehicle);
 			pVehicle->bUsesCollision = false;
 			pVehicle->bAffectedByGravity = false;
 			for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++) {
-				if (pVehicles[i] == nil) {
-					m_nVehicle = i;
-					pVehicles[i] = pVehicle;
+				if (SceneEdit_pVehicles[i] == nil) {
+					SceneEdit_m_nVehicle = i;
+					SceneEdit_pVehicles[i] = pVehicle;
 					break;
 				}
 			}
 		}
 		else {
-			pVehicles[m_nVehicle]->SetPosition(m_vecCurrentPosition);
-			pVehicles[m_nVehicle]->SetOrientation(0.0f, 0.0f, 0.0f);
-			int32 mi = m_nVehiclemodelId;
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle]->SetPosition(SceneEdit_m_vecCurrentPosition);
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle]->SetOrientation(0.0f, 0.0f, 0.0f);
+			int32 mi = SceneEdit_m_nVehiclemodelId;
 			if (CPad::GetPad(1)->GetLeftShoulder1JustDown())
-				mi = NextValidModelId(m_nVehiclemodelId, -1);
+				mi = NextValidModelId(SceneEdit_m_nVehiclemodelId, -1);
 			else if (CPad::GetPad(1)->GetRightShoulder1JustDown())
-				mi = NextValidModelId(m_nVehiclemodelId, 1);
-			if (mi == m_nVehiclemodelId) {
+				mi = NextValidModelId(SceneEdit_m_nVehiclemodelId, 1);
+			if (mi == SceneEdit_m_nVehiclemodelId) {
 				if (CPad::GetPad(1)->GetTriangleJustDown()) {
-					pVehicles[m_nVehicle]->bUsesCollision = true;
-					pVehicles[m_nVehicle]->bAffectedByGravity = true;
-					++m_nNumVehicles;
-					Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_NEW_VEHICLE;
-					Movie[m_nNumMovieCommands].m_vecPosition = m_vecCurrentPosition;
-					Movie[m_nNumMovieCommands].m_nModelIndex = m_nVehiclemodelId;
-					Movie[m_nNumMovieCommands++].m_nVehicleId = m_nVehicle;
-					m_nVehicle = -1;
-					m_bCommandActive = false;
+					SceneEdit_pVehicles[SceneEdit_m_nVehicle]->bUsesCollision = true;
+					SceneEdit_pVehicles[SceneEdit_m_nVehicle]->bAffectedByGravity = true;
+					++SceneEdit_m_nNumVehicles;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_NEW_VEHICLE;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_vecPosition = SceneEdit_m_vecCurrentPosition;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nModelIndex = SceneEdit_m_nVehiclemodelId;
+					SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nVehicleId = SceneEdit_m_nVehicle;
+					SceneEdit_m_nVehicle = -1;
+					SceneEdit_m_bCommandActive = false;
 				}
 				if (CPad::GetPad(1)->GetCircleJustDown()) {
-					CWorld::Remove(pVehicles[m_nVehicle]);
+					World_Remove(SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene vehicle without invoking C++ delete.
-					pVehicles[m_nVehicle]->~CVehicle();
+					SceneEdit_pVehicles[SceneEdit_m_nVehicle]->~CVehicle();
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetVehiclePool(), pVehicles[m_nVehicle]);
+					CPool_Delete(Pools_GetVehiclePool(), SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
-					pVehicles[m_nVehicle] = nil;
-					m_nVehicle = -1;
-					m_bCommandActive = false;
+					SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
+					SceneEdit_m_nVehicle = -1;
+					SceneEdit_m_bCommandActive = false;
 				}
 			}
 			else {
-				m_nVehiclemodelId = mi;
-				if (pVehicles[m_nVehicle]) {
-					CWorld::Remove(pVehicles[m_nVehicle]);
+				SceneEdit_m_nVehiclemodelId = mi;
+				if (SceneEdit_pVehicles[SceneEdit_m_nVehicle]) {
+					World_Remove(SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene vehicle without invoking C++ delete.
-					pVehicles[m_nVehicle]->~CVehicle();
+					SceneEdit_pVehicles[SceneEdit_m_nVehicle]->~CVehicle();
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetVehiclePool(), pVehicles[m_nVehicle]);
+					CPool_Delete(Pools_GetVehiclePool(), SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
-				pVehicles[m_nVehicle] = nil;
-				m_nVehicle = -1;
+				SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
+				SceneEdit_m_nVehicle = -1;
 			}
 		}
 		break;
 	case MOVIE_MOVE_VEHICLE:
-		SelectVehicle();
-		if (m_bCommandActive)
+		SceneEdit_SelectVehicle();
+		if (SceneEdit_m_bCommandActive)
 			break;
-		pVehicles[m_nVehicle]->SetPosition(m_vecCurrentPosition);
+		SceneEdit_pVehicles[SceneEdit_m_nVehicle]->SetPosition(SceneEdit_m_vecCurrentPosition);
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			m_bCommandActive = false;
+			SceneEdit_m_bCommandActive = false;
 #ifndef FIX_BUGS // again, why? works wrong
-			pVehicles[m_nVehicle] = nil;
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
 #endif
-			m_nVehicle = -1;
+			SceneEdit_m_nVehicle = -1;
 		}
 		break;
 	case MOVIE_SELECT_VEHICLE:
-		SelectVehicle();
+		SceneEdit_SelectVehicle();
 		break;
 	case MOVIE_DELETE_VEHICLE:
-		SelectVehicle();
-		if (m_bVehicleSelected) {
-			CWorld::Remove(pVehicles[m_nVehicle]);
+		SceneEdit_SelectVehicle();
+		if (SceneEdit_m_bVehicleSelected) {
+			World_Remove(SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the selected scene vehicle without invoking C++ delete.
-			pVehicles[m_nVehicle]->~CVehicle();
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle]->~CVehicle();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicles[m_nVehicle]);
+			CPool_Delete(Pools_GetVehiclePool(), SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
-			m_nCurrentVehicle = 0;
-			--m_nNumVehicles;
-			pVehicles[m_nVehicle] = nil;
-			m_nVehicle = -1;
-			SelectVehicle();
-			m_bCommandActive = false;
+			SceneEdit_m_nCurrentVehicle = 0;
+			--SceneEdit_m_nNumVehicles;
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
+			SceneEdit_m_nVehicle = -1;
+			SceneEdit_SelectVehicle();
+			SceneEdit_m_bCommandActive = false;
 		}
 		else if (CPad::GetPad(1)->GetCircleJustDown()) {
-			pVehicles[m_nVehicle] = nil;
-			m_nVehicle = -1;
-			m_bCommandActive = false;
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
+			SceneEdit_m_nVehicle = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_GIVE_WEAPON:
-		if (m_bActorSelected) {
-			if (SelectWeapon()) {
-				m_bCommandActive = false;
-				Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_GIVE_WEAPON;
-				Movie[m_nNumMovieCommands].m_nActorId = m_nActor;
-				Movie[m_nNumMovieCommands++].m_nModelIndex = m_nWeaponType;
+		if (SceneEdit_m_bActorSelected) {
+			if (SceneEdit_SelectWeapon()) {
+				SceneEdit_m_bCommandActive = false;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_GIVE_WEAPON;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId = SceneEdit_m_nActor;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nModelIndex = SceneEdit_m_nWeaponType;
 			}
 		}
 		else {
-			SelectActor();
-			m_bCommandActive = true;
+			SceneEdit_SelectActor();
+			SceneEdit_m_bCommandActive = true;
 		}
 		break;
 	case MOVIE_GOTO:
 	case MOVIE_GOTO_WAIT:
-		if (!m_bActorSelected) {
-			m_bDrawGotoArrow = true;
-			SelectActor();
-			if (m_nActor == -1)
-				m_bCommandActive = true;
+		if (!SceneEdit_m_bActorSelected) {
+			SceneEdit_m_bDrawGotoArrow = true;
+			SceneEdit_SelectActor();
+			if (SceneEdit_m_nActor == -1)
+				SceneEdit_m_bCommandActive = true;
 		}
 		else {
-			m_vecGotoPosition = m_vecCurrentPosition;
+			SceneEdit_m_vecGotoPosition = SceneEdit_m_vecCurrentPosition;
 			if (CPad::GetPad(1)->GetTriangleJustDown()) {
-				if (pActors[m_nActor]->bInVehicle) {
-					if (CCarCtrl::JoinCarWithRoadSystemGotoCoors(pActors[m_nActor]->m_pMyVehicle, m_vecGotoPosition, false))
-						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS_STRAIGHT;
+				if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle) {
+					if (CarCtrl_JoinCarWithRoadSystemGotoCoors(SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle, SceneEdit_m_vecGotoPosition, false))
+						SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS_STRAIGHT;
 					else
-						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
-					pActors[m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
-					pActors[m_nActor]->m_pMyVehicle->bEngineOn = true;
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
-					TheCamera.TakeControl(pActors[m_nActor]->m_pMyVehicle, CCam::MODE_BEHINDCAR, JUMP_CUT, CAMCONTROL_SCRIPT);
+						SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->bEngineOn = true;
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(16, SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
+					TheCamera.TakeControl(SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle, CCam::MODE_BEHINDCAR, JUMP_CUT, CAMCONTROL_SCRIPT);
 				}
 				else {
-					pActors[m_nActor]->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, m_vecGotoPosition);
-					TheCamera.TakeControl(pActors[m_nActor], CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
+					SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, SceneEdit_m_vecGotoPosition);
+					TheCamera.TakeControl(SceneEdit_pActors[SceneEdit_m_nActor], CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
 				}
-				m_bDrawGotoArrow = false;
-				Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_GOTO;
-				Movie[m_nNumMovieCommands].m_nActorId = m_nActor;
-				Movie[m_nNumMovieCommands++].m_vecPosition = m_vecGotoPosition;
+				SceneEdit_m_bDrawGotoArrow = false;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_GOTO;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId = SceneEdit_m_nActor;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_vecPosition = SceneEdit_m_vecGotoPosition;
 			}
-			if (!m_bDrawGotoArrow) {
-				if (pActors[m_nActor]->bInVehicle && pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission == MISSION_NONE ||
-					!pActors[m_nActor]->bInVehicle && pActors[m_nActor]->m_objective == OBJECTIVE_NONE) {
-					if (pActors[m_nActor]) // if there is something that requires this check the least, it's this one
-						m_vecCamHeading = TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity->GetPosition() - TheCamera.Cams[TheCamera.ActiveCam].Source;
-					m_bCommandActive = false;
+			if (!SceneEdit_m_bDrawGotoArrow) {
+				if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle && SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission == MISSION_NONE ||
+					!SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle && SceneEdit_pActors[SceneEdit_m_nActor]->m_objective == OBJECTIVE_NONE) {
+					if (SceneEdit_pActors[SceneEdit_m_nActor]) // if there is something that requires this check the least, it's this one
+						SceneEdit_m_vecCamHeading = TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity->GetPosition() - TheCamera.Cams[TheCamera.ActiveCam].Source;
+					SceneEdit_m_bCommandActive = false;
 					TheCamera.Cams[TheCamera.ActiveCam].Mode = CCam::MODE_FIGHT_CAM_RUNABOUT;
-					m_vecCurrentPosition = pActors[m_nActor]->GetPosition();
-					pActors[m_nActor]->SetObjective(OBJECTIVE_NONE);
-					if (pActors[m_nActor]->bInVehicle)
-						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_NONE;
+					SceneEdit_m_vecCurrentPosition = SceneEdit_pActors[SceneEdit_m_nActor]->GetPosition();
+					SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_NONE);
+					if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle)
+						SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_NONE;
 				}
 			}
 			if (CPad::GetPad(1)->GetCircleJustDown()) {
-				pActors[m_nActor] = nil;
-				m_nActor = -1;
-				m_bCommandActive = false;
+				SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+				SceneEdit_m_nActor = -1;
+				SceneEdit_m_bCommandActive = false;
 			}
 		}
 		break;
 	case MOVIE_GET_IN_CAR:
-		if (m_bActorSelected)
-			SelectVehicle();
+		if (SceneEdit_m_bActorSelected)
+			SceneEdit_SelectVehicle();
 		else {
-			SelectActor();
-			if (m_nActor != -1)
-				m_bCommandActive = true;
+			SceneEdit_SelectActor();
+			if (SceneEdit_m_nActor != -1)
+				SceneEdit_m_bCommandActive = true;
 		}
-		if (m_bVehicleSelected) {
-			pActors[m_nActor]->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, pVehicles[m_nVehicle]);
-			Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_GET_IN_CAR;
-			Movie[m_nNumMovieCommands].m_nActorId = m_nActor;
-			Movie[m_nNumMovieCommands++].m_nVehicleId = m_nVehicle;
-			m_nVehicle = -1;
-			m_bCommandActive = false;
+		if (SceneEdit_m_bVehicleSelected) {
+			SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_GET_IN_CAR;
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId = SceneEdit_m_nActor;
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nVehicleId = SceneEdit_m_nVehicle;
+			SceneEdit_m_nVehicle = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		if (CPad::GetPad(1)->GetCircleJustDown()) {
-			pVehicles[m_nVehicle] = nil;
-			m_nVehicle = -1;
-			pActors[m_nActor] = nil;
-			m_nActor = -1;
-			m_bCommandActive = false;
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
+			SceneEdit_m_nVehicle = -1;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_GET_OUT_CAR:
-		SelectActor();
-		if (m_bActorSelected) {
-			if (pActors[m_nActor]->bInVehicle) {
-				pActors[m_nActor]->SetObjective(OBJECTIVE_LEAVE_CAR);
-				Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_GET_OUT_CAR;
-				Movie[m_nNumMovieCommands++].m_nActorId = m_nActor;
+		SceneEdit_SelectActor();
+		if (SceneEdit_m_bActorSelected) {
+			if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle) {
+				SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_LEAVE_CAR);
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_GET_OUT_CAR;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nActorId = SceneEdit_m_nActor;
 			}
-			m_nActor = -1;
-			m_bCommandActive = false;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		if (CPad::GetPad(1)->GetCircleJustDown()) {
-			pVehicles[m_nVehicle] = nil;
-			m_nVehicle = -1;
-			pActors[m_nActor] = nil;
-			m_nActor = -1;
-			m_bCommandActive = false;
+			SceneEdit_pVehicles[SceneEdit_m_nVehicle] = nil;
+			SceneEdit_m_nVehicle = -1;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_KILL:
-		if (!m_bActorSelected) {
-			SelectActor();
-			m_bCommandActive = true;
+		if (!SceneEdit_m_bActorSelected) {
+			SceneEdit_SelectActor();
+			SceneEdit_m_bCommandActive = true;
 		}
-		else if (!m_bActor2Selected) {
-			SelectActor2();
-			if (m_bActorSelected && m_bActor2Selected && m_nActor != -1 && m_nActor2 != -1 && m_nActor != m_nActor2) {
-				pActors[m_nActor]->SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, pActors[m_nActor2]);
-				Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_KILL;
-				Movie[m_nNumMovieCommands].m_nActorId = m_nActor;
-				Movie[m_nNumMovieCommands++].m_nActor2Id = m_nActor2;
-				m_bCommandActive = false;
+		else if (!SceneEdit_m_bActor2Selected) {
+			SceneEdit_SelectActor2();
+			if (SceneEdit_m_bActorSelected && SceneEdit_m_bActor2Selected && SceneEdit_m_nActor != -1 && SceneEdit_m_nActor2 != -1 && SceneEdit_m_nActor != SceneEdit_m_nActor2) {
+				SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, SceneEdit_pActors[SceneEdit_m_nActor2]);
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_KILL;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId = SceneEdit_m_nActor;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nActor2Id = SceneEdit_m_nActor2;
+				SceneEdit_m_bCommandActive = false;
 			}
 		}
 		if (CPad::GetPad(1)->GetCircleJustDown()) {
-			pActors[m_nActor] = nil;
-			m_nActor = -1;
-			pActors[m_nActor2] = nil;
-			m_nActor2 = -1;
-			m_bCommandActive = false;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_pActors[SceneEdit_m_nActor2] = nil;
+			SceneEdit_m_nActor2 = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_FLEE:
-		if (!m_bActorSelected) {
-			SelectActor();
-			m_bCommandActive = true;
+		if (!SceneEdit_m_bActorSelected) {
+			SceneEdit_SelectActor();
+			SceneEdit_m_bCommandActive = true;
 		}
-		else if (!m_bActor2Selected) {
-			SelectActor2();
-			if (m_bActorSelected && m_bActor2Selected && m_nActor != -1 && m_nActor2 != -1 && m_nActor != m_nActor2) {
-				pActors[m_nActor]->SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_ALWAYS, pActors[m_nActor2]);
-				Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_FLEE;
-				Movie[m_nNumMovieCommands].m_nActorId = m_nActor;
-				Movie[m_nNumMovieCommands++].m_nActor2Id = m_nActor2;
-				m_bCommandActive = false;
+		else if (!SceneEdit_m_bActor2Selected) {
+			SceneEdit_SelectActor2();
+			if (SceneEdit_m_bActorSelected && SceneEdit_m_bActor2Selected && SceneEdit_m_nActor != -1 && SceneEdit_m_nActor2 != -1 && SceneEdit_m_nActor != SceneEdit_m_nActor2) {
+				SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_ALWAYS, SceneEdit_pActors[SceneEdit_m_nActor2]);
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_FLEE;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId = SceneEdit_m_nActor;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nActor2Id = SceneEdit_m_nActor2;
+				SceneEdit_m_bCommandActive = false;
 			}
 		}
 		if (CPad::GetPad(1)->GetCircleJustDown()) {
-			pActors[m_nActor] = nil;
-			m_nActor = -1;
-			pActors[m_nActor2] = nil;
-			m_nActor2 = -1;
-			m_bCommandActive = false;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_pActors[SceneEdit_m_nActor2] = nil;
+			SceneEdit_m_nActor2 = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_WAIT:
-		SelectActor();
-		if (m_bActorSelected) {
-			pActors[m_nActor]->SetObjective(OBJECTIVE_WAIT_ON_FOOT);
-			Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_WAIT;
-			Movie[m_nNumMovieCommands++].m_nActorId = m_nActor;
+		SceneEdit_SelectActor();
+		if (SceneEdit_m_bActorSelected) {
+			SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_WAIT_ON_FOOT);
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_WAIT;
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nActorId = SceneEdit_m_nActor;
 		}
 		if (CPad::GetPad(1)->GetCircleJustDown()) {
-			pActors[m_nActor] = nil;
-			m_nActor = -1;
-			m_bCommandActive = false;
+			SceneEdit_pActors[SceneEdit_m_nActor] = nil;
+			SceneEdit_m_nActor = -1;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_POSITION_CAMERA:
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_POSITION_CAMERA;
-			Movie[m_nNumMovieCommands].m_vecPosition = TheCamera.Cams[TheCamera.ActiveCam].Source;
-			Movie[m_nNumMovieCommands++].m_vecCamera = m_vecCamHeading;
-			m_bCommandActive = false;
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_POSITION_CAMERA;
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_vecPosition = TheCamera.Cams[TheCamera.ActiveCam].Source;
+			SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_vecCamera = SceneEdit_m_vecCamHeading;
+			SceneEdit_m_bCommandActive = false;
 		}
 		if (CPad::GetPad(1)->GetCircleJustDown()) {
-			m_bCommandActive = false;
+			SceneEdit_m_bCommandActive = false;
 		}
 		break;
 	case MOVIE_SET_CAMERA_TARGET:
-		if (!m_bActorSelected) {
-			SelectActor();
-			m_bCommandActive = true;
+		if (!SceneEdit_m_bActorSelected) {
+			SceneEdit_SelectActor();
+			SceneEdit_m_bCommandActive = true;
 		}
 		else {
-			TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity = pActors[m_nActor];
+			TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity = SceneEdit_pActors[SceneEdit_m_nActor];
 			if (CPad::GetPad(1)->GetTriangleJustDown()) {
-				Movie[m_nNumMovieCommands].m_nCommandId = MOVIE_SET_CAMERA_TARGET;
-				Movie[m_nNumMovieCommands++].m_nActorId = m_nActor;
-				m_bCommandActive = false;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nCommandId = MOVIE_SET_CAMERA_TARGET;
+				SceneEdit_Movie[SceneEdit_m_nNumMovieCommands++].m_nActorId = SceneEdit_m_nActor;
+				SceneEdit_m_bCommandActive = false;
 			}
 		}
 		break;
 	case MOVIE_SELECT_CAMERA_MODE:
-		m_bCommandActive = false;
+		SceneEdit_m_bCommandActive = false;
 		break;
 	case MOVIE_SAVE_MOVIE:
-		SaveMovie();
+		SceneEdit_SaveMovie();
 		break;
 	case MOVIE_LOAD_MOVIE:
-		LoadMovie();
+		SceneEdit_LoadMovie();
 		break;
 	case MOVIE_PLAY_MOVIE:
-		InitPlayback();
-		LoadMovie();
-		m_bRecording = false;
+		SceneEdit_InitPlayback();
+		SceneEdit_LoadMovie();
+		SceneEdit_m_bRecording = false;
 		break;
 	case MOVIE_END:
-		m_bRecording = false;
+		SceneEdit_m_bRecording = false;
 		break;
 	default:
 		assert(0);
 	}
 }
 
-void CSceneEdit::PlayBack(void)
+void SceneEdit_PlayBack(void)
 {
-	m_nCurrentCommand = Movie[m_nCurrentMovieCommand].m_nCommandId;
-	if (m_nCurrentMovieCommand >= m_nNumMovieCommands) {
+	SceneEdit_m_nCurrentCommand = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nCommandId;
+	if (SceneEdit_m_nCurrentMovieCommand >= SceneEdit_m_nNumMovieCommands) {
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			m_nCurrentCommand = MOVIE_DO_NOTHING;
-			m_bRecording = true;
-			ReInitialise();
+			SceneEdit_m_nCurrentCommand = MOVIE_DO_NOTHING;
+			SceneEdit_m_bRecording = true;
+			SceneEdit_ReInitialise();
 		}
 		return;
 	}
-	switch (m_nCurrentCommand) {
+	switch (SceneEdit_m_nCurrentCommand) {
 	case MOVIE_DO_NOTHING:
 	case MOVIE_MOVE_ACTOR:
 	case MOVIE_SELECT_ACTOR:
@@ -870,12 +870,12 @@ void CSceneEdit::PlayBack(void)
 		break;
 	case MOVIE_NEW_ACTOR:
 	{
-		m_nPedmodelId = Movie[m_nCurrentMovieCommand].m_nModelIndex;
-		m_vecCurrentPosition = Movie[m_nCurrentMovieCommand].m_vecPosition;
-		if (!Streaming_HasModelLoaded(m_nPedmodelId)) { // rouz edit (ChatGPT)
-			Streaming_RequestModel(m_nPedmodelId, 0); // rouz edit (ChatGPT)
+		SceneEdit_m_nPedmodelId = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nModelIndex;
+		SceneEdit_m_vecCurrentPosition = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_vecPosition;
+		if (!Streaming_HasModelLoaded(SceneEdit_m_nPedmodelId)) { // rouz edit (ChatGPT)
+			Streaming_RequestModel(SceneEdit_m_nPedmodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-			CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
+			Streaming_LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
 			break;
 		}
@@ -883,34 +883,34 @@ void CSceneEdit::PlayBack(void)
 		// Allocate the replayed scene actor without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_New(CPools::GetPedPool()));
+		CPed* pPed = ((CPed*)CPool_New(Pools_GetPedPool()));
 		//- rouz edit (ChatGPT)
 		assert(pPed);
-		std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, m_nPedmodelId);
+		std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, SceneEdit_m_nPedmodelId);
 //- rouz edit (ChatGPT)
 		pPed->CharCreatedBy = MISSION_CHAR;
-		CWorld::Add(pPed);
-		pPed->SetPosition(m_vecCurrentPosition);
+		World_Add(pPed);
+		pPed->SetPosition(SceneEdit_m_vecCurrentPosition);
 		pPed->SetOrientation(0.0f, 0.0f, 0.0f);
 		for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-			if (pActors[i] == nil) {
-				m_nActor = i;
-				pActors[i] = pPed;
+			if (SceneEdit_pActors[i] == nil) {
+				SceneEdit_m_nActor = i;
+				SceneEdit_pActors[i] = pPed;
 				break;
 			}
 		}
-		m_nNumActors++;
-		m_nCurrentMovieCommand++;
+		SceneEdit_m_nNumActors++;
+		SceneEdit_m_nCurrentMovieCommand++;
 		break;
 	}
 	case MOVIE_NEW_VEHICLE:
 	{
-		m_nVehiclemodelId = Movie[m_nCurrentMovieCommand].m_nModelIndex;
-		m_vecCurrentPosition = Movie[m_nCurrentMovieCommand].m_vecPosition;
-		if (!Streaming_HasModelLoaded(m_nVehiclemodelId)) { // rouz edit (ChatGPT)
-			Streaming_RequestModel(m_nVehiclemodelId, 0); // rouz edit (ChatGPT)
+		SceneEdit_m_nVehiclemodelId = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nModelIndex;
+		SceneEdit_m_vecCurrentPosition = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_vecPosition;
+		if (!Streaming_HasModelLoaded(SceneEdit_m_nVehiclemodelId)) { // rouz edit (ChatGPT)
+			Streaming_RequestModel(SceneEdit_m_nVehiclemodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-			CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
+			Streaming_LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
 			break;
 		}
@@ -918,292 +918,292 @@ void CSceneEdit::PlayBack(void)
 		// Allocate the replayed scene vehicle without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		CVehicle* pVehicle = ((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 		//- rouz edit (ChatGPT)
 		assert(pVehicle);
-		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nVehiclemodelId, MISSION_VEHICLE);
+		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, SceneEdit_m_nVehiclemodelId, MISSION_VEHICLE);
 //- rouz edit (ChatGPT)
 		pVehicle->SetStatus(STATUS_PHYSICS);
-		pVehicle->SetPosition(m_vecCurrentPosition);
+		pVehicle->SetPosition(SceneEdit_m_vecCurrentPosition);
 		pVehicle->SetOrientation(0.0f, 0.0f, 0.0f);
-		CWorld::Add(pVehicle);
+		World_Add(pVehicle);
 		for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++) {
-			if (pVehicles[i] == nil) {
-				m_nVehicle = i;
-				pVehicles[i] = pVehicle;
+			if (SceneEdit_pVehicles[i] == nil) {
+				SceneEdit_m_nVehicle = i;
+				SceneEdit_pVehicles[i] = pVehicle;
 				break;
 			}
 		}
-		m_nNumVehicles++;
-		m_nCurrentMovieCommand++;
+		SceneEdit_m_nNumVehicles++;
+		SceneEdit_m_nCurrentMovieCommand++;
 		break;
 	}
 	case MOVIE_GIVE_WEAPON:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		m_nWeaponType = Movie[m_nCurrentMovieCommand].m_nModelIndex;
-		pActors[m_nActor]->GiveWeapon((eWeaponType)m_nWeaponType, 1000);
-		pActors[m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
-		pActors[m_nActor]->SetCurrentWeapon(m_nWeaponType);
-		m_nCurrentMovieCommand++;
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		SceneEdit_m_nWeaponType = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nModelIndex;
+		SceneEdit_pActors[SceneEdit_m_nActor]->GiveWeapon((eWeaponType)SceneEdit_m_nWeaponType, 1000);
+		SceneEdit_pActors[SceneEdit_m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(SceneEdit_pActors[SceneEdit_m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetCurrentWeapon(SceneEdit_m_nWeaponType);
+		SceneEdit_m_nCurrentMovieCommand++;
 		break;
 	case MOVIE_GOTO:
 	case MOVIE_GOTO_WAIT:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		m_vecGotoPosition = Movie[m_nCurrentMovieCommand].m_vecPosition;
-		if (pActors[m_nActor]->bInVehicle) {
-			if (pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission != MISSION_GOTOCOORDS &&
-				pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission != MISSION_GOTOCOORDS_STRAIGHT) {
-				if ((pActors[m_nActor]->m_pMyVehicle->GetPosition() - m_vecGotoPosition).Magnitude() < 5.0f) {
-					if (CCarCtrl::JoinCarWithRoadSystemGotoCoors(pActors[m_nActor]->m_pMyVehicle, m_vecGotoPosition, false))
-						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS_STRAIGHT;
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		SceneEdit_m_vecGotoPosition = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_vecPosition;
+		if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle) {
+			if (SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission != MISSION_GOTOCOORDS &&
+				SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission != MISSION_GOTOCOORDS_STRAIGHT) {
+				if ((SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->GetPosition() - SceneEdit_m_vecGotoPosition).Magnitude() < 5.0f) {
+					if (CarCtrl_JoinCarWithRoadSystemGotoCoors(SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle, SceneEdit_m_vecGotoPosition, false))
+						SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS_STRAIGHT;
 					else
-						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
-					pActors[m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
-					pActors[m_nActor]->m_pMyVehicle->bEngineOn = true;
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
-					if (m_nCurrentCommand != MOVIE_GOTO_WAIT)
-						++m_nCurrentMovieCommand;
+						SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->bEngineOn = true;
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(16, SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
+					SceneEdit_pActors[SceneEdit_m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
+					if (SceneEdit_m_nCurrentCommand != MOVIE_GOTO_WAIT)
+						++SceneEdit_m_nCurrentMovieCommand;
 				}
 				else
-					++m_nCurrentMovieCommand;
+					++SceneEdit_m_nCurrentMovieCommand;
 			}
 		}
 		else {
-			if (pActors[m_nActor]->m_objective != OBJECTIVE_GOTO_AREA_ON_FOOT) {
-				pActors[m_nActor]->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, m_vecGotoPosition);
-				++m_nCurrentMovieCommand;
+			if (SceneEdit_pActors[SceneEdit_m_nActor]->m_objective != OBJECTIVE_GOTO_AREA_ON_FOOT) {
+				SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, SceneEdit_m_vecGotoPosition);
+				++SceneEdit_m_nCurrentMovieCommand;
 			}
 		}
 		break;
 	case MOVIE_GET_IN_CAR:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		if (!pActors[m_nActor]->bInVehicle){
-			m_nVehicle = Movie[m_nCurrentMovieCommand].m_nVehicleId;
-			pActors[m_nActor]->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, pVehicles[m_nVehicle]);
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		if (!SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle){
+			SceneEdit_m_nVehicle = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nVehicleId;
+			SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, SceneEdit_pVehicles[SceneEdit_m_nVehicle]);
 		}
 		else
-			++m_nCurrentMovieCommand;
+			++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_GET_OUT_CAR:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		if (pActors[m_nActor]->bInVehicle)
-			pActors[m_nActor]->SetObjective(OBJECTIVE_LEAVE_CAR);
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		if (SceneEdit_pActors[SceneEdit_m_nActor]->bInVehicle)
+			SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_LEAVE_CAR);
 		else
-			++m_nCurrentMovieCommand;
+			++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_KILL:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		m_nActor2 = Movie[m_nCurrentMovieCommand].m_nActor2Id;
-		pActors[m_nActor]->SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, pActors[m_nActor2]);
-		if (pActors[m_nActor2]->GetPedState() == PED_DEAD)
-			++m_nCurrentMovieCommand;
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		SceneEdit_m_nActor2 = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActor2Id;
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, SceneEdit_pActors[SceneEdit_m_nActor2]);
+		if (SceneEdit_pActors[SceneEdit_m_nActor2]->GetPedState() == PED_DEAD)
+			++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_FLEE:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		m_nActor2 = Movie[m_nCurrentMovieCommand].m_nActor2Id;
-		pActors[m_nActor]->SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_ALWAYS, pActors[m_nActor2]);
-		++m_nCurrentMovieCommand;
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		SceneEdit_m_nActor2 = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActor2Id;
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_ALWAYS, SceneEdit_pActors[SceneEdit_m_nActor2]);
+		++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_WAIT:
-		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
-		pActors[m_nActor]->SetObjective(OBJECTIVE_WAIT_ON_FOOT);
-		++m_nCurrentMovieCommand;
+		SceneEdit_m_nActor = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_nActorId;
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetObjective(OBJECTIVE_WAIT_ON_FOOT);
+		++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_POSITION_CAMERA:
-		TheCamera.Cams[TheCamera.ActiveCam].Source = Movie[m_nCurrentMovieCommand].m_vecPosition;
-		m_vecCamHeading = Movie[m_nCurrentMovieCommand].m_vecCamera;
-		TheCamera.Cams[TheCamera.ActiveCam].Front = m_vecCamHeading;
-		++m_nCurrentMovieCommand;
+		TheCamera.Cams[TheCamera.ActiveCam].Source = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_vecPosition;
+		SceneEdit_m_vecCamHeading = SceneEdit_Movie[SceneEdit_m_nCurrentMovieCommand].m_vecCamera;
+		TheCamera.Cams[TheCamera.ActiveCam].Front = SceneEdit_m_vecCamHeading;
+		++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_SET_CAMERA_TARGET:
-		m_bCameraFollowActor = true;
-		TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity = pActors[Movie[m_nNumMovieCommands].m_nActorId];
-		TheCamera.pTargetEntity = pActors[Movie[m_nNumMovieCommands].m_nActorId];
+		SceneEdit_m_bCameraFollowActor = true;
+		TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity = SceneEdit_pActors[SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId];
+		TheCamera.pTargetEntity = SceneEdit_pActors[SceneEdit_Movie[SceneEdit_m_nNumMovieCommands].m_nActorId];
 		TheCamera.m_bLookingAtPlayer = false;
-		++m_nCurrentMovieCommand;
+		++SceneEdit_m_nCurrentMovieCommand;
 		break;
 	case MOVIE_SELECT_CAMERA_MODE:
-		m_bCommandActive = false; // this is wrong
+		SceneEdit_m_bCommandActive = false; // this is wrong
 		break;
 	}
 }
 
-void CSceneEdit::ClearForNewCommand(void)
+void SceneEdit_ClearForNewCommand(void)
 {
-	m_nActor = -1;
-	m_nActor2 = -1;
-	m_nVehicle = -1;
-	m_bActorSelected = false;
-	m_bActor2Selected = false;
-	m_bVehicleSelected = false;
-	m_bDrawGotoArrow = false;
+	SceneEdit_m_nActor = -1;
+	SceneEdit_m_nActor2 = -1;
+	SceneEdit_m_nVehicle = -1;
+	SceneEdit_m_bActorSelected = false;
+	SceneEdit_m_bActor2Selected = false;
+	SceneEdit_m_bVehicleSelected = false;
+	SceneEdit_m_bDrawGotoArrow = false;
 }
-void CSceneEdit::SelectActor(void)
+void SceneEdit_SelectActor(void)
 {
-	m_bActorSelected = false;
-	if (m_nActor != -1) {
+	SceneEdit_m_bActorSelected = false;
+	if (SceneEdit_m_nActor != -1) {
 		if (CPad::GetPad(1)->GetLeftShoulder1JustDown()) {
 			CPed* pPed;
 			do {
-				if (--m_nActor < 0)
-					m_nActor = NUM_ACTORS_IN_MOVIE - 1;
-				pPed = pActors[m_nActor];
+				if (--SceneEdit_m_nActor < 0)
+					SceneEdit_m_nActor = NUM_ACTORS_IN_MOVIE - 1;
+				pPed = SceneEdit_pActors[SceneEdit_m_nActor];
 			} while (pPed == nil);
-			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - m_vecCamHeading;
+			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - SceneEdit_m_vecCamHeading;
 		}
 		else if (CPad::GetPad(1)->GetRightShoulder1JustDown()) {
 			CPed* pPed;
 			do {
-				if (++m_nActor == NUM_ACTORS_IN_MOVIE)
-					m_nActor = 0;
-				pPed = pActors[m_nActor];
+				if (++SceneEdit_m_nActor == NUM_ACTORS_IN_MOVIE)
+					SceneEdit_m_nActor = 0;
+				pPed = SceneEdit_pActors[SceneEdit_m_nActor];
 			} while (pPed == nil);
-			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - m_vecCamHeading;
+			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - SceneEdit_m_vecCamHeading;
 		}
-		m_vecCurrentPosition = pActors[m_nActor]->GetPosition();
+		SceneEdit_m_vecCurrentPosition = SceneEdit_pActors[SceneEdit_m_nActor]->GetPosition();
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			m_bActorSelected = true;
-			m_bCommandActive = false;
+			SceneEdit_m_bActorSelected = true;
+			SceneEdit_m_bCommandActive = false;
 		}
 		else if (CPad::GetPad(1)->GetCircleJustDown()) {
-			m_nActor = -1;
+			SceneEdit_m_nActor = -1;
 		}
 	}
-	else if (m_nNumActors != 0) {
+	else if (SceneEdit_m_nNumActors != 0) {
 		for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-			if (pActors[i] != nil) {
-				m_nActor = i;
+			if (SceneEdit_pActors[i] != nil) {
+				SceneEdit_m_nActor = i;
 				break;
 			}
 		}
-		TheCamera.Cams[TheCamera.ActiveCam].Source = pActors[m_nActor]->GetPosition() - m_vecCamHeading;
-		if (m_nNumActors == 1) {
-			m_bActorSelected = true;
-			m_bCommandActive = false;
+		TheCamera.Cams[TheCamera.ActiveCam].Source = SceneEdit_pActors[SceneEdit_m_nActor]->GetPosition() - SceneEdit_m_vecCamHeading;
+		if (SceneEdit_m_nNumActors == 1) {
+			SceneEdit_m_bActorSelected = true;
+			SceneEdit_m_bCommandActive = false;
 		}
 	}
 	else {
-		m_bCommandActive = false;
+		SceneEdit_m_bCommandActive = false;
 	}
 }
 
-void CSceneEdit::SelectActor2(void)
+void SceneEdit_SelectActor2(void)
 {
-	m_bActor2Selected = false;
-	if (m_nNumActors <= 1) {
-		m_bCommandActive = false;
+	SceneEdit_m_bActor2Selected = false;
+	if (SceneEdit_m_nNumActors <= 1) {
+		SceneEdit_m_bCommandActive = false;
 		return;
 	}
-	if (m_nActor2 != -1) {
+	if (SceneEdit_m_nActor2 != -1) {
 		if (CPad::GetPad(1)->GetLeftShoulder1JustDown()) {
 			CPed* pPed;
 			do {
-				if (--m_nActor2 < 0)
-					m_nActor2 = NUM_ACTORS_IN_MOVIE - 1;
-				pPed = pActors[m_nActor2];
-			} while (pPed == nil || pPed == pActors[m_nActor]);
-			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - m_vecCamHeading;
+				if (--SceneEdit_m_nActor2 < 0)
+					SceneEdit_m_nActor2 = NUM_ACTORS_IN_MOVIE - 1;
+				pPed = SceneEdit_pActors[SceneEdit_m_nActor2];
+			} while (pPed == nil || pPed == SceneEdit_pActors[SceneEdit_m_nActor]);
+			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - SceneEdit_m_vecCamHeading;
 		}
 		else if (CPad::GetPad(1)->GetRightShoulder1JustDown()) {
 			CPed* pPed;
 			do {
-				if (++m_nActor2 == NUM_ACTORS_IN_MOVIE)
-					m_nActor2 = 0;
-				pPed = pActors[m_nActor2];
-			} while (pPed == nil || pPed == pActors[m_nActor]);
-			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - m_vecCamHeading;
+				if (++SceneEdit_m_nActor2 == NUM_ACTORS_IN_MOVIE)
+					SceneEdit_m_nActor2 = 0;
+				pPed = SceneEdit_pActors[SceneEdit_m_nActor2];
+			} while (pPed == nil || pPed == SceneEdit_pActors[SceneEdit_m_nActor]);
+			TheCamera.Cams[TheCamera.ActiveCam].Source = pPed->GetPosition() - SceneEdit_m_vecCamHeading;
 		}
-		m_vecCurrentPosition = pActors[m_nActor2]->GetPosition();
+		SceneEdit_m_vecCurrentPosition = SceneEdit_pActors[SceneEdit_m_nActor2]->GetPosition();
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			m_bActor2Selected = true;
-			m_bCommandActive = false;
+			SceneEdit_m_bActor2Selected = true;
+			SceneEdit_m_bCommandActive = false;
 		}
 		else if (CPad::GetPad(1)->GetCircleJustDown()) {
-			m_nActor2 = -1;
+			SceneEdit_m_nActor2 = -1;
 		}
 	}
 	else {
 		for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-			if (pActors[i] != nil && pActors[m_nActor] != pActors[i] ) {
-				m_nActor2 = i;
+			if (SceneEdit_pActors[i] != nil && SceneEdit_pActors[SceneEdit_m_nActor] != SceneEdit_pActors[i] ) {
+				SceneEdit_m_nActor2 = i;
 				break;
 			}
 		}
-		TheCamera.Cams[TheCamera.ActiveCam].Source = pActors[m_nActor2]->GetPosition() - m_vecCamHeading;
+		TheCamera.Cams[TheCamera.ActiveCam].Source = SceneEdit_pActors[SceneEdit_m_nActor2]->GetPosition() - SceneEdit_m_vecCamHeading;
 	}
 }
 
-void CSceneEdit::SelectVehicle(void)
+void SceneEdit_SelectVehicle(void)
 {
-	m_bVehicleSelected = false;
-	if (m_nVehicle != -1) {
+	SceneEdit_m_bVehicleSelected = false;
+	if (SceneEdit_m_nVehicle != -1) {
 		if (CPad::GetPad(1)->GetLeftShoulder1JustDown()) {
 			CVehicle* pVehicle;
 			do {
-				if (--m_nVehicle < 0)
-					m_nVehicle = NUM_VEHICLES_IN_MOVIE - 1;
-				pVehicle = pVehicles[m_nVehicle];
+				if (--SceneEdit_m_nVehicle < 0)
+					SceneEdit_m_nVehicle = NUM_VEHICLES_IN_MOVIE - 1;
+				pVehicle = SceneEdit_pVehicles[SceneEdit_m_nVehicle];
 			} while (pVehicle == nil);
 		}
 		else if (CPad::GetPad(1)->GetRightShoulder1JustDown()) {
 			CVehicle* pVehicle;
 			do {
-				if (++m_nVehicle == NUM_VEHICLES_IN_MOVIE)
-					m_nVehicle = 0;
-				pVehicle = pVehicles[m_nVehicle];
+				if (++SceneEdit_m_nVehicle == NUM_VEHICLES_IN_MOVIE)
+					SceneEdit_m_nVehicle = 0;
+				pVehicle = SceneEdit_pVehicles[SceneEdit_m_nVehicle];
 			} while (pVehicle == nil);
 		}
-		m_vecCurrentPosition = pVehicles[m_nVehicle]->GetPosition();
-		TheCamera.Cams[TheCamera.ActiveCam].Source = pVehicles[m_nVehicle]->GetPosition() - m_vecCamHeading;
+		SceneEdit_m_vecCurrentPosition = SceneEdit_pVehicles[SceneEdit_m_nVehicle]->GetPosition();
+		TheCamera.Cams[TheCamera.ActiveCam].Source = SceneEdit_pVehicles[SceneEdit_m_nVehicle]->GetPosition() - SceneEdit_m_vecCamHeading;
 		if (CPad::GetPad(1)->GetTriangleJustDown()) {
-			m_bVehicleSelected = true;
-			m_bCommandActive = false;
+			SceneEdit_m_bVehicleSelected = true;
+			SceneEdit_m_bCommandActive = false;
 		}
 		else if (CPad::GetPad(1)->GetCircleJustDown()) {
-			m_nVehicle = -1;
+			SceneEdit_m_nVehicle = -1;
 		}
 	}
-	else if (m_nNumVehicles != 0) {
+	else if (SceneEdit_m_nNumVehicles != 0) {
 		for (int i = 0; i < NUM_ACTORS_IN_MOVIE; i++) {
-			if (pVehicles[i] != nil) {
-				m_nVehicle = i;
+			if (SceneEdit_pVehicles[i] != nil) {
+				SceneEdit_m_nVehicle = i;
 				break;
 			}
 		}
 	}
 }
 
-bool CSceneEdit::SelectWeapon(void)
+bool SceneEdit_SelectWeapon(void)
 {
-	if (m_nWeaponType == WEAPONTYPE_UNARMED) {
-		m_nWeaponType = WEAPONTYPE_COLT45;
+	if (SceneEdit_m_nWeaponType == WEAPONTYPE_UNARMED) {
+		SceneEdit_m_nWeaponType = WEAPONTYPE_COLT45;
 		return false;
 	}
 	if (CPad::GetPad(1)->GetLeftShoulder1JustDown()) {
-		if (++m_nWeaponType >= WEAPONTYPE_DETONATOR)
-			m_nWeaponType = WEAPONTYPE_BRASSKNUCKLE;
-		pActors[m_nActor]->ClearWeapons();
-		pActors[m_nActor]->GiveWeapon((eWeaponType)m_nWeaponType, 1000);
-		pActors[m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
-		pActors[m_nActor]->SetCurrentWeapon(m_nWeaponType);
+		if (++SceneEdit_m_nWeaponType >= WEAPONTYPE_DETONATOR)
+			SceneEdit_m_nWeaponType = WEAPONTYPE_BRASSKNUCKLE;
+		SceneEdit_pActors[SceneEdit_m_nActor]->ClearWeapons();
+		SceneEdit_pActors[SceneEdit_m_nActor]->GiveWeapon((eWeaponType)SceneEdit_m_nWeaponType, 1000);
+		SceneEdit_pActors[SceneEdit_m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(SceneEdit_pActors[SceneEdit_m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetCurrentWeapon(SceneEdit_m_nWeaponType);
 	}
 	else if (CPad::GetPad(1)->GetRightShoulder1JustDown()){
-		if (--m_nWeaponType <= WEAPONTYPE_UNARMED)
-			m_nWeaponType = WEAPONTYPE_MINIGUN;
-		pActors[m_nActor]->ClearWeapons();
-		pActors[m_nActor]->GiveWeapon((eWeaponType)m_nWeaponType, 1000);
-		pActors[m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
-		pActors[m_nActor]->SetCurrentWeapon(m_nWeaponType);
+		if (--SceneEdit_m_nWeaponType <= WEAPONTYPE_UNARMED)
+			SceneEdit_m_nWeaponType = WEAPONTYPE_MINIGUN;
+		SceneEdit_pActors[SceneEdit_m_nActor]->ClearWeapons();
+		SceneEdit_pActors[SceneEdit_m_nActor]->GiveWeapon((eWeaponType)SceneEdit_m_nWeaponType, 1000);
+		SceneEdit_pActors[SceneEdit_m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(SceneEdit_pActors[SceneEdit_m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
+		SceneEdit_pActors[SceneEdit_m_nActor]->SetCurrentWeapon(SceneEdit_m_nWeaponType);
 	}
 	if (CPad::GetPad(1)->GetTriangleJustDown()) {
-		m_bCommandActive = false;
+		SceneEdit_m_bCommandActive = false;
 		return true;
 	}
 	if (CPad::GetPad(1)->GetCircleJustDown()) {
-		pActors[m_nActor]->ClearWeapons();
-		m_nWeaponType = WEAPONTYPE_UNARMED;
-		m_bCommandActive = false;
+		SceneEdit_pActors[SceneEdit_m_nActor]->ClearWeapons();
+		SceneEdit_m_nWeaponType = WEAPONTYPE_UNARMED;
+		SceneEdit_m_bCommandActive = false;
 		return false;
 	}
 	return false;

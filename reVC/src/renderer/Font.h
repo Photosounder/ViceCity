@@ -78,7 +78,7 @@ enum
 	LANGSET_MAX
 };
 
-#define FONT_LOCALE(style) (CFont::IsJapanese() ? FONT_JAPANESE : style)
+#define FONT_LOCALE(style) (Font_IsJapanese() ? FONT_JAPANESE : style)
 #else
 #define FONT_LOCALE(style) (style)
 #endif
@@ -110,100 +110,107 @@ enum
 #endif // BUTTON_ICONS
 
 
-class CFont
-{
+//+ rouz edit (Claude)
+// Formerly the static class CFont, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifdef MORE_LANGUAGES
-	static int16 Size[LANGSET_MAX][MAX_FONTS][210];
-	static uint8 LanguageSet;
-	static int32 Slot;
+extern int16 Font_Size[LANGSET_MAX][MAX_FONTS][210];
+extern uint8 Font_LanguageSet;
+extern int32 Font_Slot;
 #else
-	static int16 Size[MAX_FONTS][210];
+extern int16 Font_Size[MAX_FONTS][210];
 #endif
-	static bool16 NewLine;
-public:
-	static Sprite2d Sprite[MAX_FONTS];
-	static CFontDetails Details;
-	static CFontRenderState RenderState;
-
+extern bool16 Font_NewLine;
+extern Sprite2d Font_Sprite[MAX_FONTS];
 #ifdef BUTTON_ICONS
-	static int32 ButtonsSlot;
-
-	static int PS2Symbol;
-	
-	static void LoadButtons(const char *txdPath);
-	static void DrawButton(float x, float y);
+extern int32 Font_ButtonsSlot;
+extern int Font_PS2Symbol;
+void Font_LoadButtons(const char *txdPath);
+void Font_DrawButton(float x, float y);
 #endif // BUTTON_ICONS
-
-
-	static void Initialise(void);
-	static void Shutdown(void);
-	static void InitPerFrame(void);
-	static void PrintChar(float x, float y, wchar c);
-	static void PrintString(float x, float y, wchar *s);
+void Font_Initialise(void);
+void Font_Shutdown(void);
+void Font_InitPerFrame(void);
+void Font_PrintChar(float x, float y, wchar c);
 #ifdef XBOX_SUBTITLES
-	static void PrintStringFromBottom(float x, float y, wchar *str);
-	static void PrintOutlinedString(float x, float y, wchar *str, float outlineStrength, bool fromBottom, CRGBA outlineColor);
+void Font_PrintOutlinedString(float x, float y, wchar *str, float outlineStrength, bool fromBottom, CRGBA outlineColor);
 #endif
-	static int GetNumberLines(float xstart, float ystart, wchar *s);
-	static void GetTextRect(CRect *rect, float xstart, float ystart, wchar *s);
-//#ifdef MORE_LANGUAGES
-//	static bool PrintString(float x, float y, wchar *start, wchar* &end, float spwidth, float japX);
-//#else
-	static void PrintString(float x, float y, uint32, wchar *start, wchar *end, float spwidth);
-//#endif
-	static void PrintStringFromBottom(float x, float y, wchar *str);
-	static float GetCharacterWidth(wchar c);
-	static float GetCharacterSize(wchar c);
-	static float GetStringWidth(wchar *s, bool spaces = false);
+int Font_GetNumberLines(float xstart, float ystart, wchar *s);
+void Font_GetTextRect(CRect *rect, float xstart, float ystart, wchar *s);
+float Font_GetCharacterWidth(wchar c);
+float Font_GetCharacterSize(wchar c);
 #ifdef MORE_LANGUAGES
-	static float GetStringWidth_Jap(wchar* s);
+float Font_GetStringWidth_Jap(wchar* s);
 #endif
-	static uint16 *GetNextSpace(wchar *s);
-//#ifdef MORE_LANGUAGES
-//	static uint16 *ParseToken(wchar *s, bool japShit = false);
-//#else
-	static uint16 *ParseToken(wchar *s);
-	static uint16 *ParseToken(wchar *s, CRGBA &color, bool &flash, bool &bold);
-//#endif
-	static void DrawFonts(void);
-	static void RenderFontBuffer(void);
-	static uint16 character_code(uint8 c);
-
-	static void SetScale(float x, float y);
-	static void SetSlantRefPoint(float x, float y);
-	static void SetSlant(float s);
-	static void SetJustifyOn(void);
-	static void SetJustifyOff(void);
-	static void SetRightJustifyOn(void);
-	static void SetRightJustifyOff(void);
-	static void SetCentreOn(void);
-	static void SetCentreOff(void);
-	static void SetWrapx(float x);
-	static void SetCentreSize(float s);
-	static void SetBackgroundOn(void);
-	static void SetBackgroundOff(void);
-	static void SetBackGroundOnlyTextOn(void);
-	static void SetBackGroundOnlyTextOff(void);
-	static void SetPropOn(void);
-	static void SetPropOff(void);
-	static void SetFontStyle(int16 style);
-	static void SetRightJustifyWrap(float wrap);
-	static void SetAlphaFade(float fade);
-	static void SetDropShadowPosition(int16 pos);
-	static void SetBackgroundColor(CRGBA col);
-	static void SetColor(CRGBA col);
-	static void SetDropColor(CRGBA col);
-	static wchar FindNewCharacter(wchar c);
-	static void FilterOutTokensFromString(wchar*);
+uint16 *Font_GetNextSpace(wchar *s);
+void Font_DrawFonts(void);
+void Font_RenderFontBuffer(void);
+uint16 Font_character_code(uint8 c);
+void Font_SetScale(float x, float y);
+void Font_SetSlantRefPoint(float x, float y);
+void Font_SetSlant(float s);
+void Font_SetJustifyOn(void);
+void Font_SetJustifyOff(void);
+void Font_SetRightJustifyOn(void);
+void Font_SetRightJustifyOff(void);
+void Font_SetCentreOn(void);
+void Font_SetCentreOff(void);
+void Font_SetWrapx(float x);
+void Font_SetCentreSize(float s);
+void Font_SetBackgroundOn(void);
+void Font_SetBackgroundOff(void);
+void Font_SetBackGroundOnlyTextOn(void);
+void Font_SetBackGroundOnlyTextOff(void);
+void Font_SetPropOn(void);
+void Font_SetPropOff(void);
+void Font_SetFontStyle(int16 style);
+void Font_SetRightJustifyWrap(float wrap);
+void Font_SetAlphaFade(float fade);
+void Font_SetDropShadowPosition(int16 pos);
+void Font_SetBackgroundColor(CRGBA col);
+void Font_SetColor(CRGBA col);
+void Font_SetDropColor(CRGBA col);
+wchar Font_FindNewCharacter(wchar c);
+void Font_FilterOutTokensFromString(wchar*);
 #ifdef MORE_LANGUAGES
-	static void ReloadFonts(uint8 set);
-
-	// japanese stuff
-	static bool IsAnsiCharacter(wchar* s);
-	static bool IsJapanesePunctuation(wchar* str);
-	static bool IsJapanese() { return LanguageSet == FONT_LANGSET_JAPANESE; }
-	static bool IsJapaneseFont() { return IsJapanese() && (Details.style == FONT_JAPANESE);  }
+void Font_ReloadFonts(uint8 set);
+bool Font_IsAnsiCharacter(wchar* s);
+bool Font_IsJapanesePunctuation(wchar* str);
 #endif
-};
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+#ifdef MORE_LANGUAGES
+#else
+#endif
+extern CFontDetails Font_Details;
+extern CFontRenderState Font_RenderState;
+#ifdef BUTTON_ICONS
+#endif // BUTTON_ICONS
+void Font_PrintString(float x, float y, wchar *s);
+#ifdef XBOX_SUBTITLES
+void Font_PrintStringFromBottom(float x, float y, wchar *str);
+#endif
+void Font_PrintString(float x, float y, uint32, wchar *start, wchar *end, float spwidth);
+void Font_PrintStringFromBottom(float x, float y, wchar *str);
+float Font_GetStringWidth(wchar *s, bool spaces = false);
+#ifdef MORE_LANGUAGES
+#endif
+uint16 *Font_ParseToken(wchar *s);
+uint16 *Font_ParseToken(wchar *s, CRGBA &color, bool &flash, bool &bold);
+#ifdef MORE_LANGUAGES
+static inline bool Font_IsJapanese();
+static inline bool Font_IsJapaneseFont();
+#endif
+#ifdef MORE_LANGUAGES
+static inline bool Font_IsJapanese() { return Font_LanguageSet == FONT_LANGSET_JAPANESE; }
+#endif
+#ifdef MORE_LANGUAGES
+static inline bool Font_IsJapaneseFont() { return Font_IsJapanese() && (Font_Details.style == FONT_JAPANESE);  }
+#endif
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

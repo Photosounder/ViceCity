@@ -2,7 +2,7 @@
 //+ rouz edit (ChatGPT)
 #pragma once
 
-#ifndef FINAL
+#if !defined FINAL && defined __cplusplus // rouz edit (Claude)
 #include "RwHelper.h"
 #define PUSH_RENDERGROUP(str) PushRendergroup(str)
 #define POP_RENDERGROUP() PopRendergroup()
@@ -11,11 +11,24 @@
 #define POP_RENDERGROUP()
 #endif
 
-struct GlobalScene
+//+ rouz edit (Claude)
+// Everything here has C linkage so C files can use it, and the RenderWare pointers in the scene are opaque to C
+#include <stdbool.h>
+#ifdef __cplusplus
+extern "C" {
+#define GLOBALSCENE_WORLD_TYPE RpWorld
+#define GLOBALSCENE_CAMERA_TYPE RwCamera
+#else
+#define GLOBALSCENE_WORLD_TYPE void
+#define GLOBALSCENE_CAMERA_TYPE void
+#endif
+
+typedef struct GlobalScene
 {
-	RpWorld *world;
-	RwCamera *camera;
-};
+	GLOBALSCENE_WORLD_TYPE *world;
+	GLOBALSCENE_CAMERA_TYPE *camera;
+} GlobalScene;
+//- rouz edit (Claude)
 extern GlobalScene Scene;
 
 #include "WorkBuffer.h" // rouz edit (ChatGPT)
@@ -32,7 +45,7 @@ extern bool gbShowTimebars;
 extern bool gbPrintMemoryUsage;
 #endif
 
-struct Sprite2d;
+typedef struct Sprite2d Sprite2d; // rouz edit (Claude)
 
 bool DoRWStuffStartOfFrame(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomRed, int16 BottomGreen, int16 BottomBlue, int16 Alpha);
 bool DoRWStuffStartOfFrame_Horizon(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomRed, int16 BottomGreen, int16 BottomBlue, int16 Alpha);
@@ -78,5 +91,11 @@ extern void rouz_update();
 extern float get_airflow_angle_of_attack(void *p_ptr, void *normal_vec_ptr);
 extern float get_horizon_angle_of_attack(void *p_ptr);
 extern int rouz_acceleration_cheats(void *ptr);
+
+//+ rouz edit (Claude)
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

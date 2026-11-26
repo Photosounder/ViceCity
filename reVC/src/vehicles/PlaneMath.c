@@ -1,6 +1,7 @@
 //+ rouz edit (Claude)
 #include <math.h>
 #include "PlaneMath.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "VectorMath.h"
 
 static float SegmentLength(const CPlaneNode *nodes, float totalLength, int start, int end)
@@ -254,10 +255,10 @@ void PlaneMath_BuildFlightTimeline(CPlaneInterpolationLine *bits, float takeOffP
 	bits[5].time = time;
 	*totalDuration = time;
 }
-void PlaneMath_PathOrientation(const float front[3], const float rear[3], const float front2[3], float pitch, bool addRoll, float fwdOut[3], float rightOut[3], float upOut[3])
+void PlaneMath_PathOrientation(const CVector *front, const CVector *rear, const CVector *front2, float pitch, bool addRoll, CVector *fwdOut, CVector *rightOut, CVector *upOut)
 {
-	VectorMath3 fwd = { front[0] - rear[0], front[1] - rear[1], front[2] - rear[2] };
-	VectorMath3 fwd2 = { front2[0] - rear[0], front2[1] - rear[1], front2[2] - rear[2] };
+	VectorMath3 fwd = { front->x - rear->x, front->y - rear->y, front->z - rear->z };
+	VectorMath3 fwd2 = { front2->x - rear->x, front2->y - rear->y, front2->z - rear->z };
 	VectorMath3 up3 = { 0.0f, 0.0f, 1.0f };
 	VectorMath3 roll, right, up;
 
@@ -276,8 +277,8 @@ void PlaneMath_PathOrientation(const float front[3], const float rear[3], const 
 		right.z += 3.0f * roll.z;
 	VectorMath_Normalise(&right);
 	up = VectorMath_Cross(right, fwd);
-	fwdOut[0] = fwd.x; fwdOut[1] = fwd.y; fwdOut[2] = fwd.z;
-	rightOut[0] = right.x; rightOut[1] = right.y; rightOut[2] = right.z;
-	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
+	fwdOut->x = fwd.x; fwdOut->y = fwd.y; fwdOut->z = fwd.z;
+	rightOut->x = right.x; rightOut->y = right.y; rightOut->z = right.z;
+	upOut->x = up.x; upOut->y = up.y; upOut->z = up.z;
 }
 //- rouz edit (Claude)

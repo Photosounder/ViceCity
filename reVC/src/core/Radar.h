@@ -163,114 +163,122 @@ struct sRadarTraceSave
 #define RADAR_HEIGHT (76.0f)
 #endif
 
-class CRadar
-{
-public:
-	static float m_radarRange;
-	static sRadarTrace ms_RadarTrace[NUMRADARBLIPS];
-	static Sprite2d CentreSprite;
-	static Sprite2d MapHereSprite;
-	static Sprite2d NorthSprite;
-	static Sprite2d AverySprite;
-	static Sprite2d BikerSprite;
-	static Sprite2d CortezSprite;
-	static Sprite2d DiazSprite;
-	static Sprite2d KentSprite;
-	static Sprite2d LawyerSprite;
-	static Sprite2d PhilSprite;
-	static Sprite2d BikersSprite;
-	static Sprite2d BoatyardSprite;
-	static Sprite2d MalibuClubSprite;
-	static Sprite2d CubansSprite;
-	static Sprite2d FilmSprite;
-	static Sprite2d GunSprite;
-	static Sprite2d HaitiansSprite;
-	static Sprite2d HardwareSprite;
-	static Sprite2d SaveHouseSprite;
-	static Sprite2d StripSprite;
-	static Sprite2d IceSprite;
-	static Sprite2d KCabsSprite;
-	static Sprite2d LovefistSprite;
-	static Sprite2d PrintworksSprite;
-	static Sprite2d PropertySprite;
-	static Sprite2d SunYardSprite;
-	static Sprite2d SpraySprite;
-	static Sprite2d TShirtSprite;
-	static Sprite2d TommySprite;
-	static Sprite2d PhoneSprite;
-	static Sprite2d RadioWildstyleSprite;
-	static Sprite2d RadioFlashSprite;
-	static Sprite2d RadioKChatSprite;
-	static Sprite2d RadioFeverSprite;
-	static Sprite2d RadioVRockSprite;
-	static Sprite2d RadioVCPRSprite;
-	static Sprite2d RadioEspantosoSprite;
-	static Sprite2d RadioEmotionSprite;
-	static Sprite2d RadioWaveSprite;
-	static Sprite2d *RadarSprites[RADAR_SPRITE_COUNT];
-	static float cachedCos;
-	static float cachedSin;
-	static CRGBA ArrowBlipColour1;
-	static CRGBA ArrowBlipColour2;
-	static int16 MapLegendList[NUM_MAP_LEGENDS];
-	static int16 MapLegendCounter;
-
-#ifdef MAP_ENHANCEMENTS
-	static Sprite2d WaypointSprite;
-	static int TargetMarkerId;
-	static CVector TargetMarkerPos;
+//+ rouz edit (Claude)
+// Formerly the static class CRadar, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
 #endif
-
-	static void InitFrontEndMap();
-	static void DrawYouAreHereSprite(float, float);
+extern float Radar_m_radarRange;
+extern sRadarTrace Radar_ms_RadarTrace[NUMRADARBLIPS];
+extern Sprite2d Radar_CentreSprite;
+extern Sprite2d Radar_MapHereSprite;
+extern Sprite2d Radar_NorthSprite;
+extern Sprite2d Radar_AverySprite;
+extern Sprite2d Radar_BikerSprite;
+extern Sprite2d Radar_CortezSprite;
+extern Sprite2d Radar_DiazSprite;
+extern Sprite2d Radar_KentSprite;
+extern Sprite2d Radar_LawyerSprite;
+extern Sprite2d Radar_PhilSprite;
+extern Sprite2d Radar_BikersSprite;
+extern Sprite2d Radar_BoatyardSprite;
+extern Sprite2d Radar_MalibuClubSprite;
+extern Sprite2d Radar_CubansSprite;
+extern Sprite2d Radar_FilmSprite;
+extern Sprite2d Radar_GunSprite;
+extern Sprite2d Radar_HaitiansSprite;
+extern Sprite2d Radar_HardwareSprite;
+extern Sprite2d Radar_SaveHouseSprite;
+extern Sprite2d Radar_StripSprite;
+extern Sprite2d Radar_IceSprite;
+extern Sprite2d Radar_KCabsSprite;
+extern Sprite2d Radar_LovefistSprite;
+extern Sprite2d Radar_PrintworksSprite;
+extern Sprite2d Radar_PropertySprite;
+extern Sprite2d Radar_SunYardSprite;
+extern Sprite2d Radar_SpraySprite;
+extern Sprite2d Radar_TShirtSprite;
+extern Sprite2d Radar_TommySprite;
+extern Sprite2d Radar_PhoneSprite;
+extern Sprite2d Radar_RadioWildstyleSprite;
+extern Sprite2d Radar_RadioFlashSprite;
+extern Sprite2d Radar_RadioKChatSprite;
+extern Sprite2d Radar_RadioFeverSprite;
+extern Sprite2d Radar_RadioVRockSprite;
+extern Sprite2d Radar_RadioVCPRSprite;
+extern Sprite2d Radar_RadioEspantosoSprite;
+extern Sprite2d Radar_RadioEmotionSprite;
+extern Sprite2d Radar_RadioWaveSprite;
+extern Sprite2d * Radar_RadarSprites[RADAR_SPRITE_COUNT];
+extern float Radar_cachedCos;
+extern float Radar_cachedSin;
+extern CRGBA Radar_ArrowBlipColour1;
+extern CRGBA Radar_ArrowBlipColour2;
+extern int16 Radar_MapLegendList[NUM_MAP_LEGENDS];
+extern int16 Radar_MapLegendCounter;
 #ifdef MAP_ENHANCEMENTS
-	static void ToggleTargetMarker(float, float);
+extern Sprite2d Radar_WaypointSprite;
+extern int Radar_TargetMarkerId;
+extern CVector Radar_TargetMarkerPos;
 #endif
-	static uint8 CalculateBlipAlpha(float dist);
-	static void ChangeBlipBrightness(int32 i, int32 bright);
-	static void ChangeBlipColour(int32 i, int32);
-	static void ChangeBlipDisplay(int32 i, eBlipDisplay display);
-	static void ChangeBlipScale(int32 i, int32 scale);
-	static void ClearBlip(int32 i);
-	static void ClearBlipForEntity(eBlipType type, int32 id);
-	static int ClipRadarPoly(CVector2D *out, const CVector2D *in);
-	static bool DisplayThisBlip(int32 i);
-	static void Draw3dMarkers();
-	static void DrawBlips();
-	static void DrawMap();
-	static void DrawRadarMap();
-	static void DrawRadarMask();
-	static void DrawRadarSection(int32 x, int32 y);
-	static void DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha);
-	static void DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float angle, int32 alpha);
-	static int32 GetActualBlipArrayIndex(int32 i);
-	static int32 GetNewUniqueBlipIndex(int32 i);
-	static uint32 GetRadarTraceColour(uint32 color, bool bright);
-	static void Initialise();
-	static float LimitRadarPoint(CVector2D &point);
-	static void LoadAllRadarBlips(uint8 *buf, uint32 size);
-	static void LoadTextures();
-	static void RemoveRadarSections();
-	static void SaveAllRadarBlips(uint8*, uint32*);
-	static void SetBlipSprite(int32 i, int32 icon);
-	static int32 SetCoordBlip(eBlipType type, CVector pos, uint32, eBlipDisplay);
-	static int32 SetEntityBlip(eBlipType type, int32, uint32, eBlipDisplay);
-	static int32 SetShortRangeCoordBlip(eBlipType type, CVector pos, uint32, eBlipDisplay);
-	static void SetRadarMarkerState(int32 i, bool flag);
-	static void ShowRadarMarker(CVector pos, uint32 color, float radius);
-	static void ShowRadarTrace(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha);
-	static void ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha, uint8 mode);
-	static void Shutdown();
-	static void StreamRadarSections(const CVector &posn);
-	static void StreamRadarSections(int32 x, int32 y);
-	static void TransformRealWorldToTexCoordSpace(CVector2D &out, const CVector2D &in, int32 x, int32 y);
-	static void TransformRadarPointToRealWorldSpace(CVector2D &out, const CVector2D &in);
-	static void TransformRadarPointToScreenSpace(CVector2D &out, const CVector2D &in);
-	static void TransformRealWorldPointToRadarSpace(CVector2D &out, const CVector2D &in);
-	static void CalculateCachedSinCos();
-	static void DrawEntityBlip(int32 blipId);
-	static void DrawCoordBlip(int32 blipId);
-	static void DrawLegend(int32, int32, int32);
-};
+void Radar_InitFrontEndMap();
+void Radar_DrawYouAreHereSprite(float, float);
+#ifdef MAP_ENHANCEMENTS
+void Radar_ToggleTargetMarker(float, float);
+#endif
+uint8 Radar_CalculateBlipAlpha(float dist);
+void Radar_ChangeBlipBrightness(int32 i, int32 bright);
+void Radar_ChangeBlipColour(int32 i, int32);
+void Radar_ChangeBlipDisplay(int32 i, eBlipDisplay display);
+void Radar_ChangeBlipScale(int32 i, int32 scale);
+void Radar_ClearBlip(int32 i);
+void Radar_ClearBlipForEntity(eBlipType type, int32 id);
+int Radar_ClipRadarPoly(CVector2D *out, const CVector2D *in);
+bool Radar_DisplayThisBlip(int32 i);
+void Radar_Draw3dMarkers();
+void Radar_DrawBlips();
+void Radar_DrawMap();
+void Radar_DrawRadarMap();
+void Radar_DrawRadarMask();
+void Radar_DrawRadarSection(int32 x, int32 y);
+void Radar_DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha);
+void Radar_DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float angle, int32 alpha);
+int32 Radar_GetActualBlipArrayIndex(int32 i);
+int32 Radar_GetNewUniqueBlipIndex(int32 i);
+uint32 Radar_GetRadarTraceColour(uint32 color, bool bright);
+void Radar_Initialise();
+void Radar_LoadAllRadarBlips(uint8 *buf, uint32 size);
+void Radar_LoadTextures();
+void Radar_RemoveRadarSections();
+void Radar_SaveAllRadarBlips(uint8*, uint32*);
+void Radar_SetBlipSprite(int32 i, int32 icon);
+int32 Radar_SetCoordBlip(eBlipType type, CVector pos, uint32, eBlipDisplay);
+int32 Radar_SetEntityBlip(eBlipType type, int32, uint32, eBlipDisplay);
+int32 Radar_SetShortRangeCoordBlip(eBlipType type, CVector pos, uint32, eBlipDisplay);
+void Radar_SetRadarMarkerState(int32 i, bool flag);
+void Radar_ShowRadarMarker(CVector pos, uint32 color, float radius);
+void Radar_ShowRadarTrace(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha);
+void Radar_ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha, uint8 mode);
+void Radar_Shutdown();
+void Radar_CalculateCachedSinCos();
+void Radar_DrawEntityBlip(int32 blipId);
+void Radar_DrawCoordBlip(int32 blipId);
+void Radar_DrawLegend(int32, int32, int32);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+#ifdef MAP_ENHANCEMENTS
+#endif
+#ifdef MAP_ENHANCEMENTS
+#endif
+float Radar_LimitRadarPoint(CVector2D &point);
+void Radar_StreamRadarSections(const CVector &posn);
+void Radar_StreamRadarSections(int32 x, int32 y);
+void Radar_TransformRealWorldToTexCoordSpace(CVector2D &out, const CVector2D &in, int32 x, int32 y);
+void Radar_TransformRadarPointToRealWorldSpace(CVector2D &out, const CVector2D &in);
+void Radar_TransformRadarPointToScreenSpace(CVector2D &out, const CVector2D &in);
+void Radar_TransformRealWorldPointToRadarSpace(CVector2D &out, const CVector2D &in);
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

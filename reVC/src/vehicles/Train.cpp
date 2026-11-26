@@ -282,20 +282,20 @@ CTrain::ProcessControl(void)
 		int x, xmin, xmax;
 		int y, ymin, ymax;
 
-		xmin = CWorld::GetSectorIndexX(front.x - 3.0f);
+		xmin = World_GetSectorIndexX(front.x - 3.0f);
 		if(xmin < 0) xmin = 0;
-		xmax = CWorld::GetSectorIndexX(front.x + 3.0f);
+		xmax = World_GetSectorIndexX(front.x + 3.0f);
 		if(xmax > NUMSECTORS_X-1) xmax = NUMSECTORS_X-1;
-		ymin = CWorld::GetSectorIndexY(front.y - 3.0f);
+		ymin = World_GetSectorIndexY(front.y - 3.0f);
 		if(ymin < 0) ymin = 0;
-		ymax = CWorld::GetSectorIndexY(front.y + 3.0f);
+		ymax = World_GetSectorIndexY(front.y + 3.0f);
 		if(ymax > NUMSECTORS_Y-1) ymax = NUMSECTORS_X-1;
 
-		CWorld::AdvanceCurrentScanCode();
+		World_AdvanceCurrentScanCode();
 
 		for(y = ymin; y <= ymax; y++)
 			for(x = xmin; x <= xmax; x++){
-				CSector *s = CWorld::GetSector(x, y);
+				CSector *s = World_GetSector(x, y);
 				TrainHitStuff(s->m_lists[ENTITYLIST_VEHICLES]);
 				TrainHitStuff(s->m_lists[ENTITYLIST_VEHICLES_OVERLAP]);
 				TrainHitStuff(s->m_lists[ENTITYLIST_PEDS]);
@@ -479,10 +479,10 @@ CTrain::InitTrains(void)
 			&TotalLengthOfTrack_S, &TotalDurationOfTrack_S, aLineBits_S, true);
 
 	int trainId;
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 	if((CBaseModelInfo*)ModelRegistry_Find("train", 0, MODELINFOSIZE-1, &trainId)) // rouz edit (ChatGPT)
 		Streaming_RequestModel(trainId, 0); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 
 	// El-Train wagons
 	float wagonPositions[] = { 0.0f, 20.0f, 40.0f,  0.0f, 20.0f };
@@ -492,7 +492,7 @@ CTrain::InitTrains(void)
 	for(i = 0; i < 5; i++){
 		// Allocate the train wagon from the vehicle pool without invoking C++ new.
 				// Access raw storage through the C store or pool API
-		train = (CTrain*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		train = (CTrain*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 				assert(train);
 		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
 		train->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -504,7 +504,7 @@ CTrain::InitTrains(void)
 		train->m_nWagonGroup = wagonGroup[i];
 		train->m_nWagonId = i;
 		train->m_nCurTrackNode = 0;
-		CWorld::Add(train);
+		World_Add(train);
 	}
 
 	// Subway wagons
@@ -515,7 +515,7 @@ CTrain::InitTrains(void)
 	for(i = 0; i < 8; i++){
 		// Allocate the train wagon from the vehicle pool without invoking C++ new.
 				// Access raw storage through the C store or pool API
-		train = (CTrain*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		train = (CTrain*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 				assert(train);
 		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
 		train->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -528,7 +528,7 @@ CTrain::InitTrains(void)
 		train->m_nWagonId = i;
 		train->m_nCurTrackNode = 0;
 		train->m_nTrackId = TRACK_SUBWAY;
-		CWorld::Add(train);
+		World_Add(train);
 	}
 
 	// This code is actually useless, it seems it was used for announcements once
@@ -616,7 +616,7 @@ CTrain::ReadAndInterpretTrackFile(Const char *filename, CTrainNode **nodes, int1
 		for(i = 0; i < *numNodes; i++){
 			CVector p = (*nodes)[i].p;
 			p.z += 1.0f;
-			if(CWorld::ProcessVerticalLine(p, p.z-0.5f, colpoint, entity, true, false, false, false, true, false, nil))
+			if(World_ProcessVerticalLine(p, p.z-0.5f, colpoint, entity, true, false, false, false, true, false, nil))
 				(*nodes)[i].p.z = colpoint.point.z;
 			(*nodes)[i].p.z += 0.2f;
 		}
@@ -689,7 +689,7 @@ PlayAnnouncement(uint8 sound, uint8 station)
 	// this was gone in a PC version but inlined on PS2
 	// Allocate a pooled audio script object without invoking C++ new.
 		// Access raw storage through the C store or pool API
-	cAudioScriptObject *obj = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
+	cAudioScriptObject *obj = ((cAudioScriptObject*)CPool_New(Pools_GetAudioScriptObjectPool()));
 		assert(obj);
 	AudioScriptObject_Reset(obj);
 	obj->AudioId = sound;

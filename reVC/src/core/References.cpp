@@ -34,27 +34,27 @@ CEntity *References_BackendPlayerEntity(CPlayerPed *ped)
 void References_BackendRestorePlayer(CPlayerPed *ped)
 {
 	// Restore the live focused-player field at the original write point
-	CWorld::Players[CWorld::PlayerInFocus].m_pPed = ped;
+	World_Players[World_PlayerInFocus].m_pPed = ped;
 }
 CEntity **References_BackendPlayerSlot(void)
 {
 	// Return the same slot address and cast used by the original registration
-	return (CEntity **)&CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+	return (CEntity **)&World_Players[World_PlayerInFocus].m_pPed;
 }
 CPool *References_BackendPedPool(void)
 {
 	// Query the live pedestrian pool at each original access point
-	return CPools::GetPedPool();
+	return Pools_GetPedPool();
 }
 CPool *References_BackendVehiclePool(void)
 {
 	// Query the live vehicle pool at each original access point
-	return CPools::GetVehiclePool();
+	return Pools_GetVehiclePool();
 }
 CPool *References_BackendObjectPool(void)
 {
 	// Query the live object pool at each original access point
-	return CPools::GetObjectPool();
+	return Pools_GetObjectPool();
 }
 CEntity *References_BackendPed(void *slot)
 {

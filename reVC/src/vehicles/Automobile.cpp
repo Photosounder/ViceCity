@@ -297,7 +297,7 @@ CAutomobile::ProcessControl(void)
 		m_aWheelRotation[i] = rangewrap(m_aWheelRotation[i], 0., TWOPI);
 
 	if(bUsingSpecialColModel)
-		colModel = &CWorld::Players[CWorld::PlayerInFocus].m_ColModel;
+		colModel = &World_Players[World_PlayerInFocus].m_ColModel;
 	else
 		colModel = GetColModel();
 	bool drivingInSand = false;
@@ -388,9 +388,9 @@ CAutomobile::ProcessControl(void)
 		CVector parkPosition = GetPosition() + 3.0f*GetRight() + 10.0f*GetForward();
 		CEntity *ent = nil;
 		CColPoint colpoint;
-		if(!CWorld::ProcessLineOfSight(GetPosition(), parkPosition, colpoint, ent, true, true, true, false, false, false) ||
+		if(!World_ProcessLineOfSight(GetPosition(), parkPosition, colpoint, ent, true, true, true, false, false, false) ||
 		   ent == this)
-			CCarAI::GetCarToParkAtCoors(this, &parkPosition);
+			CarAI_GetCarToParkAtCoors(this, &parkPosition);
 	}
 
 	// Process depending on status
@@ -416,7 +416,7 @@ CAutomobile::ProcessControl(void)
 			}
 		}
 
-		if(CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle == this)
+		if(World_Players[World_PlayerInFocus].m_pRemoteVehicle == this)
 			playerRemote = true;
 		// fall through
 	case STATUS_PLAYER:
@@ -432,7 +432,7 @@ CAutomobile::ProcessControl(void)
 				DoDriveByShootings();
 
 			// Tweak center on mass when driving on two wheels
-			int twoWheelTime = CWorld::Players[CWorld::PlayerInFocus].m_nTimeNotFullyOnGround;
+			int twoWheelTime = World_Players[World_PlayerInFocus].m_nTimeNotFullyOnGround;
 			// Delegate the height of the centre of mass to the C implementation
 			float centreZ;
 			if(Automobile_TwoWheelCentreOfMassZ(pHandling->CentreOfMass.z, twoWheelTime, CPad::GetPad(0)->GetSteeringLeftRight(), CAR_BALANCE_MULT, colModel->boundingBox.max.z,
@@ -472,9 +472,9 @@ CAutomobile::ProcessControl(void)
 		break;
 
 	case STATUS_SIMPLE:
-		CCarAI::UpdateCarAI(this);
+		CarAI_UpdateCarAI(this);
 		CPhysical::ProcessControl();
-		CCarCtrl::UpdateCarOnRails(this);
+		CarCtrl_UpdateCarOnRails(this);
 
 		m_nWheelsOnGround = 4;
 		m_nDriveWheelsOnGroundPrev = m_nDriveWheelsOnGround;
@@ -494,8 +494,8 @@ CAutomobile::ProcessControl(void)
 		return;
 
 	case STATUS_PHYSICS:
-		CCarAI::UpdateCarAI(this);
-		CCarCtrl::SteerAICarWithPhysics(this);
+		CarAI_UpdateCarAI(this);
+		CarCtrl_SteerAICarWithPhysics(this);
 		PlayHornIfNecessary();
 
 		if(bIsBeingCarJacked){
@@ -652,7 +652,7 @@ CAutomobile::ProcessControl(void)
 			m_nStaticFrames++;
 
 			if(m_nStaticFrames > 10 || makeStatic)
-				if(!CCarCtrl::MapCouldMoveInThisArea(GetPosition().x, GetPosition().y)){
+				if(!CarCtrl_MapCouldMoveInThisArea(GetPosition().x, GetPosition().y)){
 					if(!makeStatic || m_nStaticFrames > 10)
 						m_nStaticFrames = 10;
 
@@ -673,7 +673,7 @@ CAutomobile::ProcessControl(void)
 	for(i = 0; i < 4; i++)
 		if(m_aGroundPhysical[i]){
 			bRestingOnPhysical = true;
-			if(!CWorld::bForceProcessControl && m_aGroundPhysical[i]->bIsInSafePosition){
+			if(!World_bForceProcessControl && m_aGroundPhysical[i]->bIsInSafePosition){
 				bWasPostponed = true;
 				return;
 			}
@@ -997,12 +997,7 @@ CAutomobile::ProcessControl(void)
 				{
 					CVector fwd0 = GetForward();
 					CVector n0 = CollisionVector_ToNative(m_aWheelColPoints[CARWHEEL_FRONT_LEFT].normal);
-					float fwdIn[3] = { fwd0.x, fwd0.y, fwd0.z };
-					float nIn[3] = { n0.x, n0.y, n0.z };
-					float fwdOut[3], rightOut[3];
-					Automobile_SteeredWheelAxes(fwdIn, nIn, s, c, fwdOut, rightOut);
-					wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-					wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+					Automobile_SteeredWheelAxes(&fwd0, &n0, s, c, &wheelFwd, &wheelRight);
 				}
 
 				m_aWheelColPoints[CARWHEEL_FRONT_LEFT].surfaceA = SURFACE_WHEELBASE;
@@ -1043,12 +1038,7 @@ CAutomobile::ProcessControl(void)
 				{
 					CVector fwd0 = GetForward();
 					CVector n0 = CollisionVector_ToNative(m_aWheelColPoints[CARWHEEL_FRONT_RIGHT].normal);
-					float fwdIn[3] = { fwd0.x, fwd0.y, fwd0.z };
-					float nIn[3] = { n0.x, n0.y, n0.z };
-					float fwdOut[3], rightOut[3];
-					Automobile_SteeredWheelAxes(fwdIn, nIn, s, c, fwdOut, rightOut);
-					wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-					wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+					Automobile_SteeredWheelAxes(&fwd0, &n0, s, c, &wheelFwd, &wheelRight);
 				}
 
 				m_aWheelColPoints[CARWHEEL_FRONT_RIGHT].surfaceA = SURFACE_WHEELBASE;
@@ -1134,12 +1124,9 @@ CAutomobile::ProcessControl(void)
 				// Delegate the directions of the wheel along the surface to the C implementation
 				{
 					CVector n0 = CollisionVector_ToNative(m_aWheelColPoints[CARWHEEL_REAR_LEFT].normal);
-					float fwdIn[3] = { wheelFwd.x, wheelFwd.y, wheelFwd.z };
-					float nIn[3] = { n0.x, n0.y, n0.z };
-					float fwdOut[3], rightOut[3];
-					Automobile_SurfaceWheelAxes(fwdIn, nIn, fwdOut, rightOut);
-					wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-					wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+					CVector fwdOut;
+					Automobile_SurfaceWheelAxes(&wheelFwd, &n0, &fwdOut, &wheelRight);
+					wheelFwd = CVector(fwdOut.x, fwdOut.y, fwdOut.z);
 				}
 
 				m_aWheelColPoints[CARWHEEL_REAR_LEFT].surfaceA = SURFACE_WHEELBASE;
@@ -1185,12 +1172,9 @@ CAutomobile::ProcessControl(void)
 				// Delegate the directions of the wheel along the surface to the C implementation
 				{
 					CVector n0 = CollisionVector_ToNative(m_aWheelColPoints[CARWHEEL_REAR_RIGHT].normal);
-					float fwdIn[3] = { wheelFwd.x, wheelFwd.y, wheelFwd.z };
-					float nIn[3] = { n0.x, n0.y, n0.z };
-					float fwdOut[3], rightOut[3];
-					Automobile_SurfaceWheelAxes(fwdIn, nIn, fwdOut, rightOut);
-					wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-					wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+					CVector fwdOut;
+					Automobile_SurfaceWheelAxes(&wheelFwd, &n0, &fwdOut, &wheelRight);
+					wheelFwd = CVector(fwdOut.x, fwdOut.y, fwdOut.z);
 				}
 
 				m_aWheelColPoints[CARWHEEL_REAR_RIGHT].surfaceA = SURFACE_WHEELBASE;
@@ -1261,12 +1245,7 @@ CAutomobile::ProcessControl(void)
 				{
 					CVector fwd0 = GetForward();
 					CVector n0 = CollisionVector_ToNative(m_aWheelColPoints[CARWHEEL_FRONT_LEFT].normal);
-					float fwdIn[3] = { fwd0.x, fwd0.y, fwd0.z };
-					float nIn[3] = { n0.x, n0.y, n0.z };
-					float fwdOut[3], rightOut[3];
-					Automobile_SteeredWheelAxes(fwdIn, nIn, s, c, fwdOut, rightOut);
-					wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-					wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+					Automobile_SteeredWheelAxes(&fwd0, &n0, s, c, &wheelFwd, &wheelRight);
 				}
 
 				m_aWheelColPoints[CARWHEEL_FRONT_LEFT].surfaceA = SURFACE_WHEELBASE;
@@ -1307,12 +1286,7 @@ CAutomobile::ProcessControl(void)
 				{
 					CVector fwd0 = GetForward();
 					CVector n0 = CollisionVector_ToNative(m_aWheelColPoints[CARWHEEL_FRONT_RIGHT].normal);
-					float fwdIn[3] = { fwd0.x, fwd0.y, fwd0.z };
-					float nIn[3] = { n0.x, n0.y, n0.z };
-					float fwdOut[3], rightOut[3];
-					Automobile_SteeredWheelAxes(fwdIn, nIn, s, c, fwdOut, rightOut);
-					wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-					wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+					Automobile_SteeredWheelAxes(&fwd0, &n0, s, c, &wheelFwd, &wheelRight);
 				}
 
 				m_aWheelColPoints[CARWHEEL_FRONT_RIGHT].surfaceA = SURFACE_WHEELBASE;
@@ -1475,16 +1449,15 @@ CAutomobile::ProcessControl(void)
 				if(CPad::GetPad(0)->CarGunJustDown() && (*Timer_GetTimeInMilliseconds()) > m_nGunFiringTime+350){
 					CWeapon gun(WEAPONTYPE_ROCKETLAUNCHER, 100);
 					// Delegate the lead of the rockets to the C implementation
-					const float forwardC[3] = { GetForward().x, GetForward().y, GetForward().z };
-					float rocketLead[3];
-					Automobile_RocketLead(DotProduct(m_vecMoveSpeed, GetForward()), forwardC, (*Timer_GetTimeStep()), rocketLead);
+					CVector rocketLead;
+					Automobile_RocketLead(DotProduct(m_vecMoveSpeed, GetForward()), &GetForward(), (*Timer_GetTimeStep()), &rocketLead);
 					CVector source = vecHunterRocketPos;
-					source = GetMatrix()*source + CVector(rocketLead[0], rocketLead[1], rocketLead[2]);
+					source = GetMatrix()*source + CVector(rocketLead.x, rocketLead.y, rocketLead.z);
 					gun.FireProjectile(this, &source, 0.0f);
 
 					source = vecHunterRocketPos;
 					source.x = -source.x;
-					source = GetMatrix()*source + CVector(rocketLead[0], rocketLead[1], rocketLead[2]);
+					source = GetMatrix()*source + CVector(rocketLead.x, rocketLead.y, rocketLead.z);
 					gun.FireProjectile(this, &source, 0.0f);
 
 					Stats_RoundsFiredByPlayer++;
@@ -1604,7 +1577,7 @@ CAutomobile::ProcessControl(void)
 
 	if(m_bSirenOrAlarm && ((*Timer_GetFrameCounter())&7) == 5 &&
 	   UsesSiren() && GetModelIndex() != MI_MRWHOOP)
-		CCarAI::MakeWayForCarWithSiren(this);
+		CarAI_MakeWayForCarWithSiren(this);
 
 
 	// Find out how much to shake the pad depending on suspension and ground surface
@@ -1654,7 +1627,7 @@ CAutomobile::ProcessControl(void)
 	bAudioChangingGear = false;
 
 	if(!bWarnedPeds && GetVehicleAppearance() != VEHICLE_APPEARANCE_HELI && GetVehicleAppearance() != VEHICLE_APPEARANCE_PLANE)
-		CCarCtrl::ScanForPedDanger(this);
+		CarCtrl_ScanForPedDanger(this);
 
 
 	// Turn around at the edge of the world
@@ -1719,7 +1692,7 @@ CAutomobile::ProcessControl(void)
 		CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, GetMatrix()*CVector(0.0f, 0.0f, -10.0f),
 			CVector(0.0f, 0.0f, 0.0f), nil, 0.7f, col, 0, 0, 0, 3000);
 
-		if(CWorld::TestSphereAgainstWorld(GetPosition(), 10.0f, this, true, false, false, false, false, false) ||
+		if(World_TestSphereAgainstWorld(GetPosition(), 10.0f, this, true, false, false, false, false, false) ||
 		   GetPosition().z < 6.0f)
 			if(!bRenderScorched){	// we already know this is true...
 				Explosion_AddExplosion(this, nil, EXPLOSION_CAR, GetPosition(), 0);
@@ -1733,7 +1706,7 @@ CAutomobile::ProcessControl(void)
 void
 CAutomobile::Teleport(CVector pos)
 {
-	CWorld::Remove(this);
+	World_Remove(this);
 
 	SetPosition(pos);
 	SetOrientation(0.0f, 0.0f, 0.0f);
@@ -1742,7 +1715,7 @@ CAutomobile::Teleport(CVector pos)
 
 	ResetSuspension();
 
-	CWorld::Add(this);
+	World_Add(this);
 }
 
 void
@@ -2548,8 +2521,8 @@ CAutomobile::PreRender(void)
 	if(IsRealHeli() && m_aWheelSpeed[1] > 0.1125f && GetPosition().z < 30.0f){
 		bool foundGround = false;
 		float waterZ = -1000.0f;
-		float groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, GetPosition().z, &foundGround);
-		if(!CWaterLevel::GetWaterLevel(GetPosition(), &waterZ, false))
+		float groundZ = World_FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, GetPosition().z, &foundGround);
+		if(!WaterLevel_GetWaterLevel(GetPosition(), &waterZ, false))
 			waterZ = 0.0f;
 		// Delegate the higher height to the C implementation
 		groundZ = General_MaxFloat(groundZ, waterZ);
@@ -3006,7 +2979,7 @@ CAutomobile::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 		bVehicleColProcessed = true;
 
 	if(bUsingSpecialColModel)
-		colModel = &CWorld::Players[CWorld::PlayerInFocus].m_ColModel;
+		colModel = &World_Players[World_PlayerInFocus].m_ColModel;
 	else
 		colModel = GetColModel();
 
@@ -3019,7 +2992,7 @@ CAutomobile::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 	   GetModelIndex() == MI_DODO && ent->IsVehicle())
 		colModel->numLines = 0;
 
-	int numCollisions = CCollision::ProcessColModels(GetMatrix(), *colModel,
+	int numCollisions = Collision_ProcessColModels(GetMatrix(), *colModel,
 		ent->GetMatrix(), *ent->GetColModel(),
 		colpoints,
 		m_aWheelColPoints, m_aSuspensionSpringRatio);
@@ -3156,9 +3129,9 @@ CAutomobile::FireTruckControl(void)
 		CVector cannonPos(0.0f, 1.5f, 1.9f);
 		cannonPos = GetMatrix() * cannonPos;
 		// Delegate the direction of the cannon to the C implementation
-		float cannonDirC[3];
-		Automobile_CannonDirection(m_fCarGunLR, m_fCarGunUD, cannonDirC);
-		CVector cannonDir(cannonDirC[0], cannonDirC[1], cannonDirC[2]);
+		CVector cannonDirC;
+		Automobile_CannonDirection(m_fCarGunLR, m_fCarGunUD, &cannonDirC);
+		CVector cannonDir(cannonDirC.x, cannonDirC.y, cannonDirC.z);
 		cannonDir = Multiply3x3(GetMatrix(), cannonDir);
 		cannonDir.z += (General_GetRandomNumber()&0xF)/1000.0f;
 		// Enter the C water-cannon algorithm with the original owner expressions
@@ -3189,9 +3162,9 @@ CAutomobile::FireTruckControl(void)
 			CVector cannonPos(0.0f, 0.0f, 2.2f);	// different position than player's firetruck!
 			cannonPos = GetMatrix() * cannonPos;
 			// Delegate the direction of the cannon to the C implementation
-			float cannonDirC[3];
-			Automobile_CannonDirection(m_fCarGunLR, m_fCarGunUD, cannonDirC);
-			CVector cannonDir(cannonDirC[0], cannonDirC[1], cannonDirC[2]);
+			CVector cannonDirC;
+			Automobile_CannonDirection(m_fCarGunLR, m_fCarGunUD, &cannonDirC);
+			CVector cannonDir(cannonDirC.x, cannonDirC.y, cannonDirC.z);
 			cannonDir = Multiply3x3(GetMatrix(), cannonDir);
 			cannonDir.z += (General_GetRandomNumber()&0xF)/1000.0f;
 			// Enter the C water-cannon algorithm with the original owner expressions
@@ -3212,7 +3185,7 @@ CAutomobile::TankControl(void)
 
 	if(this != FindPlayerVehicle())
 		return;
-	if(CWorld::Players[CWorld::PlayerInFocus].m_WBState != WBSTATE_PLAYING)
+	if(World_Players[World_PlayerInFocus].m_WBState != WBSTATE_PLAYING)
 		return;
 
 	// Rotate turret
@@ -3229,8 +3202,8 @@ CAutomobile::TankControl(void)
 
 	// Shoot
 	if(CPad::GetPad(0)->CarGunJustDown() &&
-	   (*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nTimeTankShotGun + 800){
-		CWorld::Players[CWorld::PlayerInFocus].m_nTimeTankShotGun = (*Timer_GetTimeInMilliseconds());
+	   (*Timer_GetTimeInMilliseconds()) > World_Players[World_PlayerInFocus].m_nTimeTankShotGun + 800){
+		World_Players[World_PlayerInFocus].m_nTimeTankShotGun = (*Timer_GetTimeInMilliseconds());
 
 		// more like -sin(angle), cos(angle), i.e. rotated (0,1,0)
 		// Delegate the direction of the turret to the C implementation
@@ -3240,11 +3213,9 @@ CAutomobile::TankControl(void)
 		turretDir = Multiply3x3(GetMatrix(), turretDir);
 
 		// Delegate the end of the gun to the C implementation
-		const float baseToEndC[3] = { baseToEnd.x, baseToEnd.y, baseToEnd.z };
-		const float turrentBaseC[3] = { turrentBase.x, turrentBase.y, turrentBase.z };
-		float rotatedEndC[3];
-		Automobile_TankGunEnd(m_fCarGunLR, baseToEndC, turrentBaseC, rotatedEndC);
-		CVector rotatedEnd(rotatedEndC[0], rotatedEndC[1], rotatedEndC[2]);
+		CVector rotatedEndC;
+		Automobile_TankGunEnd(m_fCarGunLR, &baseToEnd, &turrentBase, &rotatedEndC);
+		CVector rotatedEnd(rotatedEndC.x, rotatedEndC.y, rotatedEndC.z);
 
 		CVector point1 = GetMatrix() * rotatedEnd;
 		CVector point2 = point1 + 60.0f*turretDir;
@@ -3254,7 +3225,7 @@ CAutomobile::TankControl(void)
 		CWeapon::DoTankDoomAiming(FindPlayerVehicle(), FindPlayerPed(), &point1, &point2);
 		CColPoint colpoint;
 		CEntity *entity = nil;
-		CWorld::ProcessLineOfSight(point1, point2, colpoint, entity, true, true, true, true, true, true, false);
+		World_ProcessLineOfSight(point1, point2, colpoint, entity, true, true, true, true, true, true, false);
 		if(entity)
 			point2 = CollisionVector_ToNative(colpoint.point) - 0.04f*(CollisionVector_ToNative(colpoint.point) - point1);
 
@@ -3310,7 +3281,7 @@ CAutomobile::HydraulicControl(void)
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	CColModel *normalColModel = mi->GetColModel();
 	float wheelRadius = 0.5f*mi->m_wheelScale;
-	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
+	CPlayerInfo *playerInfo = &World_Players[World_PlayerInFocus];
 	CColModel *specialColModel = &playerInfo->m_ColModel;
 
 	if(GetStatus() != STATUS_PLAYER){
@@ -3396,9 +3367,7 @@ CAutomobile::HydraulicControl(void)
 		// Delegate the radius of the vehicle to the C implementation
 		CVector radiusMin = CollisionVector_ToNative(specialColModel->boundingBox.min);
 		CVector radiusMax = CollisionVector_ToNative(specialColModel->boundingBox.max);
-		const float radiusMinC[3] = { radiusMin.x, radiusMin.y, radiusMin.z };
-		const float radiusMaxC[3] = { radiusMax.x, radiusMax.y, radiusMax.z };
-		float radius = VehicleLogic_BoundingRadius(radiusMinC, radiusMaxC);
+		float radius = VehicleLogic_BoundingRadius(&radiusMin, &radiusMax);
 		if(specialColModel->boundingSphere.radius < radius)
 			specialColModel->boundingSphere.radius = radius;
 		return;
@@ -3674,7 +3643,7 @@ CAutomobile::ProcessBuoyancy(void)
 		if(nGenerateWaterCircles > 0 && nGenerateWaterCircles <= (*Timer_GetTimeInMilliseconds())){
 			CVector pos = GetPosition();
 			float waterLevel = 0.0f;
-			if(CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &waterLevel, false))
+			if(WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &waterLevel, false))
 				pos.z = waterLevel;
 			static RwRGBA black;
 			if(pos.z != 0.0f){
@@ -3694,7 +3663,7 @@ CAutomobile::ProcessBuoyancy(void)
 		if(nGenerateRaindrops > 0 && nGenerateRaindrops <= (*Timer_GetTimeInMilliseconds())){
 			CVector pos = GetPosition();
 			float waterLevel = 0.0f;
-			if(CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &waterLevel, false))
+			if(WaterLevel_GetWaterLevel(pos.x, pos.y, pos.z, &waterLevel, false))
 				pos.z = waterLevel;
 			static RwRGBA black;
 			if(pos.z >= 0.0f){
@@ -3841,7 +3810,7 @@ CAutomobile::DoHoverSuspensionRatios(void)
 		CVector upper = GetMatrix() * CollisionVector_ToNative(colmodel->lines[i].p0);
 		CVector lower = GetMatrix() * CollisionVector_ToNative(colmodel->lines[i].p1);
 		// see if touching water, the wheel is changed in C
-		if(CWaterLevel::GetWaterLevel(lower, &waterZ, false))
+		if(WaterLevel_GetWaterLevel(lower, &waterZ, false))
 			Automobile_HoverWheelInWater(this, i, &upper.x, &lower.x, waterZ);
 	}
 }
@@ -3855,11 +3824,11 @@ CAutomobile::RcbanditCheckHitWheels(void)
 	// Delegate the range of sectors to the C implementation
 	World_SectorRange(GetPosition().x - 2.0f, GetPosition().y - 2.0f, GetPosition().x + 2.0f, GetPosition().y + 2.0f, &xmin, &ymin, &xmax, &ymax);
 
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	for(y = ymin; y <= ymax; y++)
 		for(x = xmin; x <= xmax; x++){
-			CSector *s = CWorld::GetSector(x, y);
+			CSector *s = World_GetSector(x, y);
 			if(RcbanditCheck1CarWheels(s->m_lists[ENTITYLIST_VEHICLES]) ||
 			   RcbanditCheck1CarWheels(s->m_lists[ENTITYLIST_VEHICLES_OVERLAP]))
 				return 1;
@@ -3880,8 +3849,8 @@ CAutomobile::RcbanditCheck1CarWheels(CPtrList &list)
 	for(node = list.first; node; node = node->next){
 		car = (CAutomobile*)node->item;
 		if(this != car && car->IsCar() && car->GetModelIndex() != MI_RCBANDIT &&
-		   car->m_scanCode != CWorld::GetCurrentScanCode()){
-			car->m_scanCode = CWorld::GetCurrentScanCode();
+		   car->m_scanCode != World_GetCurrentScanCode()){
+			car->m_scanCode = World_GetCurrentScanCode();
 
 			// Delegate the check that the other car is close to the C implementation
 			if(VehicleLogic_WithinSquare(this->GetPosition().x, this->GetPosition().y, car->GetPosition().x, car->GetPosition().y, 10.0f)){
@@ -3895,7 +3864,7 @@ CAutomobile::RcbanditCheck1CarWheels(CPtrList &list)
 						matW2B = Invert(GetMatrix());
 						sph.bounds.center = CollisionVector_FromNative(matW2B * (car->GetMatrix() * wheelPos));
 						sph.bounds.radius = mi->m_wheelScale*0.25f;
-						if(CCollision::TestSphereBox(sph.bounds, colModel->boundingBox))
+						if(Collision_TestSphereBox(sph.bounds, colModel->boundingBox))
 							return 1;
 					}
 				}
@@ -3920,7 +3889,7 @@ CAutomobile::PlaceOnRoadProperly(void)
 	CVector front(GetPosition().x + GetForward().x*lenFwd,
 	              GetPosition().y + GetForward().y*lenFwd,
 	              GetPosition().z + 5.0f);
-	if(CWorld::ProcessVerticalLine(front, GetPosition().z - 5.0f, point, entity,
+	if(World_ProcessVerticalLine(front, GetPosition().z - 5.0f, point, entity,
 			true, false, false, false, false, false, nil)){
 		frontZ = point.point.z;
 		m_pCurGroundEntity = entity;
@@ -3931,7 +3900,7 @@ CAutomobile::PlaceOnRoadProperly(void)
 	CVector rear(GetPosition().x - GetForward().x*lenBack,
 	             GetPosition().y - GetForward().y*lenBack,
 	             GetPosition().z + 5.0f);
-	if(CWorld::ProcessVerticalLine(rear, GetPosition().z - 5.0f, point, entity,
+	if(World_ProcessVerticalLine(rear, GetPosition().z - 5.0f, point, entity,
 			true, false, false, false, false, false, nil)){
 		rearZ = point.point.z;
 		m_pCurGroundEntity = entity;
@@ -3943,12 +3912,15 @@ CAutomobile::PlaceOnRoadProperly(void)
 	// Delegate the orientation and position of the car on the road to the C implementation
 	const float frontXY[2] = { front.x, front.y };
 	const float rearXY[2] = { rear.x, rear.y };
-	float rightC[3], forwardC[3], upC[3], posC[3];
-	Automobile_RoadAlignedMatrix(frontXY, rearXY, frontZ, rearZ, len, GetHeightAboveRoad(), rightC, forwardC, upC, posC);
-	GetMatrix().GetRight() = CVector(rightC[0], rightC[1], rightC[2]);
-	GetMatrix().GetForward() = CVector(forwardC[0], forwardC[1], forwardC[2]);
-	GetMatrix().GetUp() = CVector(upC[0], upC[1], upC[2]);
-	GetMatrix().GetPosition() = CVector(posC[0], posC[1], posC[2]);
+	CVector rightC;
+	CVector forwardC;
+	CVector upC;
+	CVector posC;
+	Automobile_RoadAlignedMatrix(frontXY, rearXY, frontZ, rearZ, len, GetHeightAboveRoad(), &rightC, &forwardC, &upC, &posC);
+	GetMatrix().GetRight() = CVector(rightC.x, rightC.y, rightC.z);
+	GetMatrix().GetForward() = CVector(forwardC.x, forwardC.y, forwardC.z);
+	GetMatrix().GetUp() = CVector(upC.x, upC.y, upC.z);
+	GetMatrix().GetPosition() = CVector(posC.x, posC.y, posC.z);
 }
 
 void
@@ -4640,8 +4612,8 @@ CAutomobile::BlowUpCar(CEntity *culprit)
 		return;
 
 	if(culprit == FindPlayerPed() || culprit == FindPlayerVehicle()){
-		CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 20;
-		CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention += 10.0f;
+		World_Players[World_PlayerInFocus].m_nHavocLevel += 20;
+		World_Players[World_PlayerInFocus].m_fMediaAttention += 10.0f;
 		Stats_PropertyDestroyed += General_GetRandomNumber()%6000 + 4000;
 	}
 
@@ -4682,11 +4654,11 @@ CAutomobile::BlowUpCar(CEntity *culprit)
 	bTaxiLight = false;
 	if(bIsAmbulanceOnDuty){
 		bIsAmbulanceOnDuty = false;
-		CCarCtrl::NumAmbulancesOnDuty--;
+		CarCtrl_NumAmbulancesOnDuty--;
 	}
 	if(bIsFireTruckOnDuty){
 		bIsFireTruckOnDuty = false;
-		CCarCtrl::NumFiretrucksOnDuty--;
+		CarCtrl_NumFiretrucksOnDuty--;
 	}
 	ChangeLawEnforcerState(false);
 
@@ -4780,7 +4752,7 @@ CAutomobile::BurstTyre(uint8 wheel, bool applyForces)
 
 		if(GetStatus() == STATUS_SIMPLE){
 			SetStatus(STATUS_PHYSICS);
-			CCarCtrl::SwitchVehicleToRealPhysics(this);
+			CarCtrl_SwitchVehicleToRealPhysics(this);
 		}
 
 		if(applyForces){
@@ -4838,16 +4810,16 @@ CAutomobile::IsRoomForPedToLeaveCar(uint32 component, CVector *doorOffset)
 	// Delegate the scale of the vector to the C implementation
 	CVector pedPos = seatPos + dist*VehicleLogic_ExitCheckScale(length);
 
-	if(!CWorld::GetIsLineOfSightClear(seatPos, pedPos, true, false, false, true, false, false))
+	if(!World_GetIsLineOfSightClear(seatPos, pedPos, true, false, false, true, false, false))
 		return false;
-	if(CWorld::TestSphereAgainstWorld(doorPos, 0.6f, this, true, true, false, true, false, false))
+	if(World_TestSphereAgainstWorld(doorPos, 0.6f, this, true, true, false, true, false, false))
 		return false;
-	if(CWorld::ProcessVerticalLine(doorPos, 1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
+	if(World_ProcessVerticalLine(doorPos, 1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
 		// Delegate the test for the ceiling to the C implementation
 		if(VehicleLogic_ExitBlockedAbove(colpoint.point.z, doorPos.z))
 			return false;
 	float upperZ = colpoint.point.z;
-	if(!CWorld::ProcessVerticalLine(doorPos, -1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
+	if(!World_ProcessVerticalLine(doorPos, -1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
 		return false;
 	// Delegate the test for the ground to the C implementation
 	if(VehicleLogic_ExitBlockedBelow(upperZ, colpoint.point.z))
@@ -4926,9 +4898,7 @@ CAutomobile::SetupSuspensionLines(void)
 	// Delegate the radius of the vehicle to the C implementation
 	CVector radiusMin = CollisionVector_ToNative(colModel->boundingBox.min);
 	CVector radiusMax = CollisionVector_ToNative(colModel->boundingBox.max);
-	const float radiusMinC[3] = { radiusMin.x, radiusMin.y, radiusMin.z };
-	const float radiusMaxC[3] = { radiusMax.x, radiusMax.y, radiusMax.z };
-	float radius = VehicleLogic_BoundingRadius(radiusMinC, radiusMaxC);
+	float radius = VehicleLogic_BoundingRadius(&radiusMin, &radiusMax);
 	if(colModel->boundingSphere.radius < radius)
 		colModel->boundingSphere.radius = radius;
 
@@ -4947,7 +4917,7 @@ CAutomobile::ScanForCrimes(void)
 		if(FindPlayerVehicle()->IsAlarmOn())
 			// if player's alarm is on, increase wanted level
 			if((FindPlayerVehicle()->GetPosition() - GetPosition()).MagnitudeSqr() < sq(20.0f))
-				CWorld::Players[CWorld::PlayerInFocus].m_pPed->SetWantedLevelNoDrop(1);
+				World_Players[World_PlayerInFocus].m_pPed->SetWantedLevelNoDrop(1);
 }
 
 void
@@ -4994,11 +4964,11 @@ CPed::DeadPedMakesTyresBloody(void)
 	int32_t minX, minY, maxX, maxY;
 	World_SectorRange(GetPosition().x - 2.0f, GetPosition().y - 2.0f, GetPosition().x + 2.0f, GetPosition().y + 2.0f, &minX, &minY, &maxX, &maxY);
 
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	for (int curY = minY; curY <= maxY; curY++) {
 		for (int curX = minX; curX <= maxX; curX++) {
-			CSector *sector = CWorld::GetSector(curX, curY);
+			CSector *sector = World_GetSector(curX, curY);
 			MakeTyresMuddySectorList(sector->m_lists[ENTITYLIST_VEHICLES]);
 			MakeTyresMuddySectorList(sector->m_lists[ENTITYLIST_VEHICLES_OVERLAP]);
 		}
@@ -5012,8 +4982,8 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 	CBike *bike = nil;
 	for (CPtrNode *node = list.first; node; node = node->next) {
 		CVehicle *veh = (CVehicle*)node->item;
-		if (veh->m_scanCode != CWorld::GetCurrentScanCode()) {
-			veh->m_scanCode = CWorld::GetCurrentScanCode();
+		if (veh->m_scanCode != World_GetCurrentScanCode()) {
+			veh->m_scanCode = World_GetCurrentScanCode();
 
 			// Delegate the check that the other vehicle is close to the C implementation
 			if (VehicleLogic_WithinSquare(GetPosition().x, GetPosition().y, veh->GetPosition().x, veh->GetPosition().y, 10.0f)) {				
@@ -5039,7 +5009,7 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 								if (General_AbsDiffBelow(wheelPos.z, GetPosition().z, 2.0f)) {
 
 									if ((wheelPos - GetPosition()).MagnitudeSqr2D() < 1.0f) {
-										if (CGame::nastyGame) {
+										if (Game_nastyGame) {
 											car->m_aWheelSkidmarkBloody[wheel] = true;
 											DMAudio_PlayOneShot(car->m_audioEntityId, SOUND_SPLATTER, 0.0f);
 										}
@@ -5070,7 +5040,7 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 								if (General_AbsDiffBelow(wheelPos.z, GetPosition().z, 2.0f)) {
 
 									if ((wheelPos - GetPosition()).MagnitudeSqr2D() < 1.0f) {
-										if (CGame::nastyGame) {
+										if (Game_nastyGame) {
 											bike->m_aWheelSkidmarkBloody[wheel] = true;
 											DMAudio_PlayOneShot(bike->m_audioEntityId, SOUND_SPLATTER, 0.0f);
 										}
@@ -5256,7 +5226,7 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 		return nil;
 
 	// Allocate the flying automobile component without invoking C++ new.
-	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObjectPool *objectPool = Pools_GetObjectPool();
 		// Access raw storage through the C store or pool API
 	obj = ((CObject*)CPool_New(objectPool));
 	#ifdef FIX_BUGS
@@ -5268,7 +5238,7 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
 								// Access raw storage through the C store or pool API
 				int32 handle = CPool_GetIndex(objectPool, existing);
-								CWorld::Remove(existing);
+								World_Remove(existing);
 				existing->~CObject();
 								// Access raw storage through the C store or pool API
 				CPool_Delete(objectPool, existing);
@@ -5347,10 +5317,7 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 		obj->m_nEndOfLifeTime = (*Timer_GetTimeInMilliseconds()) + 20000;
 
 	// Delegate the speed of the component to the C implementation
-	const float carSpeedC[3] = { m_vecMoveSpeed.x, m_vecMoveSpeed.y, m_vecMoveSpeed.z };
-	float componentSpeedC[3];
-	Automobile_FlyingComponentSpeed(carSpeedC, GetUp().z, component == COMPGROUP_BONNET || component == COMPGROUP_BOOT || component == CAR_WINDSCREEN, componentSpeedC);
-	obj->m_vecMoveSpeed = CVector(componentSpeedC[0], componentSpeedC[1], componentSpeedC[2]);
+	Automobile_FlyingComponentSpeed(&m_vecMoveSpeed, GetUp().z, component == COMPGROUP_BONNET || component == COMPGROUP_BOOT || component == CAR_WINDSCREEN, &obj->m_vecMoveSpeed);
 
 	obj->m_vecTurnSpeed = m_vecTurnSpeed*2.0f;
 
@@ -5381,15 +5348,15 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 		ApplyMoveForce(5.0f*dist);
 	}
 
-	if(CCollision::ProcessColModels(obj->GetMatrix(), *obj->GetColModel(),
+	if(Collision_ProcessColModels(obj->GetMatrix(), *obj->GetColModel(),
 			this->GetMatrix(), *this->GetColModel(),
-			CWorld::m_aTempColPts, nil, nil) > 0)
+			World_m_aTempColPts, nil, nil) > 0)
 		obj->m_pCollidingEntity = this;
 
 	if(bRenderScorched)
 		obj->bRenderScorched = true;
 
-	CWorld::Add(obj);
+	World_Add(obj);
 
 	return obj;
 }
@@ -5429,7 +5396,7 @@ CAutomobile::SetPanelDamage(int32 component, ePanels panel, bool noFlyingCompone
 		if(!noFlyingComponents)
 			SpawnFlyingComponent(component, COMPGROUP_PANEL);
 		else if(panel == VEHPANEL_WINDSCREEN)
-			CGlass::CarWindscreenShatters(this, false);
+			Glass_CarWindscreenShatters(this, false);
 		// hide both
 		SetComponentVisibility(m_aCarNodes[component], ATOMIC_FLAG_NONE);
 	}

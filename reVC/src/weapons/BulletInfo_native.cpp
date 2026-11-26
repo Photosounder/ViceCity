@@ -79,7 +79,7 @@ extern "C" CollisionPointRef BulletInfo_HostSniperEnd(void)
 extern "C" bool BulletInfo_HostTestLineBox(const CColLine *line, const CBox *box)
 {
     // Call the separately owned native collision operation with its real C records
-    return CCollision::TestLineBox(*line, *box);
+    return Collision_TestLineBox(*line, *box);
 }
 #endif
 //- rouz edit (ChatGPT)
@@ -90,7 +90,7 @@ extern "C" bool BulletInfo_HostLineOfSight(const BulletInfoVector *start,const B
 {
     // Construct actual native input vectors and retain the original typed output objects
     CVector nativeStart(start->x,start->y,start->z), nativeEnd(end->x,end->y,end->z);
-    return CWorld::ProcessLineOfSight(nativeStart,nativeEnd,*point,*entity,buildings,vehicles,peds,objects,dummies,seeThrough,someObjects,shootThrough);
+    return World_ProcessLineOfSight(nativeStart,nativeEnd,*point,*entity,buildings,vehicles,peds,objects,dummies,seeThrough,someObjects,shootThrough);
 }
 extern "C" void BulletInfo_HostCheckOccupant(CEntity **entity,CColPoint *point,enum eWeaponType weapon,const BulletInfoVector *start,const BulletInfoVector *end)
 {
@@ -101,22 +101,22 @@ extern "C" void BulletInfo_HostCheckOccupant(CEntity **entity,CColPoint *point,e
 extern "C" bool *BulletInfo_HostWorldDeadPeds(void)
 {
     // Borrow the actual live world query flag
-    return &CWorld::bIncludeDeadPeds;
+    return &World_bIncludeDeadPeds;
 }
 extern "C" bool *BulletInfo_HostWorldBikers(void)
 {
     // Borrow the actual live biker query flag
-    return &CWorld::bIncludeBikers;
+    return &World_bIncludeBikers;
 }
 extern "C" bool *BulletInfo_HostWorldCarTyres(void)
 {
     // Borrow the actual live tyre query flag
-    return &CWorld::bIncludeCarTyres;
+    return &World_bIncludeCarTyres;
 }
 extern "C" CEntity **BulletInfo_HostWorldIgnoreEntity(void)
 {
     // Borrow the actual live ignored entity slot
-    return &CWorld::pIgnoreEntity;
+    return &World_pIgnoreEntity;
 }
 extern "C" int32_t BulletInfo_HostEntityType(CEntity *entity)
 {
@@ -141,7 +141,7 @@ extern "C" void BulletInfo_HostPedSay(CEntity *entity,uint16_t sound)
 extern "C" bool BulletInfo_HostNastyGame(void)
 {
     // Read the actual live game effects flag
-    return CGame::nastyGame;
+    return Game_nastyGame;
 }
 extern "C" CollisionPointRef BulletInfo_HostPedPosition(CEntity *entity)
 {
@@ -203,7 +203,7 @@ extern "C" bool BulletInfo_HostIsVehicle(CEntity *entity)
 extern "C" void BulletInfo_HostGlassHit(CEntity *entity,const CColPoint *point)
 {
     // Pass the live collision point to the existing native glass operation
-    CGlass::WasGlassHitByBullet(entity,CollisionVector_ToNative(point->point));
+    Glass_WasGlassHitByBullet(entity,CollisionVector_ToNative(point->point));
 }
 extern "C" void BulletInfo_HostBlowUpExplosive(CEntity *entity)
 {

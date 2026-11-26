@@ -56,7 +56,7 @@ void ShotInfo_HostSprint(CEntity *entity)
 void ShotInfo_HostCarsOnFire(float x,float y,float z,float radius,CEntity *source)
 {
     // Use the actual separately owned native entity or vector operation
-    CWorld::SetCarsOnFire(x,y,z,radius,source);
+    World_SetCarsOnFire(x,y,z,radius,source);
 }
 void ShotInfo_HostNormalise(ShotInfoVector *value)
 {

@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include <stdint.h>
 #include "config.h"
@@ -37,9 +38,9 @@ static inline bool Replay_IsPlayingBack(void)
 }
 //+ rouz edit (Claude)
 // Offset of the look-around replay camera from its focus, from the distance and the vertical (alpha) and horizontal (beta) angles
-void Replay_LookAroundOffset(float distance, float alpha, float beta, float offset[3]);
+void Replay_LookAroundOffset(float distance, float alpha, float beta, CVector *offset);
 // Orientation of the look-around replay camera that looks from a position at a focus point (forward, right and up vectors, all normalised)
-void Replay_LookAroundBasis(const float focus[3], const float cameraPos[3], float forward[3], float right[3], float up[3]);
+void Replay_LookAroundBasis(const CVector *focus, const CVector *cameraPos, CVector *forward, CVector *right, CVector *up);
 //- rouz edit (Claude)
 //+ rouz edit (Claude)
 // Value of a replay packet field: a factor times the value limited to a range

@@ -426,9 +426,9 @@ psInitialize(void)
 	CPad::Initialise();
 	CPad::GetPad(0)->Mode = 0;
 
-	CGame::frenchGame = false;
-	CGame::germanGame = false;
-	CGame::nastyGame = true;
+	Game_frenchGame = false;
+	Game_germanGame = false;
+	Game_nastyGame = true;
 	CMenuManager::m_PrefsAllowNastyGame = true;
 
 #ifndef _WIN32
@@ -457,15 +457,15 @@ psInitialize(void)
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_SPANISH;
 	else if ( lang  == LANG_GERMAN )
 	{
-		CGame::germanGame = true;
-		CGame::nastyGame = false;
+		Game_germanGame = true;
+		Game_nastyGame = false;
 		CMenuManager::m_PrefsAllowNastyGame = false;
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_GERMAN;
 	}
 	else if ( lang  == LANG_FRENCH )
 	{
-		CGame::frenchGame = true;
-		CGame::nastyGame = false;
+		Game_frenchGame = true;
+		Game_nastyGame = false;
 		CMenuManager::m_PrefsAllowNastyGame = false;
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_FRENCH;
 	}
@@ -1253,29 +1253,29 @@ void InitialiseLanguage()
 		|| primSystemLCID == LANG_GERMAN
 		|| primLayout	  == LANG_GERMAN )
 	{
-		CGame::nastyGame = false;
+		Game_nastyGame = false;
 		FrontEndMenuManager.m_PrefsAllowNastyGame = false;
-		CGame::germanGame = true;
+		Game_germanGame = true;
 	}
 	
 	if (   primUserLCID	  == LANG_FRENCH
 		|| primSystemLCID == LANG_FRENCH
 		|| primLayout	  == LANG_FRENCH )
 	{
-		CGame::nastyGame = false;
+		Game_nastyGame = false;
 		FrontEndMenuManager.m_PrefsAllowNastyGame = false;
-		CGame::frenchGame = true;
+		Game_frenchGame = true;
 	}
 	
 	if (   subUserLCID	 == SUBLANG_ENGLISH_AUS
 		|| subSystemLCID == SUBLANG_ENGLISH_AUS
 		|| subLayout	 == SUBLANG_ENGLISH_AUS )
-		CGame::noProstitutes = true;
+		Game_noProstitutes = true;
 
 #ifdef NASTY_GAME
-	CGame::nastyGame = true;
+	Game_nastyGame = true;
 	FrontEndMenuManager.m_PrefsAllowNastyGame = true;
-	CGame::noProstitutes = false;
+	Game_noProstitutes = false;
 #endif
 	
 	int32 lang;
@@ -2076,7 +2076,7 @@ main(int argc, char *argv[])
 		Text_Unload(&TheText);
 		Text_Load(&TheText);
 		
-		CFont::Initialise();
+		Font_Initialise();
 		
 		FrontEndMenuManager.DrawMemoryCardStartUpMenus();
 	}
@@ -2114,7 +2114,7 @@ main(int argc, char *argv[])
 
 #ifdef PS2_MENU
 		if (TheMemoryCard.m_bWantToLoad)
-			LoadSplash(GetLevelSplashScreen(CGame::currLevel));
+			LoadSplash(GetLevelSplashScreen(Game_currLevel));
 		
 		TheMemoryCard.m_bWantToLoad = false;
 		
@@ -2222,7 +2222,7 @@ main(int argc, char *argv[])
 						
 #ifdef PS2_MENU
 						extern char version_name[64];
-						if ( CGame::frenchGame || CGame::germanGame )
+						if ( Game_frenchGame || Game_germanGame )
 							LoadingScreen(NULL, version_name, "loadsc24");
 						else
 							LoadingScreen(NULL, version_name, "loadsc0");
@@ -2232,7 +2232,7 @@ main(int argc, char *argv[])
 						LoadingScreen(nil, nil, "loadsc0");
 						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
 #endif
-						if ( !CGame::InitialiseOnceAfterRW() )
+						if ( !Game_InitialiseOnceAfterRW() )
 							RsGlobal.quit = TRUE;
 						
 #ifdef PS2_MENU
@@ -2298,7 +2298,7 @@ main(int argc, char *argv[])
 					case GS_INIT_PLAYING_GAME:
 					{
 #ifdef PS2_MENU
-						CGame::Initialise("DATA\\GTA3.DAT");
+						Game_Initialise("DATA\\GTA3.DAT");
 						
 						//LoadingScreen("Starting Game", NULL, GetRandomSplashScreen());
 					
@@ -2317,7 +2317,7 @@ main(int argc, char *argv[])
 								Text_Load(&TheText);
 							}
 					
-							CGame::currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
+							Game_currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
 						}
 #else
 						InitialiseGame();
@@ -2374,7 +2374,7 @@ main(int argc, char *argv[])
 		DMAudio_ChangeMusicMode(MUSICMODE_DISABLE);
 		
 #ifdef PS2_MENU
-		CGame::ShutDownForRestart();
+		Game_ShutDownForRestart();
 #endif
 		
 		Timer_Stop();
@@ -2388,24 +2388,24 @@ main(int argc, char *argv[])
 				TheMemoryCard.m_bWantToLoad = true;
 			}
 
-			CGame::InitialiseWhenRestarting();
+			Game_InitialiseWhenRestarting();
 			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			FrontEndMenuManager.m_bWantToRestart = false;
 			
 			continue;
 		}
 		
-		CGame::ShutDown();	
+		Game_ShutDown();	
 		Timer_Stop();
 		
 		break;
 #else
 		if ( FrontEndMenuManager.m_bWantToLoad )
 		{
-			CGame::ShutDownForRestart();
-			CGame::InitialiseWhenRestarting();
+			Game_ShutDownForRestart();
+			Game_InitialiseWhenRestarting();
 			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
-			LoadSplash(GetLevelSplashScreen(CGame::currLevel));
+			LoadSplash(GetLevelSplashScreen(Game_currLevel));
 			FrontEndMenuManager.m_bWantToLoad = false;
 		}
 		else
@@ -2416,7 +2416,7 @@ main(int argc, char *argv[])
 			else
 #endif
 			if ( gGameState == GS_PLAYING_GAME )
-				CGame::ShutDown();
+				Game_ShutDown();
 			
 			Timer_Stop();
 			
@@ -2443,7 +2443,7 @@ main(int argc, char *argv[])
 	else
 #endif
 	if ( gGameState == GS_PLAYING_GAME )
-		CGame::ShutDown();
+		Game_ShutDown();
 
 	DMAudio_Terminate();
 	

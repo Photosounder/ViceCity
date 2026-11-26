@@ -10,7 +10,7 @@
 #include "VectorMath.h"
 #include "SurfaceTable.h"
 
-void Collision_CalculateTrianglePlanes(CLinkList *cache, CColModel *model)
+void CollisionModel_CalculateTrianglePlanes(CLinkList *cache, CColModel *model)
 {
 	CLink *lptr;
 
@@ -58,7 +58,7 @@ static CColLine TransformLine(const CColLine *line, const float matrix[4][4])
 	return newline;
 }
 
-bool Collision_TestLineOfSight(const CColLine *line, const float matrix[4][4], CColModel *model, bool ignoreSeeThrough, bool ignoreShootThrough, CLinkList *cache)
+bool CollisionModel_TestLineOfSight(const CColLine *line, const float matrix[4][4], CColModel *model, bool ignoreSeeThrough, bool ignoreShootThrough, CLinkList *cache)
 {
 	int i;
 
@@ -66,35 +66,35 @@ bool Collision_TestLineOfSight(const CColLine *line, const float matrix[4][4], C
 	CColLine newline = TransformLine(line, matrix);
 
 	// If we do not intersect with the bounding box there is no chance on the rest
-	if (!Collision_TestLineBox(&newline, &model->boundingBox))
+	if (!CollisionTests_TestLineBox(&newline, &model->boundingBox))
 		return false;
 
 	for (i = 0; i < model->numSpheres; i++) {
 		if (ignoreSeeThrough && IsSeeThrough(model->spheres[i].surface)) continue;
 		if (ignoreShootThrough && IsShootThrough(model->spheres[i].surface)) continue;
-		if (Collision_TestLineSphere(&newline, &model->spheres[i]))
+		if (CollisionTests_TestLineSphere(&newline, &model->spheres[i]))
 			return true;
 	}
 
 	for (i = 0; i < model->numBoxes; i++) {
 		if (ignoreSeeThrough && IsSeeThrough(model->boxes[i].surface)) continue;
 		if (ignoreShootThrough && IsShootThrough(model->boxes[i].surface)) continue;
-		if (Collision_TestLineBox(&newline, &model->boxes[i].bounds))
+		if (CollisionTests_TestLineBox(&newline, &model->boxes[i].bounds))
 			return true;
 	}
 
-	Collision_CalculateTrianglePlanes(cache, model);
+	CollisionModel_CalculateTrianglePlanes(cache, model);
 	for (i = 0; i < model->numTriangles; i++) {
 		if (ignoreSeeThrough && IsSeeThrough(model->triangles[i].surface)) continue;
 		if (ignoreShootThrough && IsShootThrough(model->triangles[i].surface)) continue;
-		if (Collision_TestLineTriangle(&newline, model->vertices, &model->triangles[i], &model->trianglePlanes[i]))
+		if (CollisionTriangle_TestLineTriangle(&newline, model->vertices, &model->triangles[i], &model->trianglePlanes[i]))
 			return true;
 	}
 
 	return false;
 }
 
-bool Collision_ProcessLineOfSight(const CColLine *line, const float matrix[4][4], CColModel *model, CColPoint *point, float *mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CLinkList *cache)
+bool CollisionModel_ProcessLineOfSight(const CColLine *line, const float matrix[4][4], CColModel *model, CColPoint *point, float *mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CLinkList *cache)
 {
 	int i;
 	float coldist;
@@ -104,27 +104,27 @@ bool Collision_ProcessLineOfSight(const CColLine *line, const float matrix[4][4]
 	CColLine newline = TransformLine(line, matrix);
 
 	// If we do not intersect with the bounding box there is no chance on the rest
-	if (!Collision_TestLineBox(&newline, &model->boundingBox))
+	if (!CollisionTests_TestLineBox(&newline, &model->boundingBox))
 		return false;
 
 	coldist = *mindist;
 	for (i = 0; i < model->numSpheres; i++) {
 		if (ignoreSeeThrough && IsSeeThrough(model->spheres[i].surface)) continue;
 		if (ignoreShootThrough && IsShootThrough(model->spheres[i].surface)) continue;
-		Collision_ProcessLineSphere(&newline, &model->spheres[i], point, &coldist);
+		CollisionProcess_ProcessLineSphere(&newline, &model->spheres[i], point, &coldist);
 	}
 
 	for (i = 0; i < model->numBoxes; i++) {
 		if (ignoreSeeThrough && IsSeeThrough(model->boxes[i].surface)) continue;
 		if (ignoreShootThrough && IsShootThrough(model->boxes[i].surface)) continue;
-		Collision_ProcessLineBox(&newline, &model->boxes[i], point, &coldist);
+		CollisionProcess_ProcessLineBox(&newline, &model->boxes[i], point, &coldist);
 	}
 
-	Collision_CalculateTrianglePlanes(cache, model);
+	CollisionModel_CalculateTrianglePlanes(cache, model);
 	for (i = 0; i < model->numTriangles; i++) {
 		if (ignoreSeeThrough && IsSeeThrough(model->triangles[i].surface)) continue;
 		if (ignoreShootThrough && IsShootThrough(model->triangles[i].surface)) continue;
-		Collision_ProcessLineTriangle(&newline, model->vertices, &model->triangles[i], &model->trianglePlanes[i], point, &coldist, verts);
+		CollisionTriangle_ProcessLineTriangle(&newline, model->vertices, &model->triangles[i], &model->trianglePlanes[i], point, &coldist, verts);
 	}
 
 	// A contact was found, bring it back to world space
@@ -166,7 +166,7 @@ static VectorMath3 MultiplyInverse(const float m[4][4], float x, float y, float 
 	return r;
 }
 
-bool Collision_ProcessVerticalLine(const CColLine *line, const float matrix[4][4], CColModel *model, CColPoint *point, float *mindist, bool ignoreSeeThrough, CStoredCollPoly *poly, CLinkList *cache)
+bool CollisionModel_ProcessVerticalLine(const CColLine *line, const float matrix[4][4], CColModel *model, CColPoint *point, float *mindist, bool ignoreSeeThrough, CStoredCollPoly *poly, CLinkList *cache)
 {
 	static CStoredCollPoly TempStoredPoly;
 	int i;
@@ -179,26 +179,26 @@ bool Collision_ProcessVerticalLine(const CColLine *line, const float matrix[4][4
 	// Transform the line to model space
 	ColLine_Init(&newline, COLLISION_POINT_REF(ta), COLLISION_POINT_REF(tb));
 
-	if (!Collision_TestLineBox(&newline, &model->boundingBox))
+	if (!CollisionTests_TestLineBox(&newline, &model->boundingBox))
 		return false;
 
 	// Only the see through flag counts here, as in the original
 	coldist = *mindist;
 	for (i = 0; i < model->numSpheres; i++) {
 		if (ignoreSeeThrough && IsSeeThroughVertical(model->spheres[i].surface)) continue;
-		Collision_ProcessLineSphere(&newline, &model->spheres[i], point, &coldist);
+		CollisionProcess_ProcessLineSphere(&newline, &model->spheres[i], point, &coldist);
 	}
 
 	for (i = 0; i < model->numBoxes; i++) {
 		if (ignoreSeeThrough && IsSeeThroughVertical(model->boxes[i].surface)) continue;
-		Collision_ProcessLineBox(&newline, &model->boxes[i], point, &coldist);
+		CollisionProcess_ProcessLineBox(&newline, &model->boxes[i], point, &coldist);
 	}
 
-	Collision_CalculateTrianglePlanes(cache, model);
+	CollisionModel_CalculateTrianglePlanes(cache, model);
 	TempStoredPoly.valid = false;
 	for (i = 0; i < model->numTriangles; i++) {
 		if (ignoreSeeThrough && IsSeeThroughVertical(model->triangles[i].surface)) continue;
-		if (Collision_ProcessLineTriangle(&newline, model->vertices, &model->triangles[i], &model->trianglePlanes[i], point, &coldist, verts))
+		if (CollisionTriangle_ProcessLineTriangle(&newline, model->vertices, &model->triangles[i], &model->trianglePlanes[i], point, &coldist, verts))
 			StoreTriangle(&TempStoredPoly, verts);
 	}
 
@@ -249,7 +249,7 @@ static CollisionVector3 TransformDirection(const float m[4][4], CollisionVector3
 	return out;
 }
 
-int Collision_ProcessColModels(const float matrixA[4][4], CColModel *modelA, const float matrixB[4][4], CColModel *modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists, CLinkList *cache)
+int CollisionModel_ProcessColModels(const float matrixA[4][4], CColModel *modelA, const float matrixB[4][4], CColModel *modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists, CLinkList *cache)
 {
 	static int aSphereIndicesA[MAXNUMSPHERES];
 	static int aLineIndicesA[MAXNUMLINES];
@@ -278,7 +278,7 @@ int Collision_ProcessColModels(const float matrixA[4][4], CColModel *modelA, con
 	// Bounding sphere of A in B space
 	bsphereAB.bounds.radius = modelA->boundingSphere.radius;
 	bsphereAB.bounds.center = TransformPoint((const float (*)[4])matAB, modelA->boundingSphere.center);
-	if (!Collision_TestSphereBox(&bsphereAB.bounds, &modelB->boundingBox))
+	if (!CollisionTests_TestSphereBox(&bsphereAB.bounds, &modelB->boundingBox))
 		return 0;
 
 	// B to A space
@@ -302,7 +302,7 @@ int Collision_ProcessColModels(const float matrixA[4][4], CColModel *modelA, con
 	numSpheresA = 0;
 	numLinesA = 0;
 	for (i = 0; i < modelA->numSpheres; i++)
-		if (Collision_TestSphereBox(&aSpheresA[i].bounds, &modelB->boundingBox))
+		if (CollisionTests_TestSphereBox(&aSpheresA[i].bounds, &modelB->boundingBox))
 			aSphereIndicesA[numSpheresA++] = i;
 
 	// There is no actual check for lines
@@ -320,15 +320,15 @@ int Collision_ProcessColModels(const float matrixA[4][4], CColModel *modelA, con
 	for (i = 0; i < modelB->numSpheres; i++) {
 		s.bounds.radius = modelB->spheres[i].bounds.radius;
 		s.bounds.center = TransformPoint((const float (*)[4])matBA, modelB->spheres[i].bounds.center);
-		if (Collision_TestSphereBox(&s.bounds, &modelA->boundingBox))
+		if (CollisionTests_TestSphereBox(&s.bounds, &modelA->boundingBox))
 			aSphereIndicesB[numSpheresB++] = i;
 	}
 	for (i = 0; i < modelB->numBoxes; i++)
-		if (Collision_TestSphereBox(&bsphereAB.bounds, &modelB->boxes[i].bounds))
+		if (CollisionTests_TestSphereBox(&bsphereAB.bounds, &modelB->boxes[i].bounds))
 			aBoxIndicesB[numBoxesB++] = i;
-	Collision_CalculateTrianglePlanes(cache, modelB);
+	CollisionModel_CalculateTrianglePlanes(cache, modelB);
 	for (i = 0; i < modelB->numTriangles; i++)
-		if (Collision_TestSphereTriangle(&bsphereAB, modelB->vertices, &modelB->triangles[i], &modelB->trianglePlanes[i]))
+		if (CollisionTriangle_TestSphereTriangle(&bsphereAB, modelB->vertices, &modelB->triangles[i], &modelB->trianglePlanes[i]))
 			aTriangleIndicesB[numTrianglesB++] = i;
 	assert(numSpheresB <= MAXNUMSPHERES);
 	assert(numBoxesB <= MAXNUMBOXES);
@@ -345,11 +345,11 @@ int Collision_ProcessColModels(const float matrixA[4][4], CColModel *modelA, con
 		bool hasCollided = false;
 
 		for (j = 0; j < numSpheresB; j++)
-			hasCollided |= Collision_ProcessSphereSphere(&aSpheresA[aSphereIndicesA[i]], &modelB->spheres[aSphereIndicesB[j]], &spherepoints[numCollisions], &coldist);
+			hasCollided |= CollisionProcess_ProcessSphereSphere(&aSpheresA[aSphereIndicesA[i]], &modelB->spheres[aSphereIndicesB[j]], &spherepoints[numCollisions], &coldist);
 		for (j = 0; j < numBoxesB; j++)
-			hasCollided |= Collision_ProcessSphereBox(&aSpheresA[aSphereIndicesA[i]], &modelB->boxes[aBoxIndicesB[j]], &spherepoints[numCollisions], &coldist);
+			hasCollided |= CollisionProcess_ProcessSphereBox(&aSpheresA[aSphereIndicesA[i]], &modelB->boxes[aBoxIndicesB[j]], &spherepoints[numCollisions], &coldist);
 		for (j = 0; j < numTrianglesB; j++)
-			hasCollided |= Collision_ProcessSphereTriangle(&aSpheresA[aSphereIndicesA[i]], modelB->vertices, &modelB->triangles[aTriangleIndicesB[j]], &modelB->trianglePlanes[aTriangleIndicesB[j]], &spherepoints[numCollisions], &coldist);
+			hasCollided |= CollisionTriangle_ProcessSphereTriangle(&aSpheresA[aSphereIndicesA[i]], modelB->vertices, &modelB->triangles[aTriangleIndicesB[j]], &modelB->trianglePlanes[aTriangleIndicesB[j]], &spherepoints[numCollisions], &coldist);
 
 		if (hasCollided)
 			numCollisions++;
@@ -364,11 +364,11 @@ int Collision_ProcessColModels(const float matrixA[4][4], CColModel *modelA, con
 		aCollided[i] = false;
 
 		for (j = 0; j < numSpheresB; j++)
-			aCollided[i] |= Collision_ProcessLineSphere(&aLinesA[aLineIndicesA[i]], &modelB->spheres[aSphereIndicesB[j]], &linepoints[aLineIndicesA[i]], &linedists[aLineIndicesA[i]]);
+			aCollided[i] |= CollisionProcess_ProcessLineSphere(&aLinesA[aLineIndicesA[i]], &modelB->spheres[aSphereIndicesB[j]], &linepoints[aLineIndicesA[i]], &linedists[aLineIndicesA[i]]);
 		for (j = 0; j < numBoxesB; j++)
-			aCollided[i] |= Collision_ProcessLineBox(&aLinesA[aLineIndicesA[i]], &modelB->boxes[aBoxIndicesB[j]], &linepoints[aLineIndicesA[i]], &linedists[aLineIndicesA[i]]);
+			aCollided[i] |= CollisionProcess_ProcessLineBox(&aLinesA[aLineIndicesA[i]], &modelB->boxes[aBoxIndicesB[j]], &linepoints[aLineIndicesA[i]], &linedists[aLineIndicesA[i]]);
 		for (j = 0; j < numTrianglesB; j++)
-			aCollided[i] |= Collision_ProcessLineTriangle(&aLinesA[aLineIndicesA[i]], modelB->vertices, &modelB->triangles[aTriangleIndicesB[j]], &modelB->trianglePlanes[aTriangleIndicesB[j]], &linepoints[aLineIndicesA[i]], &linedists[aLineIndicesA[i]], verts);
+			aCollided[i] |= CollisionTriangle_ProcessLineTriangle(&aLinesA[aLineIndicesA[i]], modelB->vertices, &modelB->triangles[aTriangleIndicesB[j]], &modelB->trianglePlanes[aTriangleIndicesB[j]], &linepoints[aLineIndicesA[i]], &linedists[aLineIndicesA[i]], verts);
 	}
 	for (i = 0; i < numLinesA; i++)
 		if (aCollided[i]) {

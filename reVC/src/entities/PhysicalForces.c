@@ -2,6 +2,7 @@
 #include <math.h>
 #include "config.h"
 #include "PhysicalForces.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "VectorMath.h"
 
 #define GRAVITY (0.008f)
@@ -366,7 +367,7 @@ float Physical_ShiftDamping(float damp, float timeStep)
 {
 	return powf(damp, timeStep);
 }
-void Physical_BlendGravityUp(const float gravityUp[3], const float surfaceUp[3], float timeStep, float out[3])
+void Physical_BlendGravityUp(const CVector *gravityUp, const CVector *surfaceUp, float timeStep, CVector *out)
 {
 	float t = timeStep * 0.5f;
 	float x, y, z;
@@ -375,18 +376,18 @@ void Physical_BlendGravityUp(const float gravityUp[3], const float surfaceUp[3],
 	t = t < 0.05f ? 0.05f : t > 0.8f ? 0.8f : t;
 
 	// Blend the previous gravity direction with the surface direction
-	x = gravityUp[0] * (1.0f - t) + surfaceUp[0] * t;
-	y = gravityUp[1] * (1.0f - t) + surfaceUp[1] * t;
-	z = gravityUp[2] * (1.0f - t) + surfaceUp[2] * t;
+	x = gravityUp->x * (1.0f - t) + surfaceUp->x * t;
+	y = gravityUp->y * (1.0f - t) + surfaceUp->y * t;
+	z = gravityUp->z * (1.0f - t) + surfaceUp->z * t;
 
 	// Normalise it unless it is too short, then use straight up
 	if (x * x + y * y + z * z < 0.1f) {
-		out[0] = 0.0f; out[1] = 0.0f; out[2] = 1.0f;
+		out->x = 0.0f; out->y = 0.0f; out->z = 1.0f;
 	} else {
 		VectorMath3 v = { x, y, z };
 
 		VectorMath_Normalise(&v);
-		out[0] = v.x; out[1] = v.y; out[2] = v.z;
+		out->x = v.x; out->y = v.y; out->z = v.z;
 	}
 }
 //- rouz edit (Claude)

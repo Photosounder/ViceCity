@@ -97,88 +97,77 @@ extern bool gbDontRenderWater;
 
 class CEntity;
 
-class CWaterLevel
-{
-public:
-	static int32       ms_nNoOfWaterLevels;
-	static float       ms_aWaterZs[48];
-	static CRect       ms_aWaterRects[48];
-	static int8        aWaterBlockList[MAX_LARGE_SECTORS][MAX_LARGE_SECTORS];				// 64x64 Large blocks 64x64 each
-	static int8        aWaterFineBlockList[MAX_SMALL_SECTORS][MAX_SMALL_SECTORS];			// 128x128 Small blocks 32x32 each
-	static bool        WavesCalculatedThisFrame;
-
-	static bool        RequireWavySector;
-	static bool        MaskCalculatedThisFrame;
-	static CVector     PreCalculatedMaskPosn;
-	static bool        m_bRenderSeaBed;
-	static int32       m_nRenderWaterLayers;
-
-	static RpAtomic    *ms_pWavyAtomic;
-	static RpAtomic    *ms_pMaskAtomic;
-
-	static void    Initialise(Const char *pWaterDat); // out of class in III PC and later because of SecuROM
-	static void    Shutdown();
-
-	static void    CreateWavyAtomic();
-	static void    DestroyWavyAtomic();
-
-	static void    AddWaterLevel(float fXLeft, float fYBottom, float fXRight, float fYTop, float fLevel);
-	static bool    WaterLevelAccordingToRectangles(float fX, float fY, float *pfOutLevel = nil);
-	static bool    TestVisibilityForFineWaterBlocks(const CVector &worldPos);
-	static void    RemoveIsolatedWater();
-
-	static bool    GetWaterLevel(float fX, float fY, float fZ, float *pfOutLevel, bool bDontCheckZ);
-	static bool    GetWaterLevel(CVector coors, float *pfOutLevel, bool bDontCheckZ) { return GetWaterLevel(coors.x, coors.y, coors.z, pfOutLevel, bDontCheckZ); }
-	static bool    GetWaterLevelNoWaves(float fX, float fY, float fZ, float *pfOutLevel);
-	static float   GetWaterWavesOnly(short x, short y);	// unused
-	static CVector GetWaterNormal(float fX, float fY);
-
-	static void    RenderWater();
-	static void    RenderTransparentWater(void);
-	// unused 
-	static void RenderOneFlatSmallWaterPoly    (float fX, float fY, float fZ, RwRGBA const &color);
-	// inlined
-	static void RenderOneFlatLargeWaterPoly    (float fX, float fY, float fZ, RwRGBA const &color);	
-	static void RenderOneFlatHugeWaterPoly     (float fX, float fY, float fZ, RwRGBA const &color);
-	static void RenderOneFlatExtraHugeWaterPoly(float fX, float fY, float fZ, RwRGBA const &color);
-	// inlined
-	static void RenderOneWavySector            (float fX, float fY, float fZ, RwRGBA const &color, bool bDontRender = false);
-	// unused
+//+ rouz edit (Claude)
+// Formerly the static class CWaterLevel, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int32 WaterLevel_ms_nNoOfWaterLevels;
+extern float WaterLevel_ms_aWaterZs[48];
+extern CRect WaterLevel_ms_aWaterRects[48];
+extern int8 WaterLevel_aWaterBlockList[MAX_LARGE_SECTORS][MAX_LARGE_SECTORS];
+extern int8 WaterLevel_aWaterFineBlockList[MAX_SMALL_SECTORS][MAX_SMALL_SECTORS];
+extern bool WaterLevel_WavesCalculatedThisFrame;
+extern bool WaterLevel_RequireWavySector;
+extern bool WaterLevel_MaskCalculatedThisFrame;
+extern CVector WaterLevel_PreCalculatedMaskPosn;
+extern bool WaterLevel_m_bRenderSeaBed;
+extern int32 WaterLevel_m_nRenderWaterLayers;
+extern RpAtomic    * WaterLevel_ms_pWavyAtomic;
+extern RpAtomic    * WaterLevel_ms_pMaskAtomic;
+void    WaterLevel_Initialise(Const char *pWaterDat); // out of class in III PC and later because of SecuROM
+void    WaterLevel_Shutdown();
+void    WaterLevel_CreateWavyAtomic();
+void    WaterLevel_DestroyWavyAtomic();
+void    WaterLevel_AddWaterLevel(float fXLeft, float fYBottom, float fXRight, float fYTop, float fLevel);
+void    WaterLevel_RemoveIsolatedWater();
+bool    WaterLevel_GetWaterLevelNoWaves(float fX, float fY, float fZ, float *pfOutLevel);
+float   WaterLevel_GetWaterWavesOnly(short x, short y);	// unused
+CVector WaterLevel_GetWaterNormal(float fX, float fY);
+void    WaterLevel_RenderWater();
+void    WaterLevel_RenderTransparentWater(void);
 #ifdef PC_WATER
-	static void RenderWavyMask(float fX, float fY, float fZ, float fSectorX, float fSectorY, float fCamPosX, float fCamPosY, float fCamDirX, float fCamDirY, RwRGBA const&color);
 #else
-	static void RenderWavyMask(float fX, float fY, float fZ, float fSectorX, float fSectorY, int32 nCamDirX, int32 nCamDirY, RwRGBA const&color);
 #endif
-
 #ifdef PC_WATER
-	static void PreCalcWaterGeometry(void);
-	static bool PreCalcWavySector(RwRGBA const &color);	//fucked up
-	static bool PreCalcWavyMask(float fX, float fY, float fZ, float fSectorX, float fSectorY, float fCamPosX, float fCamPosY, float fCamDirX, float fCamDirY, RwRGBA const&color);
+void WaterLevel_PreCalcWaterGeometry(void);
 #endif
-
-
-	static void RenderBoatWakes(void);
-	static void RenderWakeSegment(CVector2D &vecA, CVector2D &vecB, CVector2D &vecC, CVector2D &vecD, float &fSizeA, float &fSizeB, float &fAlphaA, float &fAlphaB, float &fWakeZ);
-
-	// unused
-	static void RenderOneSlopedUnderWaterPoly(float fX, float fY, float fZ, RwRGBA const&color); // UNUSED
-	static void RenderOneFlatSmallWaterPolyBlended(float fX, float fY, float fZ, float fCamX, float fCamY, RwRGBA const &color, RwRGBA const &colorTrans, float fDrawDist);
-	static float CalcDistanceToWater(float fX, float fY);
-	static void RenderAndEmptyRenderBuffer();
-	
-	static bool GetGroundLevel(CVector const &vecPosn, float *pfOutLevel, ColData *pData, float fDistance);
-
-	// unused
-	static bool IsLocationOutOfWorldBounds_WS(CVector const &vecPosn, int nOffset);
-	// unused
-	static bool GetGroundLevel_WS(CVector const & vecPosn, float *pfOutLevel, ColData *pData, float fDistance);
-	static bool GetWaterDepth(CVector const &vecPosn, float *pfDepth, float *pfLevelNoWaves, float *pfGroundLevel);
-
-	static void RenderSeaBirds();
-	static void RenderShipsOnHorizon();
-
-	static void HandleSeaLifeForms();
-
-	static void HandleBeachToysStuff(void);
-	static CEntity *CreateBeachToy(CVector const &vec, eBeachToy beachtoy);
-};
+void WaterLevel_RenderBoatWakes(void);
+float WaterLevel_CalcDistanceToWater(float fX, float fY);
+void WaterLevel_RenderAndEmptyRenderBuffer();
+void WaterLevel_RenderSeaBirds();
+void WaterLevel_RenderShipsOnHorizon();
+void WaterLevel_HandleSeaLifeForms();
+void WaterLevel_HandleBeachToysStuff(void);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+bool    WaterLevel_WaterLevelAccordingToRectangles(float fX, float fY, float *pfOutLevel = nil);
+bool    WaterLevel_TestVisibilityForFineWaterBlocks(const CVector &worldPos);
+bool    WaterLevel_GetWaterLevel(float fX, float fY, float fZ, float *pfOutLevel, bool bDontCheckZ);
+static inline bool    WaterLevel_GetWaterLevel(CVector coors, float *pfOutLevel, bool bDontCheckZ);
+void WaterLevel_RenderOneFlatSmallWaterPoly(float fX, float fY, float fZ, RwRGBA const &color);
+void WaterLevel_RenderOneFlatLargeWaterPoly(float fX, float fY, float fZ, RwRGBA const &color);
+void WaterLevel_RenderOneFlatHugeWaterPoly(float fX, float fY, float fZ, RwRGBA const &color);
+void WaterLevel_RenderOneFlatExtraHugeWaterPoly(float fX, float fY, float fZ, RwRGBA const &color);
+void WaterLevel_RenderOneWavySector(float fX, float fY, float fZ, RwRGBA const &color, bool bDontRender = false);
+#ifdef PC_WATER
+void WaterLevel_RenderWavyMask(float fX, float fY, float fZ, float fSectorX, float fSectorY, float fCamPosX, float fCamPosY, float fCamDirX, float fCamDirY, RwRGBA const&color);
+#else
+void WaterLevel_RenderWavyMask(float fX, float fY, float fZ, float fSectorX, float fSectorY, int32 nCamDirX, int32 nCamDirY, RwRGBA const&color);
+#endif
+#ifdef PC_WATER
+bool WaterLevel_PreCalcWavySector(RwRGBA const &color);	//fucked up
+bool WaterLevel_PreCalcWavyMask(float fX, float fY, float fZ, float fSectorX, float fSectorY, float fCamPosX, float fCamPosY, float fCamDirX, float fCamDirY, RwRGBA const&color);
+#endif
+void WaterLevel_RenderWakeSegment(CVector2D &vecA, CVector2D &vecB, CVector2D &vecC, CVector2D &vecD, float &fSizeA, float &fSizeB, float &fAlphaA, float &fAlphaB, float &fWakeZ);
+void WaterLevel_RenderOneSlopedUnderWaterPoly(float fX, float fY, float fZ, RwRGBA const&color); // UNUSED
+void WaterLevel_RenderOneFlatSmallWaterPolyBlended(float fX, float fY, float fZ, float fCamX, float fCamY, RwRGBA const &color, RwRGBA const &colorTrans, float fDrawDist);
+bool WaterLevel_GetGroundLevel(CVector const &vecPosn, float *pfOutLevel, ColData *pData, float fDistance);
+bool WaterLevel_IsLocationOutOfWorldBounds_WS(CVector const &vecPosn, int nOffset);
+bool WaterLevel_GetGroundLevel_WS(CVector const & vecPosn, float *pfOutLevel, ColData *pData, float fDistance);
+bool WaterLevel_GetWaterDepth(CVector const &vecPosn, float *pfDepth, float *pfLevelNoWaves, float *pfGroundLevel);
+CEntity *WaterLevel_CreateBeachToy(CVector const &vec, eBeachToy beachtoy);
+static inline bool    WaterLevel_GetWaterLevel(CVector coors, float *pfOutLevel, bool bDontCheckZ) { return WaterLevel_GetWaterLevel(coors.x, coors.y, coors.z, pfOutLevel, bDontCheckZ); }
+#endif
+//- rouz edit (Claude)

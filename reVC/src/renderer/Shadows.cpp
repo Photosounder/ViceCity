@@ -1051,16 +1051,16 @@ CShadows::RenderStoredShadows(void)
 
 					// Delegate the range of sectors to the C implementation
 					int nStartX, nStartY, nEndX, nEndY;
-					World_ClampSectorRange(CWorld::GetSectorIndexX(fStartX), CWorld::GetSectorIndexX(fEndX), NUMSECTORS_X, &nStartX, &nEndX);
-					World_ClampSectorRange(CWorld::GetSectorIndexY(fStartY), CWorld::GetSectorIndexY(fEndY), NUMSECTORS_Y, &nStartY, &nEndY);
+					World_ClampSectorRange(World_GetSectorIndexX(fStartX), World_GetSectorIndexX(fEndX), NUMSECTORS_X, &nStartX, &nEndX);
+					World_ClampSectorRange(World_GetSectorIndexY(fStartY), World_GetSectorIndexY(fEndY), NUMSECTORS_Y, &nStartY, &nEndY);
 
-					CWorld::AdvanceCurrentScanCode();
+					World_AdvanceCurrentScanCode();
 
 					for ( int32 y = nStartY; y <= nEndY; y++ )
 					{
 						for ( int32 x = nStartX; x <= nEndX; x++ )
 						{
-							CSector *pCurSector = CWorld::GetSector(x, y);
+							CSector *pCurSector = World_GetSector(x, y);
 
 							ASSERT(pCurSector != nil);
 							
@@ -1281,16 +1281,16 @@ CShadows::GeneratePolysForStaticShadow(int16 nStaticShadowID)
 
 	// Delegate the range of sectors to the C implementation
 	int nStartX, nStartY, nEndX, nEndY;
-	World_ClampSectorRange(CWorld::GetSectorIndexX(fStartX), CWorld::GetSectorIndexX(fEndX), NUMSECTORS_X, &nStartX, &nEndX);
-	World_ClampSectorRange(CWorld::GetSectorIndexY(fStartY), CWorld::GetSectorIndexY(fEndY), NUMSECTORS_Y, &nStartY, &nEndY);
+	World_ClampSectorRange(World_GetSectorIndexX(fStartX), World_GetSectorIndexX(fEndX), NUMSECTORS_X, &nStartX, &nEndX);
+	World_ClampSectorRange(World_GetSectorIndexY(fStartY), World_GetSectorIndexY(fEndY), NUMSECTORS_Y, &nStartY, &nEndY);
 
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	for ( int32 y = nStartY; y <= nEndY; y++ )
 	{
 		for ( int32 x = nStartX; x <= nEndX; x++ )
 		{
-			CSector *pCurSector = CWorld::GetSector(x, y);
+			CSector *pCurSector = World_GetSector(x, y);
 
 			ASSERT(pCurSector != nil);
 
@@ -1346,9 +1346,9 @@ CShadows::CastShadowSectorList(CPtrList &PtrList, float fStartX, float fStartY, 
 
 		ASSERT( pEntity != nil );
 
-		if ( nScanCode != CWorld::GetCurrentScanCode() )
+		if ( nScanCode != World_GetCurrentScanCode() )
 		{
-			pEntity->m_scanCode = CWorld::GetCurrentScanCode();
+			pEntity->m_scanCode = World_GetCurrentScanCode();
 			
 			if ( pEntity->bUsesCollision && !pEntity->bDontCastShadowsOn)
 			{
@@ -1403,9 +1403,9 @@ CShadows::CastPlayerShadowSectorList(CPtrList &PtrList, float fStartX, float fSt
 
 		ASSERT( pEntity != nil );
 
-		if ( nScanCode != CWorld::GetCurrentScanCode() )
+		if ( nScanCode != World_GetCurrentScanCode() )
 		{
-			pEntity->m_scanCode = CWorld::GetCurrentScanCode();
+			pEntity->m_scanCode = World_GetCurrentScanCode();
 			
 			if ( pEntity->bUsesCollision )
 			{
@@ -1461,9 +1461,9 @@ CShadows::CastCutsceneShadowSectorList(CPtrList &PtrList, float fStartX, float f
 
 		ASSERT( pEntity != nil );
 
-		if ( nScanCode != CWorld::GetCurrentScanCode() )
+		if ( nScanCode != World_GetCurrentScanCode() )
 		{
-			pEntity->m_scanCode = CWorld::GetCurrentScanCode();
+			pEntity->m_scanCode = World_GetCurrentScanCode();
 			
 			if ( pEntity->bUsesCollision )
 			{
@@ -1519,7 +1519,7 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 			CollisionVector_ToNative(Box_GetSize(&pCol->boundingBox)).y);
 #endif
 	
-	CCollision::CalculateTrianglePlanes(pCol);
+	Collision_CalculateTrianglePlanes(pCol);
 
 	// Delegate the shadow quad and its bounds to the C implementation
 	CVector posRelToEntity = *pPosn - pEntity->GetPosition();
@@ -1775,7 +1775,7 @@ CShadows::CastShadowEntityXYZ(CEntity *pEntity, CVector *pPosn,
 		ShadowCamera *shadow = CutsceneShadow_GetShadowCamera(pShadow,CUTSCENE_SHADOW_RASTER);
 		CColModel *collision  = pEntity->GetColModel();
 		
-		CCollision::CalculateTrianglePlanes(collision);
+		Collision_CalculateTrianglePlanes(collision);
 		
 		RwMatrix mat;
 		// Use the C shadow operation with its canonical record and explicit lifecycle
@@ -1844,7 +1844,7 @@ CShadows::CastShadowEntityXYZ(CEntity *pEntity, CVector *pPosn,
 			// Invoke the complete C collision owner at the original native lifetime or operation boundary
 			p[2] = CollisionVector_ToNative(ColModel_GetTrianglePoint(collision,collision->triangles[i].c));
 			
-			if ( CCollision::TestSphereTriangle(colSphere, collision->vertices, collision->triangles[i], collision->trianglePlanes[i]) )
+			if ( Collision_TestSphereTriangle(colSphere, collision->vertices, collision->triangles[i], collision->trianglePlanes[i]) )
 			{
 				CVector n;
                 // Read the complete normal through the representation-independent C operation

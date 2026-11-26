@@ -90,7 +90,7 @@ CVehicle::CVehicle(uint8 CreatedBy)
 #ifdef FIX_BUGS
 	bIsHandbrakeOn = false;
 #endif
-	CCarCtrl::UpdateCarCount(this, false);
+	CarCtrl_UpdateCarCount(this, false);
 	m_fHealth = 1000.0f;
 	bEngineOn = true;
 	bFreebies = true;
@@ -200,7 +200,7 @@ CVehicle::~CVehicle()
 		m_audioEntityId = -5;
 	}
 		// Access raw storage through the C store or pool API
-	CRadar::ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), this));
+	Radar_ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(Pools_GetVehiclePool(), this));
 		if (pDriver)
 		pDriver->FlagToDestroyWhenNextProcessed();
 	for (int i = 0; i < m_nNumMaxPassengers; i++){
@@ -209,13 +209,13 @@ CVehicle::~CVehicle()
 	}
 	if (m_pCarFire)
 		Fire_Extinguish(m_pCarFire);
-	CCarCtrl::UpdateCarCount(this, true);
+	CarCtrl_UpdateCarCount(this, true);
 	if (bIsAmbulanceOnDuty){
-		CCarCtrl::NumAmbulancesOnDuty--;
+		CarCtrl_NumAmbulancesOnDuty--;
 		bIsAmbulanceOnDuty = false;
 	}
 	if (bIsFireTruckOnDuty){
-		CCarCtrl::NumFiretrucksOnDuty--;
+		CarCtrl_NumFiretrucksOnDuty--;
 		bIsFireTruckOnDuty = false;
 	}
 }
@@ -257,7 +257,7 @@ CVehicle::SetupLighting(void)
 void
 CVehicle::RemoveLighting(bool reset)
 {
-	CRenderer::RemoveVehiclePedLights(this, reset);
+	Renderer_RemoveVehiclePedLights(this, reset);
 }
 
 bool
@@ -267,7 +267,7 @@ CVehicle::IsClearToDriveAway(void)
 	float length = CollisionVector_ToNative(Box_GetSize(&GetColModel()->boundingBox)).y;
 	CEntity *ent = nil;
 	CVector front = GetForward() * (length*0.5f + 3.0f);
-	return !CWorld::ProcessLineOfSight(GetPosition() + front, GetPosition(),
+	return !World_ProcessLineOfSight(GetPosition() + front, GetPosition(),
 			point, ent, true, true, false, false, false, true, true) ||
 		ent == this;
 }
@@ -592,10 +592,10 @@ CVehicle::DoBladeCollision(CVector pos, CMatrix &matrix, int16 rotorType, float 
 	int32_t minX, minY, maxX, maxY;
 	World_SectorRange(pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius, &minX, &minY, &maxX, &maxY);
 
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	for(int curY = minY; curY <= maxY; curY++) {
 		for(int curX = minX; curX <= maxX; curX++) {
-			CSector *sector = CWorld::GetSector(curX, curY);
+			CSector *sector = World_GetSector(curX, curY);
 			if(BladeColSectorList(sector->m_lists[ENTITYLIST_BUILDINGS], rotorColModel, matrix, rotorType, damageMult))
 				hadCollision = true;
 			if(BladeColSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], rotorColModel, matrix, rotorType, damageMult))
@@ -662,10 +662,10 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 		CEntity *entity = (CEntity *)node->item;
 		if(entity == (CEntity*)this ||
 		   !entity->bUsesCollision ||
-		   entity->m_scanCode == CWorld::GetCurrentScanCode())
+		   entity->m_scanCode == World_GetCurrentScanCode())
 			continue;
 
-		entity->m_scanCode = CWorld::GetCurrentScanCode();
+		entity->m_scanCode = World_GetCurrentScanCode();
 
 		int numCollisions;
 		CColModel *entityCol;
@@ -674,8 +674,8 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 		else
 			entityCol = entity->GetColModel();
 		if(entityCol)
-			numCollisions = CCollision::ProcessColModels(matrix, rotorColModel, entity->GetMatrix(), *entityCol,
-				CWorld::m_aTempColPts, nil, nil);
+			numCollisions = Collision_ProcessColModels(matrix, rotorColModel, entity->GetMatrix(), *entityCol,
+				World_m_aTempColPts, nil, nil);
 		else
 			numCollisions = 0;
 
@@ -690,7 +690,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 			}
 			ped->InflictDamage(this, WEAPONTYPE_RUNOVERBYCAR, 1000.0f, PEDPIECE_TORSO, localDir);
 
-			if(CGame::nastyGame && ped->GetIsOnScreen()){
+			if(Game_nastyGame && ped->GetIsOnScreen()){
 				for(i = 0; i < 16; i++)
 					CParticle::AddParticle(PARTICLE_BLOOD_SMALL, ped->GetPosition(), CVector(dirToRotor.x, dirToRotor.y, 1.0f) * 0.01f);
 				CParticle::AddParticle(PARTICLE_TEST, ped->GetPosition(), CVector(0.0f, 0.0f, 0.02f), nil, 0.1f);
@@ -703,10 +703,10 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 			m_fElasticity = ROTOR_COL_ELASTICITY;
 
 			for(i = 0; i < numCollisions; i++){
-				CVector colpos = CollisionVector_ToNative(CWorld::m_aTempColPts[i].point);
+				CVector colpos = CollisionVector_ToNative(World_m_aTempColPts[i].point);
 				CVector localColpos = colpos - center;
 				float axisDir = DotProduct(axis, localColpos);
-				float colDir = DotProduct(CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal), localColpos);
+				float colDir = DotProduct(CollisionVector_ToNative(World_m_aTempColPts[i].normal), localColpos);
 
 				// Delegate the check that the collision misses the rotor to the C implementation
 				if(VehicleLogic_RotorMissesCollision(axisDir, colDir, ROTOR_SEMI_THICKNESS, ROTOR_DISGUARD_MULT))
@@ -720,14 +720,14 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 				// Particles
 				for(int j = 0; j < 4; j++){
 					CParticle::AddParticle(PARTICLE_SPARK_SMALL, colpos, (tangentSpeed+m_vecMoveSpeed)/2.0f);
-					CParticle::AddParticle(PARTICLE_SPARK, colpos, 0.1f*CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal));
+					CParticle::AddParticle(PARTICLE_SPARK, colpos, 0.1f*CollisionVector_ToNative(World_m_aTempColPts[i].normal));
 				}
 
 				// Apply Collision
 				if(IsCar()){
 					CAutomobile *heli = (CAutomobile*)this;
 					if(heli->m_aWheelSpeed[1] > 0.15f){
-						ApplyCollision(CWorld::m_aTempColPts[i], impulse);
+						ApplyCollision(World_m_aTempColPts[i], impulse);
 						ApplyTurnForce(m_fTurnMass*ROTOR_COL_TURNMULT*tangentSpeed, colpos - center);
 						heli->m_aWheelSpeed[1] = 0.15f;
 					}else if(heli->m_aWheelSpeed[1] < 0.075f && heli->m_aWheelSpeed[1] > 0.0f)
@@ -736,7 +736,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 
 				float damageImpulse = damageMult * General_MaxFloat(impulse, ROTOR_DEFAULT_DAMAGE*m_fMass/3000.0f);
 				if(damageImpulse > m_fDamageImpulse)
-					SetDamagedPieceRecord(0, damageImpulse, entity, CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal));
+					SetDamagedPieceRecord(0, damageImpulse, entity, CollisionVector_ToNative(World_m_aTempColPts[i].normal));
 
 			}
 
@@ -950,8 +950,8 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 		return;
 
 	if(damage > 10.0f && (damagedBy == FindPlayerPed() || damagedBy == FindPlayerVehicle()) && GetStatus() != STATUS_WRECKED){
-		CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 2;
-		CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention += 1.0f;
+		World_Players[World_PlayerInFocus].m_nHavocLevel += 2;
+		World_Players[World_PlayerInFocus].m_fMediaAttention += 1.0f;
 		Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(5, 25);
 	}
 
@@ -1006,7 +1006,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 			(GetStatus() == STATUS_SIMPLE || GetStatus() == STATUS_PHYSICS) &&
 			AutoPilot.m_nCarMission == MISSION_CRUISE) {
 			if (m_randomSeed < DAMAGE_FLEE_IN_CAR_PROBABILITY_VALUE) {
-				CCarCtrl::SwitchVehicleToRealPhysics(this);
+				CarCtrl_SwitchVehicleToRealPhysics(this);
 				AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_AVOID_CARS;
 				AutoPilot.m_nCruiseSpeed = GAME_SPEED_TO_CARAI_SPEED * pHandling->Transmission.fMaxCruiseVelocity;
 				SetStatus(STATUS_PHYSICS);
@@ -1145,11 +1145,11 @@ CVehicle::ActivateBomb(void)
 		m_bombType = CARBOMB_TIMEDACTIVE;
 		m_nBombTimer = 7000;
 		m_pBlowUpEntity = FindPlayerPed();
-		CGarages::TriggerMessage("GA_12", -1, 3000, -1);
+		Garages_TriggerMessage("GA_12", -1, 3000, -1);
 		DMAudio_PlayOneShot(m_audioEntityId, SOUND_BOMB_TIMED_ACTIVATED, 1.0f);
 	}else if(m_bombType == CARBOMB_ONIGNITION){
 		m_bombType = CARBOMB_ONIGNITIONACTIVE;
-		CGarages::TriggerMessage("GA_12", -1, 3000, -1);
+		Garages_TriggerMessage("GA_12", -1, 3000, -1);
 		DMAudio_PlayOneShot(m_audioEntityId, SOUND_BOMB_ONIGNITION_ACTIVATED, 1.0f);
 	}
 }
@@ -1379,7 +1379,7 @@ CVehicle::ChangeLawEnforcerState(uint8 enable)
 {
 	// Delegate to the C implementation, the flag is a bit field so it goes through a temporary
 	bool isLawEnforcer = bIsLawEnforcer;
-	Vehicle_ChangeLawEnforcerState(&isLawEnforcer, &CCarCtrl::NumLawEnforcerCars, enable != 0);
+	Vehicle_ChangeLawEnforcerState(&isLawEnforcer, &CarCtrl_NumLawEnforcerCars, enable != 0);
 	bIsLawEnforcer = isLawEnforcer;
 }
 
@@ -1391,7 +1391,7 @@ CVehicle::SetUpDriver(void)
 	if(VehicleCreatedBy != RANDOM_VEHICLE)
 		return nil;
 
-	pDriver = CPopulation::AddPedInCar(this, true);
+	pDriver = Population_AddPedInCar(this, true);
 	pDriver->m_pMyVehicle = this;
 	pDriver->m_pMyVehicle->RegisterReference((CEntity**)&pDriver->m_pMyVehicle);
 	pDriver->bInVehicle = true;
@@ -1412,7 +1412,7 @@ CVehicle::SetupPassenger(int n)
 	if((IsTaxi() || IsLimo()) && n == 0)
 		pPassengers[0] = nil;
 	else{
-		CPed *passenger = CPopulation::AddPedInCar(this, false);
+		CPed *passenger = Population_AddPedInCar(this, false);
 		pPassengers[n] = passenger;
 		passenger->m_pMyVehicle = this;
 		passenger->m_pMyVehicle->RegisterReference((CEntity**)&pPassengers[n]->m_pMyVehicle);
@@ -1425,7 +1425,7 @@ CVehicle::SetupPassenger(int n)
 				   (pPassengers[i]->m_nPedType == PEDTYPE_CIVMALE || pPassengers[i]->m_nPedType == PEDTYPE_CIVFEMALE) &&
 				   passenger->GetModelIndex() == pPassengers[i]->GetModelIndex()){
 					pPassengers[n] = nil;
-					CPopulation::RemovePed(passenger);
+					Population_RemovePed(passenger);
 				}
 	}
 	if(bIsBus && pPassengers[n])
@@ -1445,14 +1445,14 @@ CVehicle::SetDriver(CPed *driver)
 		switch(GetModelIndex()){
 		case MI_AMBULAN:
 			// Delegate the health of the freebie to the C implementation
-			FindPlayerPed()->m_fHealth = VehicleLogic_AmbulanceFreebieHealth(FindPlayerPed()->m_fHealth, CWorld::Players[0].m_nMaxHealth);
+			FindPlayerPed()->m_fHealth = VehicleLogic_AmbulanceFreebieHealth(FindPlayerPed()->m_fHealth, World_Players[0].m_nMaxHealth);
 			break;
 
 		case MI_TAXI:
 		case MI_CABBIE:
 		case MI_ZEBRA:
 		case MI_KAUFMAN:
-			CWorld::Players[CWorld::PlayerInFocus].m_nMoney += 12;
+			World_Players[World_PlayerInFocus].m_nMoney += 12;
 			break;
 
 		case MI_POLICE:
@@ -1462,7 +1462,7 @@ CVehicle::SetDriver(CPed *driver)
 
 		case MI_ENFORCER:
 			// Delegate the armour of the freebie to the C implementation
-			driver->m_fArmour = VehicleLogic_EnforcerFreebieArmour(driver->m_fArmour, CWorld::Players[0].m_nMaxArmour);
+			driver->m_fArmour = VehicleLogic_EnforcerFreebieArmour(driver->m_fArmour, World_Players[0].m_nMaxArmour);
 			break;
 
 		case MI_CADDY:
@@ -1688,7 +1688,7 @@ CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 		pos += heliPos;
 
 		if(i < 32 && i == 4*frm){
-			if(CWorld::ProcessVerticalLine(pos, testLowZ, point, entity, true, false, false, false, true, false, nil)){
+			if(World_ProcessVerticalLine(pos, testLowZ, point, entity, true, false, false, false, true, false, nil)){
 				n = rnd;
 				particleZ = point.point.z;
 				surface = point.surfaceB;
@@ -1696,7 +1696,7 @@ CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 				n = 0;
 
 			float waterLevel = 0.0f;
-			if(CWaterLevel::GetWaterLevel(pos, &waterLevel, false) && waterLevel > particleZ){
+			if(WaterLevel_GetWaterLevel(pos, &waterLevel, false) && waterLevel > particleZ){
 				surface = SURFACE_WATER;
 				n = rnd;
 				particleZ = waterLevel;
@@ -1771,7 +1771,7 @@ CVehicle::DoSunGlare(void)
 	int b = VehicleLogic_SunGlareChannel(intens, TimeCycle_GetSunCoreBlue());
 
 	CColModel *colmodel = GetColModel();
-	CCollision::CalculateTrianglePlanes(colmodel);
+	Collision_CalculateTrianglePlanes(colmodel);
 
 	int i;
 	for(i = 0; i < colmodel->numTriangles-2; i += 2){
@@ -1860,11 +1860,11 @@ DestroyVehicleAndDriverAndPassengers(CVehicle* pVehicle)
 			pVehicle->pPassengers[i]->FlagToDestroyWhenNextProcessed();
 		}
 	}
-	CWorld::Remove(pVehicle);
+	World_Remove(pVehicle);
 	// Destroy and release the vehicle without invoking C++ delete.
 	pVehicle->~CVehicle();
 		// Access raw storage through the C store or pool API
-	CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+	CPool_Delete(Pools_GetVehiclePool(), pVehicle);
 	}
 
 #ifdef COMPATIBLE_SAVES
@@ -2016,7 +2016,7 @@ IsVehiclePointerValid(CVehicle* pVehicle)
 	if (!pVehicle)
 		return false;
 		// Access raw storage through the C store or pool API
-	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetVehiclePool(), pVehicle);
+	int index = CPool_GetJustIndex_NoFreeAssert(Pools_GetVehiclePool(), pVehicle);
 	#ifdef FIX_BUGS
 	if (index < 0 || index >= NUMVEHICLES)
 #else

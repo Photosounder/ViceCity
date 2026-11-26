@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stddef.h>
 #include "VehicleLogic.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "WeaponType.h"
 #include "SurfaceTypes.h"
 #include "General.h"
@@ -978,10 +979,10 @@ float VehicleLogic_EnforcerFreebieArmour(float armour, float maxArmour)
 {
 	return armour > maxArmour ? armour : maxArmour;
 }
-float VehicleLogic_BoundingRadius(const float boxMin[3], const float boxMax[3])
+float VehicleLogic_BoundingRadius(const CVector *boxMin, const CVector *boxMax)
 {
-	float a = sqrtf(boxMin[0] * boxMin[0] + boxMin[1] * boxMin[1] + boxMin[2] * boxMin[2]);
-	float b = sqrtf(boxMax[0] * boxMax[0] + boxMax[1] * boxMax[1] + boxMax[2] * boxMax[2]);
+	float a = sqrtf(boxMin->x * boxMin->x + boxMin->y * boxMin->y + boxMin->z * boxMin->z);
+	float b = sqrtf(boxMax->x * boxMax->x + boxMax->y * boxMax->y + boxMax->z * boxMax->z);
 
 	return a > b ? a : b;
 }

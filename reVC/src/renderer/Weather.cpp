@@ -54,7 +54,7 @@ float Weather_BackendSunZ(void)
 bool Weather_BackendInterior(void)
 {
     // Access the original typed native operation without moving its weather decisions
-    return CGame::IsInInterior();
+    return Game_IsInInterior();
 }
 bool Weather_BackendCutscene(void)
 {
@@ -154,7 +154,7 @@ WeatherVector Weather_BackendEntityPosition(CEntity *entity)
 float Weather_BackendGroundZ(float x,float y,float z,bool *found)
 {
     // Access the original typed native operation without moving its weather decisions
-    return CWorld::FindGroundZFor3DCoord(x,y,z,found);
+    return World_FindGroundZFor3DCoord(x,y,z,found);
 }
 void Weather_BackendRemoveParticles(enum tParticleType type)
 {
@@ -179,7 +179,7 @@ void Weather_BackendParticleDrop(enum tParticleType type,WeatherVector position,
 bool Weather_BackendVerticalLine(WeatherVector value,float *height)
 {
     // Access the original typed native operation without moving its weather decisions
-    CVector position(value.x,value.y,value.z);CColPoint point;CEntity *entity;bool hit=CWorld::ProcessVerticalLine(position,-40.0f,point,entity,true,false,false,false,true,false,nil);
+    CVector position(value.x,value.y,value.z);CColPoint point;CEntity *entity;bool hit=World_ProcessVerticalLine(position,-40.0f,point,entity,true,false,false,false,true,false,nil);
     if(hit){
         // Copy only the valid collision height before the C controller decides whether to add splashes
         *height=point.point.z;

@@ -3,7 +3,7 @@
 #include "CollisionProcess.h"
 #include "VectorMath.h"
 
-bool Collision_ProcessSphereSphere(const CColSphere *s1, const CColSphere *s2, CColPoint *point, float *mindistsq)
+bool CollisionProcess_ProcessSphereSphere(const CColSphere *s1, const CColSphere *s2, CColPoint *point, float *mindistsq)
 {
 	VectorMath3 dist = {s1->bounds.center.x - s2->bounds.center.x, s1->bounds.center.y - s2->bounds.center.y, s1->bounds.center.z - s2->bounds.center.z};
 	float d = sqrtf(dist.x*dist.x + dist.y*dist.y + dist.z*dist.z) - s2->bounds.radius;	// distance from s1's center to s2
@@ -32,7 +32,7 @@ bool Collision_ProcessSphereSphere(const CColSphere *s1, const CColSphere *s2, C
 	return false;
 }
 
-bool Collision_ProcessSphereBox(const CColSphere *sph, const CColBox *box, CColPoint *point, float *mindistsq)
+bool CollisionProcess_ProcessSphereBox(const CColSphere *sph, const CColBox *box, CColPoint *point, float *mindistsq)
 {
 	float p[3];
 	float dist[3];
@@ -139,7 +139,7 @@ bool Collision_ProcessSphereBox(const CColSphere *sph, const CColBox *box, CColP
 	return false;
 }
 
-bool Collision_ProcessLineBox(const CColLine *line, const CColBox *box, CColPoint *point, float *mindist)
+bool CollisionProcess_ProcessLineBox(const CColLine *line, const CColBox *box, CColPoint *point, float *mindist)
 {
 	float mint, t, x, y, z;
 	CollisionVector3 normal = {0.0f, 0.0f, 0.0f};
@@ -253,7 +253,7 @@ bool Collision_ProcessLineBox(const CColLine *line, const CColBox *box, CColPoin
 	return true;
 }
 
-bool Collision_ProcessLineSphere(const CColLine *line, const CColSphere *sphere, CColPoint *point, float *mindist)
+bool CollisionProcess_ProcessLineSphere(const CColLine *line, const CColSphere *sphere, CColPoint *point, float *mindist)
 {
 	float v01[3] = {line->p1.x - line->p0.x, line->p1.y - line->p0.y, line->p1.z - line->p0.z};
 	float v0c[3] = {sphere->bounds.center.x - line->p0.x, sphere->bounds.center.y - line->p0.y, sphere->bounds.center.z - line->p0.z};

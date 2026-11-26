@@ -23,91 +23,119 @@ enum{
 #define FIX_PATHFIND_BUG
 #endif
 
-class CCarCtrl
-{
-public:
-	
-
-	static void SwitchVehicleToRealPhysics(CVehicle*);
-	static void AddToCarArray(int32 id, int32 vehclass);
-	static void UpdateCarCount(CVehicle*, bool);
-	static int32 ChooseCarModel(int32 vehclass);
-	static bool JoinCarWithRoadSystemGotoCoors(CVehicle*, CVector, bool);
-	static void JoinCarWithRoadSystem(CVehicle*);
-	static void UpdateCarOnRails(CVehicle*);
-	static bool MapCouldMoveInThisArea(float x, float y);
-	static void ScanForPedDanger(CVehicle *veh);
-	static void RemoveFromInterestingVehicleList(CVehicle*);
-	static void GenerateRandomCars(void);
-	static void GenerateOneRandomCar(void);
-	static void GenerateEmergencyServicesCar(void);
-	static int32 ChooseModel(CZoneInfo*, int*);
-	static int32 ChoosePoliceCarModel(void);
-	static int32 ChooseGangCarModel(int32 gang);
-	static void RemoveDistantCars(void);
-	static void PossiblyRemoveVehicle(CVehicle*);
-	static bool IsThisVehicleInteresting(CVehicle*);
-	static void RegisterVehicleOfInterest(CVehicle*);
-	static int32 CountCarsOfType(int32 mi);
-	static void SlowCarOnRailsDownForTrafficAndLights(CVehicle*);
-	static bool PickNextNodeAccordingStrategy(CVehicle*);
-	static void DragCarToPoint(CVehicle*, CVector*);
-	static float FindMaximumSpeedForThisCarInTraffic(CVehicle*);
-	static void SlowCarDownForCarsSectorList(CPtrList&, CVehicle*, float, float, float, float, float*, float);
-	static void SlowCarDownForPedsSectorList(CPtrList&, CVehicle*, float, float, float, float, float*, float);
-	static void SlowCarDownForOtherCar(CEntity*, CVehicle*, float*, float);
-	static float TestCollisionBetween2MovingRects(CVehicle*, CVehicle*, float, float, CVector*, CVector*, uint8);
-	static float FindAngleToWeaveThroughTraffic(CVehicle*, CPhysical*, float, float);
-	static void WeaveThroughCarsSectorList(CPtrList&, CVehicle*, CPhysical*, float, float, float, float, float*, float*);
-	static void WeaveForOtherCar(CEntity*, CVehicle*, float*, float*);
-	static void WeaveThroughPedsSectorList(CPtrList&, CVehicle*, CPhysical*, float, float, float, float, float*, float*);
-	static void WeaveForPed(CEntity*, CVehicle*, float*, float*);
-	static void WeaveThroughObjectsSectorList(CPtrList&, CVehicle*, float, float, float, float, float*, float*);
-	static void WeaveForObject(CEntity*, CVehicle*, float*, float*);
-#ifdef FIX_PATHFIND_BUG
-	static void PickNextNodeToChaseCar(CVehicle*, float, float, float, CVehicle*);
-#else
-	static void PickNextNodeToChaseCar(CVehicle*, float, float, CVehicle*);
+//+ rouz edit (Claude)
+// Formerly the static class CCarCtrl, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
 #endif
-	static bool PickNextNodeToFollowPath(CVehicle*);
-	static void PickNextNodeRandomly(CVehicle*);
-	static uint8 FindPathDirection(int32, int32, int32);
-	static void Init(void);
-	static void ReInit(void);
-	static float FindSpeedMultiplier(float, float, float, float);
-	static void SteerAICarWithPhysics(CVehicle*);
-	static void SteerAICarWithPhysics_OnlyMission(CVehicle*, float*, float*, float*, bool*);
-	static float FindMaxSteerAngle(CVehicle*);
-	static void SteerAICarWithPhysicsFollowPath(CVehicle*, float*, float*, float*, bool*);
-	static void SteerAICarWithPhysicsHeadingForTarget(CVehicle*, CPhysical*, float, float, float*, float*, float*, bool*);
-	static void SteerAICarWithPhysicsTryingToBlockTarget(CVehicle*, float, float, float, float, float*, float*, float*, bool*);
-	static void SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle*, float, float, float, float, float*, float*, float*, bool*);
-	static bool ThisRoadObjectCouldMove(int16);
-	static void ClearInterestingVehicleList();
-	static void FindLinksToGoWithTheseNodes(CVehicle*);
-	static bool GenerateOneEmergencyServicesCar(uint32, CVector);
-	static float FindSpeedMultiplierWithSpeedFromNodes(int8);
-	static int32 ChooseBoatModel(int32);
-	static int32 ChooseBoatRating(CZoneInfo* pZoneInfo);
-	static int32 ChooseCarRating(CZoneInfo* pZoneInfo);
-	static void AddToLoadedVehicleArray(int32 mi, int32 rating, int32 freq);
-	static void RemoveFromLoadedVehicleArray(int32 mi, int32 rating);
-	static int32 ChooseCarModelToLoad(int32 rating);
-	static bool BoatWithTallMast(int32 mi);
-	static void RemoveCarsIfThePoolGetsFull(void);
-	static void SteerAIBoatWithPhysicsHeadingForTarget(CVehicle*, float, float, float*, float*, float*);
-	static void SteerAIHeliTowardsTargetCoors(CAutomobile*);
-	static void SteerAIPlaneTowardsTargetCoors(CAutomobile*);
-	static void SteerAIBoatWithPhysicsAttackingPlayer(CVehicle*, float*, float*, float*, bool*);
-	static void SteerAICarBlockingPlayerForwardAndBack(CVehicle*, float*, float*, float*, bool*);
-
-	static float GetPositionAlongCurrentCurve(CVehicle* pVehicle)
+void CarCtrl_SwitchVehicleToRealPhysics(CVehicle*);
+void CarCtrl_AddToCarArray(int32 id, int32 vehclass);
+void CarCtrl_UpdateCarCount(CVehicle*, bool);
+int32 CarCtrl_ChooseCarModel(int32 vehclass);
+bool CarCtrl_JoinCarWithRoadSystemGotoCoors(CVehicle*, CVector, bool);
+void CarCtrl_JoinCarWithRoadSystem(CVehicle*);
+void CarCtrl_UpdateCarOnRails(CVehicle*);
+bool CarCtrl_MapCouldMoveInThisArea(float x, float y);
+void CarCtrl_ScanForPedDanger(CVehicle *veh);
+void CarCtrl_RemoveFromInterestingVehicleList(CVehicle*);
+void CarCtrl_GenerateRandomCars(void);
+void CarCtrl_GenerateOneRandomCar(void);
+void CarCtrl_GenerateEmergencyServicesCar(void);
+int32 CarCtrl_ChooseModel(CZoneInfo*, int*);
+int32 CarCtrl_ChoosePoliceCarModel(void);
+int32 CarCtrl_ChooseGangCarModel(int32 gang);
+void CarCtrl_RemoveDistantCars(void);
+void CarCtrl_PossiblyRemoveVehicle(CVehicle*);
+bool CarCtrl_IsThisVehicleInteresting(CVehicle*);
+void CarCtrl_RegisterVehicleOfInterest(CVehicle*);
+int32 CarCtrl_CountCarsOfType(int32 mi);
+void CarCtrl_SlowCarOnRailsDownForTrafficAndLights(CVehicle*);
+bool CarCtrl_PickNextNodeAccordingStrategy(CVehicle*);
+void CarCtrl_DragCarToPoint(CVehicle*, CVector*);
+float CarCtrl_FindMaximumSpeedForThisCarInTraffic(CVehicle*);
+void CarCtrl_SlowCarDownForOtherCar(CEntity*, CVehicle*, float*, float);
+float CarCtrl_TestCollisionBetween2MovingRects(CVehicle*, CVehicle*, float, float, CVector*, CVector*, uint8);
+float CarCtrl_FindAngleToWeaveThroughTraffic(CVehicle*, CPhysical*, float, float);
+void CarCtrl_WeaveForOtherCar(CEntity*, CVehicle*, float*, float*);
+void CarCtrl_WeaveForPed(CEntity*, CVehicle*, float*, float*);
+void CarCtrl_WeaveForObject(CEntity*, CVehicle*, float*, float*);
+#ifdef FIX_PATHFIND_BUG
+#else
+#endif
+bool CarCtrl_PickNextNodeToFollowPath(CVehicle*);
+void CarCtrl_PickNextNodeRandomly(CVehicle*);
+uint8 CarCtrl_FindPathDirection(int32, int32, int32);
+void CarCtrl_Init(void);
+void CarCtrl_ReInit(void);
+float CarCtrl_FindSpeedMultiplier(float, float, float, float);
+void CarCtrl_SteerAICarWithPhysics(CVehicle*);
+void CarCtrl_SteerAICarWithPhysics_OnlyMission(CVehicle*, float*, float*, float*, bool*);
+float CarCtrl_FindMaxSteerAngle(CVehicle*);
+void CarCtrl_SteerAICarWithPhysicsFollowPath(CVehicle*, float*, float*, float*, bool*);
+void CarCtrl_SteerAICarWithPhysicsHeadingForTarget(CVehicle*, CPhysical*, float, float, float*, float*, float*, bool*);
+void CarCtrl_SteerAICarWithPhysicsTryingToBlockTarget(CVehicle*, float, float, float, float, float*, float*, float*, bool*);
+void CarCtrl_SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle*, float, float, float, float, float*, float*, float*, bool*);
+bool CarCtrl_ThisRoadObjectCouldMove(int16);
+void CarCtrl_ClearInterestingVehicleList();
+void CarCtrl_FindLinksToGoWithTheseNodes(CVehicle*);
+bool CarCtrl_GenerateOneEmergencyServicesCar(uint32, CVector);
+float CarCtrl_FindSpeedMultiplierWithSpeedFromNodes(int8);
+int32 CarCtrl_ChooseBoatModel(int32);
+int32 CarCtrl_ChooseBoatRating(CZoneInfo* pZoneInfo);
+int32 CarCtrl_ChooseCarRating(CZoneInfo* pZoneInfo);
+void CarCtrl_AddToLoadedVehicleArray(int32 mi, int32 rating, int32 freq);
+void CarCtrl_RemoveFromLoadedVehicleArray(int32 mi, int32 rating);
+int32 CarCtrl_ChooseCarModelToLoad(int32 rating);
+bool CarCtrl_BoatWithTallMast(int32 mi);
+void CarCtrl_RemoveCarsIfThePoolGetsFull(void);
+void CarCtrl_SteerAIBoatWithPhysicsHeadingForTarget(CVehicle*, float, float, float*, float*, float*);
+void CarCtrl_SteerAIHeliTowardsTargetCoors(CAutomobile*);
+void CarCtrl_SteerAIPlaneTowardsTargetCoors(CAutomobile*);
+void CarCtrl_SteerAIBoatWithPhysicsAttackingPlayer(CVehicle*, float*, float*, float*, bool*);
+void CarCtrl_SteerAICarBlockingPlayerForwardAndBack(CVehicle*, float*, float*, float*, bool*);
+extern bool CarCtrl_bMadDriversCheat;
+extern int32 CarCtrl_NumLawEnforcerCars;
+extern int32 CarCtrl_NumAmbulancesOnDuty;
+extern int32 CarCtrl_NumFiretrucksOnDuty;
+extern int32 CarCtrl_NumRandomCars;
+extern int32 CarCtrl_NumMissionCars;
+extern int32 CarCtrl_NumParkedCars;
+extern int32 CarCtrl_NumPermanentCars;
+extern bool CarCtrl_bCarsGeneratedAroundCamera;
+extern float CarCtrl_CarDensityMultiplier;
+extern int8 CarCtrl_CountDownToCarsAtStart;
+extern uint32 CarCtrl_LastTimeLawEnforcerCreated;
+extern uint32 CarCtrl_LastTimeFireTruckCreated;
+extern uint32 CarCtrl_LastTimeAmbulanceCreated;
+extern int32 CarCtrl_TotalNumOfCarsOfRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
+extern int32 CarCtrl_CarArrays[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
+extern int32 CarCtrl_MiamiViceCycle;
+extern uint32 CarCtrl_LastTimeMiamiViceGenerated;
+extern int32 CarCtrl_NumRequestsOfCarRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
+extern int32 CarCtrl_NumOfLoadedCarsOfRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
+extern int32 CarCtrl_CarFreqArrays[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
+extern int32 CarCtrl_LoadedCarsArray[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+void CarCtrl_SlowCarDownForCarsSectorList(CPtrList&, CVehicle*, float, float, float, float, float*, float);
+void CarCtrl_SlowCarDownForPedsSectorList(CPtrList&, CVehicle*, float, float, float, float, float*, float);
+void CarCtrl_WeaveThroughCarsSectorList(CPtrList&, CVehicle*, CPhysical*, float, float, float, float, float*, float*);
+void CarCtrl_WeaveThroughPedsSectorList(CPtrList&, CVehicle*, CPhysical*, float, float, float, float, float*, float*);
+void CarCtrl_WeaveThroughObjectsSectorList(CPtrList&, CVehicle*, float, float, float, float, float*, float*);
+#ifdef FIX_PATHFIND_BUG
+void CarCtrl_PickNextNodeToChaseCar(CVehicle*, float, float, float, CVehicle*);
+#else
+void CarCtrl_PickNextNodeToChaseCar(CVehicle*, float, float, CVehicle*);
+#endif
+static inline float CarCtrl_GetPositionAlongCurrentCurve(CVehicle* pVehicle);
+static inline float CarCtrl_LimitRadianAngle(float angle);
+static inline float CarCtrl_GetPositionAlongCurrentCurve(CVehicle* pVehicle)
 	{
 		uint32 timeInCurve = (*Timer_GetTimeInMilliseconds()) - pVehicle->AutoPilot.m_nTimeEnteredCurve;
 		return (float)timeInCurve / pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve;
 	}
-
-	static float LimitRadianAngle(float angle)
+static inline float CarCtrl_LimitRadianAngle(float angle)
 	{
 		while (angle < -PI)
 			angle += TWOPI;
@@ -115,32 +143,8 @@ public:
 			angle -= TWOPI;
 		return angle;
 	}
-
-	static bool bMadDriversCheat;
-	static int32 NumLawEnforcerCars;
-	static int32 NumAmbulancesOnDuty;
-	static int32 NumFiretrucksOnDuty;
-	static int32 NumRandomCars;
-	static int32 NumMissionCars;
-	static int32 NumParkedCars;
-	static int32 NumPermanentCars;
-	static bool bCarsGeneratedAroundCamera;
-	static float CarDensityMultiplier;
-	static int8 CountDownToCarsAtStart;
-
-	static uint32 LastTimeLawEnforcerCreated;
-	static uint32 LastTimeFireTruckCreated;
-	static uint32 LastTimeAmbulanceCreated;
-	static int32 TotalNumOfCarsOfRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
-	static int32 CarArrays[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
-
-	static int32 MiamiViceCycle;
-	static uint32 LastTimeMiamiViceGenerated;
-	static int32 NumRequestsOfCarRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
-	static int32 NumOfLoadedCarsOfRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
-	static int32 CarFreqArrays[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
-	static int32 LoadedCarsArray[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
-};
+#endif
+//- rouz edit (Claude)
 
 extern CVehicle* apCarsToKeep[MAX_CARS_TO_KEEP];
 //- rouz edit (ChatGPT)

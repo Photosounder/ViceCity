@@ -19,17 +19,17 @@ CPlaceableShText::Draw(float x, float y)
 		return;
 
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOn();
+		Font_SetRightJustifyOn();
 	if(m_bDropShadow){
-		CFont::SetDropShadowPosition(m_shadowOffset.x);
-		CFont::SetDropColor(m_shadowColor);
+		Font_SetDropShadowPosition(m_shadowOffset.x);
+		Font_SetDropColor(m_shadowColor);
 	}
-	CFont::SetColor(m_color);
-	CFont::PrintString(x+m_position.x, y+m_position.y, m_text);
+	Font_SetColor(m_color);
+	Font_PrintString(x+m_position.x, y+m_position.y, m_text);
 	if(m_bDropShadow)
-		CFont::SetDropShadowPosition(0);
+		Font_SetDropShadowPosition(0);
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOff();
+		Font_SetRightJustifyOff();
 }
 
 void
@@ -39,17 +39,17 @@ CPlaceableShText::Draw(const CRGBA &color, float x, float y)
 		return;
 
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOn();
+		Font_SetRightJustifyOn();
 	if(m_bDropShadow){
-		CFont::SetDropShadowPosition(m_shadowOffset.x);
-		CFont::SetDropColor(m_shadowColor);
+		Font_SetDropShadowPosition(m_shadowOffset.x);
+		Font_SetDropColor(m_shadowColor);
 	}
-	CFont::SetColor(color);
-	CFont::PrintString(x+m_position.x, y+m_position.y, m_text);
+	Font_SetColor(color);
+	Font_PrintString(x+m_position.x, y+m_position.y, m_text);
 	if(m_bDropShadow)
-		CFont::SetDropShadowPosition(0);
+		Font_SetDropShadowPosition(0);
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOff();
+		Font_SetRightJustifyOff();
 }
 
 void
@@ -59,25 +59,25 @@ CPlaceableShTextTwoLines::Draw(float x, float y)
 		return;
 
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOn();
+		Font_SetRightJustifyOn();
 	if(m_bDropShadow){
-		CFont::SetDropShadowPosition(m_shadowOffset.x);
-		CFont::SetDropColor(m_shadowColor);
+		Font_SetDropShadowPosition(m_shadowOffset.x);
+		Font_SetDropColor(m_shadowColor);
 	}
 
 	if(m_line1.m_text){
-		CFont::SetColor(m_line1.m_color);
-		CFont::PrintString(x+m_line1.m_position.x, y+m_line1.m_position.y, m_line1.m_text);
+		Font_SetColor(m_line1.m_color);
+		Font_PrintString(x+m_line1.m_position.x, y+m_line1.m_position.y, m_line1.m_text);
 	}
 	if(m_line2.m_text){
-		CFont::SetColor(m_line2.m_color);
-		CFont::PrintString(x+m_line2.m_position.x, y+m_line2.m_position.y, m_line2.m_text);
+		Font_SetColor(m_line2.m_color);
+		Font_PrintString(x+m_line2.m_position.x, y+m_line2.m_position.y, m_line2.m_text);
 	}
 
 	if(m_bDropShadow)
-		CFont::SetDropShadowPosition(0);
+		Font_SetDropShadowPosition(0);
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOff();
+		Font_SetRightJustifyOff();
 }
 
 void
@@ -87,25 +87,25 @@ CPlaceableShTextTwoLines::Draw(const CRGBA &color, float x, float y)
 		return;
 
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOn();
+		Font_SetRightJustifyOn();
 	if(m_bDropShadow){
-		CFont::SetDropShadowPosition(m_shadowOffset.x);
-		CFont::SetDropColor(m_shadowColor);
+		Font_SetDropShadowPosition(m_shadowOffset.x);
+		Font_SetDropColor(m_shadowColor);
 	}
 
 	if(m_line1.m_text){
-		CFont::SetColor(color);
-		CFont::PrintString(x+m_line1.m_position.x, y+m_line1.m_position.y, m_line1.m_text);
+		Font_SetColor(color);
+		Font_PrintString(x+m_line1.m_position.x, y+m_line1.m_position.y, m_line1.m_text);
 	}
 	if(m_line2.m_text){
-		CFont::SetColor(color);
-		CFont::PrintString(x+m_line2.m_position.x, y+m_line2.m_position.y, m_line2.m_text);
+		Font_SetColor(color);
+		Font_PrintString(x+m_line2.m_position.x, y+m_line2.m_position.y, m_line2.m_text);
 	}
 
 	if(m_bDropShadow)
-		CFont::SetDropShadowPosition(0);
+		Font_SetDropShadowPosition(0);
 	if(m_bRightJustify)
-		CFont::SetRightJustifyOff();
+		Font_SetRightJustifyOff();
 }
 
 void
@@ -244,14 +244,14 @@ CMenuPictureAndText::Draw(CRGBA const &,CRGBA const &, float x, float y)
 		m_sprites[i].Draw(m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	for(i = 0; i < m_numTexts; i++)
 		if(m_bWrap)
 			m_texts[i].DrawShWrap(m_position.x+x, m_position.y+y, m_wrapX, m_oldWrapx);
 		else
 			m_texts[i].Draw(m_position.x+x, m_position.y+y);
 	if(m_bSetTextScale)
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 }
 
 void
@@ -323,14 +323,14 @@ CMenuMultiChoice::Draw(CRGBA const &optionHighlight ,CRGBA const &titleHighlight
 	int i;
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	if(m_cursor == -1)
 		m_title.Draw(m_position.x+x, m_position.y+y);
 	else
 		m_title.Draw(titleHighlight, m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	if(m_cursor == -1)
 		for(i = 0; i < m_numOptions; i++)
@@ -344,8 +344,8 @@ CMenuMultiChoice::Draw(CRGBA const &optionHighlight ,CRGBA const &titleHighlight
 		}
 
 	if(m_bSetTextScale){
-		CFont::DrawFonts();
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_DrawFonts();
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 	}
 }
 
@@ -355,18 +355,18 @@ CMenuMultiChoice::DrawNormal(float x, float y)
 	int i;
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	m_title.Draw(m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	for(i = 0; i < m_numOptions; i++)
 		m_options[i].Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale){
-		CFont::DrawFonts();
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_DrawFonts();
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 	}
 }
 
@@ -376,21 +376,21 @@ CMenuMultiChoice::DrawHighlighted(CRGBA const &titleHighlight, float x, float y)
 	int i;
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	if(m_cursor == -1)
 		m_title.Draw(m_position.x+x, m_position.y+y);
 	else
 		m_title.Draw(titleHighlight, m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	for(i = 0; i < m_numOptions; i++)
 		m_options[i].Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale){
-		CFont::DrawFonts();
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_DrawFonts();
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 	}
 }
 
@@ -805,14 +805,14 @@ CMenuMultiChoiceTwoLines::Draw(CRGBA const &optionHighlight ,CRGBA const &titleH
 	int i;
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	if(m_cursor == -1)
 		m_title.Draw(m_position.x+x, m_position.y+y);
 	else
 		m_title.Draw(titleHighlight, m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	if(m_cursor == -1)
 		for(i = 0; i < m_numOptions; i++)
@@ -826,8 +826,8 @@ CMenuMultiChoiceTwoLines::Draw(CRGBA const &optionHighlight ,CRGBA const &titleH
 		}
 
 	if(m_bSetTextScale){
-		CFont::DrawFonts();
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_DrawFonts();
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 	}
 }
 
@@ -837,18 +837,18 @@ CMenuMultiChoiceTwoLines::DrawNormal(float x, float y)
 	int i;
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	m_title.Draw(m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	for(i = 0; i < m_numOptions; i++)
 		m_options[i].Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale){
-		CFont::DrawFonts();
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_DrawFonts();
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 	}
 }
 
@@ -858,21 +858,21 @@ CMenuMultiChoiceTwoLines::DrawHighlighted(CRGBA const &titleHighlight, float x, 
 	int i;
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	if(m_cursor == -1)
 		m_title.Draw(m_position.x+x, m_position.y+y);
 	else
 		m_title.Draw(titleHighlight, m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	for(i = 0; i < m_numOptions; i++)
 		m_options[i].Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale){
-		CFont::DrawFonts();
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_DrawFonts();
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 	}
 }
 
@@ -1036,14 +1036,14 @@ CMenuOnOff::Draw(CRGBA const &optionHighlight, CRGBA const &titleHighlight, floa
 	}
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	if(m_bActive)
 		m_title.Draw(titleHighlight, m_position.x+x, m_position.y+y);
 	else
 		m_title.Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	if(m_bActive){
 		if(m_title.m_bSelected)
@@ -1058,7 +1058,7 @@ CMenuOnOff::Draw(CRGBA const &optionHighlight, CRGBA const &titleHighlight, floa
 	}
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 }
 
 void
@@ -1073,11 +1073,11 @@ CMenuOnOff::DrawNormal(float x, float y)
 	}
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	m_title.Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	if(m_title.m_bSelected)
 		m_options[1].Draw(m_position.x+x, m_position.y+y);
@@ -1085,7 +1085,7 @@ CMenuOnOff::DrawNormal(float x, float y)
 		m_options[0].Draw(m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 }
 
 void
@@ -1100,14 +1100,14 @@ CMenuOnOff::DrawHighlighted(CRGBA const &titleHighlight, float x, float y)
 	}
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 	if(m_bActive)
 		m_title.Draw(titleHighlight, m_position.x+x, m_position.y+y);
 	else
 		m_title.Draw(CRGBA(0,0,0,0), m_position.x+x, m_position.y+y, false);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_textScale.x, m_textScale.y);
+		Font_SetScale(m_textScale.x, m_textScale.y);
 
 	if(m_title.m_bSelected)
 		m_options[1].Draw(m_position.x+x, m_position.y+y);
@@ -1115,7 +1115,7 @@ CMenuOnOff::DrawHighlighted(CRGBA const &titleHighlight, float x, float y)
 		m_options[0].Draw(m_position.x+x, m_position.y+y);
 
 	if(m_bSetTextScale)
-		CFont::SetScale(m_oldTextScale.x, m_oldTextScale.y);
+		Font_SetScale(m_oldTextScale.x, m_oldTextScale.y);
 }
 
 void
@@ -1604,9 +1604,9 @@ CMenuLineLister::Draw(const CRGBA &optionHighlight, const CRGBA &titleHighlight,
 		m_linesRight[i].SetAlpha((alpha*m_lineAlphas[i])>>8);
 
 		m_linesLeft[i].Draw(m_position.x+x, m_position.y+y - m_scrollPosition);
-		CFont::SetRightJustifyOn();
+		Font_SetRightJustifyOn();
 		m_linesRight[i].Draw(m_position.x+x + m_width, m_position.y+y - m_scrollPosition);
-		CFont::SetRightJustifyOff();
+		Font_SetRightJustifyOff();
 
 		// restore alpha
 		m_linesLeft[i].SetAlpha(alpha);

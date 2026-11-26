@@ -48,7 +48,7 @@ void CRunningScript::LocatePlayerCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+	CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 	switch (command) {
 	case COMMAND_LOCATE_STOPPED_PLAYER_ANY_MEANS_2D:
 	case COMMAND_LOCATE_STOPPED_PLAYER_ANY_MEANS_3D:
@@ -56,7 +56,7 @@ void CRunningScript::LocatePlayerCommand(int32 command, uint32* pIp)
 	case COMMAND_LOCATE_STOPPED_PLAYER_IN_CAR_3D:
 	case COMMAND_LOCATE_STOPPED_PLAYER_ON_FOOT_2D:
 	case COMMAND_LOCATE_STOPPED_PLAYER_ON_FOOT_3D:
-		if (!CTheScripts::IsPlayerStopped(pPlayerInfo)) {
+		if (!TheScripts_IsPlayerStopped(pPlayerInfo)) {
 			result = false;
 			decided = true;
 		}
@@ -116,12 +116,12 @@ void CRunningScript::LocatePlayerCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -140,10 +140,10 @@ void CRunningScript::LocatePlayerCharCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+	CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+	CPed* pTarget = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPlayerInfo->GetPos();
@@ -197,15 +197,15 @@ void CRunningScript::LocatePlayerCharCommand(int32 command, uint32* pIp)
 	UpdateCompareFlag(result);
 	if (debug)
 #ifdef FIX_BUGS
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
 #else
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dX, b3D ? Z : MAP_Z_LOW_LIMIT);
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dX, b3D ? Z : MAP_Z_LOW_LIMIT);
 #endif
-	if (CTheScripts::DbgFlag) {
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -224,10 +224,10 @@ void CRunningScript::LocatePlayerCarCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+	CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPlayerInfo->GetPos();
@@ -274,12 +274,12 @@ void CRunningScript::LocatePlayerCarCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -303,7 +303,7 @@ void CRunningScript::LocateCharCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 8 : 6);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	CVector pos = pPed->InVehicle() ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
@@ -314,7 +314,7 @@ void CRunningScript::LocateCharCommand(int32 command, uint32* pIp)
 	case COMMAND_LOCATE_STOPPED_CHAR_IN_CAR_3D:
 	case COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_2D:
 	case COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_3D:
-		if (!CTheScripts::IsPedStopped(pPed)) {
+		if (!TheScripts_IsPedStopped(pPed)) {
 			result = false;
 			decided = true;
 		}
@@ -375,12 +375,12 @@ void CRunningScript::LocateCharCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -401,12 +401,12 @@ void CRunningScript::LocateCharCharCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 6 : 5);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+	CPed* pTarget = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
@@ -461,15 +461,15 @@ void CRunningScript::LocateCharCharCommand(int32 command, uint32* pIp)
 	UpdateCompareFlag(result);
 	if (debug)
 #ifdef FIX_BUGS
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
 #else
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dX, b3D ? Z : MAP_Z_LOW_LIMIT);
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dX, b3D ? Z : MAP_Z_LOW_LIMIT);
 #endif
-	if (CTheScripts::DbgFlag) {
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -490,12 +490,12 @@ void CRunningScript::LocateCharCarCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 6 : 5);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
@@ -542,12 +542,12 @@ void CRunningScript::LocateCharCarCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -568,12 +568,12 @@ void CRunningScript::LocateCharObjectCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 6 : 5);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CObject* pTarget = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[1]));
+	CObject* pTarget = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
@@ -620,12 +620,12 @@ void CRunningScript::LocateCharObjectCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -645,14 +645,14 @@ void CRunningScript::LocateCarCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 8 : 6);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pVehicle);
 	CVector pos = pVehicle->GetPosition();
 	switch (command) {
 	case COMMAND_LOCATE_STOPPED_CAR_2D:
 	case COMMAND_LOCATE_STOPPED_CAR_3D:
-		if (!CTheScripts::IsVehicleStopped(pVehicle)) {
+		if (!TheScripts_IsVehicleStopped(pVehicle)) {
 			result = false;
 			decided = true;
 		}
@@ -689,12 +689,12 @@ void CRunningScript::LocateCarCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -713,7 +713,7 @@ void CRunningScript::LocateObjectCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 8 : 6);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+	CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pObject);
 	CVector pos = pObject->GetPosition();
@@ -744,12 +744,12 @@ void CRunningScript::LocateObjectCommand(int32 command, uint32* pIp)
 	result = in_area;
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -784,12 +784,12 @@ void CRunningScript::LocateSniperBulletCommand(int32 command, uint32* pIp)
 	result = BulletInfo_TestForSniperBullet(X - dX, X + dX, Y - dY, Y + dY, b3D ? Z - dZ : -1000.0f, b3D ? Z + dZ : 1000.0f);
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -811,7 +811,7 @@ void CRunningScript::PlayerInAreaCheckCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+	CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 	switch (command) {
 	case COMMAND_IS_PLAYER_STOPPED_IN_AREA_3D:
 	case COMMAND_IS_PLAYER_STOPPED_IN_AREA_ON_FOOT_3D:
@@ -819,7 +819,7 @@ void CRunningScript::PlayerInAreaCheckCommand(int32 command, uint32* pIp)
 	case COMMAND_IS_PLAYER_STOPPED_IN_AREA_2D:
 	case COMMAND_IS_PLAYER_STOPPED_IN_AREA_ON_FOOT_2D:
 	case COMMAND_IS_PLAYER_STOPPED_IN_AREA_IN_CAR_2D:
-		if (!CTheScripts::IsPlayerStopped(pPlayerInfo)) {
+		if (!TheScripts_IsPlayerStopped(pPlayerInfo)) {
 			result = false;
 			decided = true;
 		}
@@ -887,12 +887,12 @@ void CRunningScript::PlayerInAreaCheckCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
+			TheScripts_DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
 		else
-			CTheScripts::DrawDebugSquare(infX, infY, supX, supY);
+			TheScripts_DrawDebugSquare(infX, infY, supX, supY);
 	}
 }
 
@@ -914,7 +914,7 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 9 : 7);
-	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+	CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 	switch (command) {
 	case COMMAND_IS_PLAYER_STOPPED_IN_ANGLED_AREA_3D:
 	case COMMAND_IS_PLAYER_STOPPED_IN_ANGLED_AREA_ON_FOOT_3D:
@@ -922,7 +922,7 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 	case COMMAND_IS_PLAYER_STOPPED_IN_ANGLED_AREA_2D:
 	case COMMAND_IS_PLAYER_STOPPED_IN_ANGLED_AREA_ON_FOOT_2D:
 	case COMMAND_IS_PLAYER_STOPPED_IN_ANGLED_AREA_IN_CAR_2D:
-		if (!CTheScripts::IsPlayerStopped(pPlayerInfo)) {
+		if (!TheScripts_IsPlayerStopped(pPlayerInfo)) {
 			result = false;
 			decided = true;
 		}
@@ -986,14 +986,14 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantAngledArea((uintptr)this + m_nIp, infX, infY, supX, supY,
+		TheScripts_HighlightImportantAngledArea((uintptr)this + m_nIp, infX, infY, supX, supY,
 			rotatedSupX, rotatedSupY, rotatedInfX, rotatedInfY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugAngledCube(infX, infY, infZ, supX, supY, supZ,
+			TheScripts_DrawDebugAngledCube(infX, infY, infZ, supX, supY, supZ,
 				rotatedSupX, rotatedSupY, rotatedInfX, rotatedInfY);
 		else
-			CTheScripts::DrawDebugAngledSquare(infX, infY, supX, supY,
+			TheScripts_DrawDebugAngledSquare(infX, infY, supX, supY,
 				rotatedSupX, rotatedSupY, rotatedInfX, rotatedInfY);
 	}
 }
@@ -1018,7 +1018,7 @@ void CRunningScript::CharInAreaCheckCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 8 : 6);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	CVector pos = pPed->InVehicle() ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
@@ -1029,7 +1029,7 @@ void CRunningScript::CharInAreaCheckCommand(int32 command, uint32* pIp)
 	case COMMAND_IS_CHAR_STOPPED_IN_AREA_2D:
 	case COMMAND_IS_CHAR_STOPPED_IN_AREA_ON_FOOT_2D:
 	case COMMAND_IS_CHAR_STOPPED_IN_AREA_IN_CAR_2D:
-		if (!CTheScripts::IsPedStopped(pPed)) {
+		if (!TheScripts_IsPedStopped(pPed)) {
 			result = false;
 			decided = true;
 		}
@@ -1096,12 +1096,12 @@ void CRunningScript::CharInAreaCheckCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
+			TheScripts_DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
 		else
-			CTheScripts::DrawDebugSquare(infX, infY, supX, supY);
+			TheScripts_DrawDebugSquare(infX, infY, supX, supY);
 	}
 }
 
@@ -1121,14 +1121,14 @@ void CRunningScript::CarInAreaCheckCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 8 : 6);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pVehicle);
 	CVector pos = pVehicle->GetPosition();
 	switch (command) {
 	case COMMAND_IS_CAR_STOPPED_IN_AREA_3D:
 	case COMMAND_IS_CAR_STOPPED_IN_AREA_2D:
-		if (!CTheScripts::IsVehicleStopped(pVehicle)) {
+		if (!TheScripts_IsVehicleStopped(pVehicle)) {
 			result = false;
 			decided = true;
 		}
@@ -1183,12 +1183,12 @@ void CRunningScript::CarInAreaCheckCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
+			TheScripts_DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
 		else
-			CTheScripts::DrawDebugSquare(infX, infY, supX, supY);
+			TheScripts_DrawDebugSquare(infX, infY, supX, supY);
 	}
 }
 
@@ -1207,7 +1207,7 @@ void CRunningScript::ObjectInAreaCheckCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 8 : 6);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+	CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 	//- rouz edit (ChatGPT)
 	script_assert(pObject);
 	CVector pos = pObject->GetPosition();
@@ -1254,12 +1254,12 @@ void CRunningScript::ObjectInAreaCheckCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
+			TheScripts_DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
 		else
-			CTheScripts::DrawDebugSquare(infX, infY, supX, supY);
+			TheScripts_DrawDebugSquare(infX, infY, supX, supY);
 	}
 }
 
@@ -1267,9 +1267,9 @@ void CRunningScript::DoDeatharrestCheck()
 {
 	if (!m_bDeatharrestEnabled)
 		return;
-	if (!CTheScripts::IsPlayerOnAMission())
+	if (!TheScripts_IsPlayerOnAMission())
 		return;
-	CPlayerInfo* pPlayer = &CWorld::Players[CWorld::PlayerInFocus];
+	CPlayerInfo* pPlayer = &World_Players[World_PlayerInFocus];
 	if (!pPlayer->IsRestartingAfterDeath() && !pPlayer->IsRestartingAfterArrest())
 		return;
 #ifdef MISSION_REPLAY
@@ -1285,7 +1285,7 @@ void CRunningScript::DoDeatharrestCheck()
 		--m_nStackPointer;
 	m_nIp = m_anStack[--m_nStackPointer];
 	Messages_ClearSmallMessagesOnly();
-	*(int32*)&CTheScripts::ScriptSpace[CTheScripts::OnAMissionFlag] = 0;
+	*(int32*)&TheScripts_ScriptSpace[TheScripts_OnAMissionFlag] = 0;
 	m_bDeatharrestExecuted = true;
 	m_nWakeTime = 0;
 }
@@ -1358,7 +1358,7 @@ void CRunningScript::LocateCollectiveCommand(int32 command, uint32* pIp)
 			continue;
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
 		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
@@ -1370,7 +1370,7 @@ void CRunningScript::LocateCollectiveCommand(int32 command, uint32* pIp)
 		case COMMAND_LOCATE_STOPPED_COLL_ANY_MEANS_2D:
 		case COMMAND_LOCATE_STOPPED_COLL_ON_FOOT_2D:
 		case COMMAND_LOCATE_STOPPED_COLL_IN_CAR_2D:
-			if (!CTheScripts::IsPedStopped(pPed)) {
+			if (!TheScripts_IsPedStopped(pPed)) {
 				result = false;
 				decided = true;
 			}
@@ -1412,12 +1412,12 @@ void CRunningScript::LocateCollectiveCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -1438,7 +1438,7 @@ void CRunningScript::LocateCollectiveCharCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 6 : 5);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+	CPed* pTarget = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	if (pTarget->bInVehicle) {
@@ -1466,7 +1466,7 @@ void CRunningScript::LocateCollectiveCharCommand(int32 command, uint32* pIp)
 			continue;
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
 		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
@@ -1503,12 +1503,12 @@ void CRunningScript::LocateCollectiveCharCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -1529,7 +1529,7 @@ void CRunningScript::LocateCollectiveCarCommand(int32 command, uint32* pIp)
 	CollectParameters(pIp, b3D ? 6 : 5);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[1]));
 	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	X = pTarget->GetPosition().x;
@@ -1550,7 +1550,7 @@ void CRunningScript::LocateCollectiveCarCommand(int32 command, uint32* pIp)
 			continue;
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
 		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
@@ -1587,12 +1587,12 @@ void CRunningScript::LocateCollectiveCarCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -1611,7 +1611,7 @@ void CRunningScript::LocateCollectivePlayerCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CVector pos = CWorld::Players[ScriptParams[1]].GetPos();
+	CVector pos = World_Players[ScriptParams[1]].GetPos();
 	X = pos.x;
 	Y = pos.y;
 	Z = pos.z;
@@ -1630,7 +1630,7 @@ void CRunningScript::LocateCollectivePlayerCommand(int32 command, uint32* pIp)
 			continue;
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
 		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
@@ -1667,12 +1667,12 @@ void CRunningScript::LocateCollectivePlayerCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
+			TheScripts_DrawDebugCube(X - dX, Y - dY, Z - dZ, X + dX, Y + dY, Z + dZ);
 		else
-			CTheScripts::DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
+			TheScripts_DrawDebugSquare(X - dX, Y - dY, X + dX, Y + dY);
 	}
 }
 
@@ -1720,7 +1720,7 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 			continue;
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
 		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
@@ -1732,7 +1732,7 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 		case COMMAND_IS_COLL_STOPPED_IN_AREA_2D:
 		case COMMAND_IS_COLL_STOPPED_IN_AREA_ON_FOOT_2D:
 		case COMMAND_IS_COLL_STOPPED_IN_AREA_IN_CAR_2D:
-			if (!CTheScripts::IsPedStopped(pPed)) {
+			if (!TheScripts_IsPedStopped(pPed)) {
 				result = false;
 				decided = true;
 			}
@@ -1774,12 +1774,12 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 	}
 	UpdateCompareFlag(result);
 	if (debug)
-		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
-	if (CTheScripts::DbgFlag) {
+		TheScripts_HighlightImportantArea((uintptr)this + m_nIp, infX, infY, supX, supY, b3D ? (infZ + supZ) / 2 : MAP_Z_LOW_LIMIT);
+	if (TheScripts_DbgFlag) {
 		if (b3D)
-			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
+			TheScripts_DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
 		else
-			CTheScripts::DrawDebugSquare(infX, infY, supX, supY);
+			TheScripts_DrawDebugSquare(infX, infY, supX, supY);
 	}
 }
 #endif
@@ -1854,14 +1854,14 @@ bool CRunningScript::CheckDamagedWeaponType(int32 actual, int32 type)
 	return false;
 }
 
-void CTheScripts::PrintListSizes()
+void TheScripts_PrintListSizes()
 {
 	int active = 0;
 	int idle = 0;
 
-	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
+	for (CRunningScript* pScript = TheScripts_pActiveScripts; pScript; pScript = pScript->GetNext())
 		active++;
-	for (CRunningScript* pScript = pIdleScripts; pScript; pScript = pScript->GetNext())
+	for (CRunningScript* pScript = TheScripts_pIdleScripts; pScript; pScript = pScript->GetNext())
 		idle++;
 
 	debug("active: %d, idle: %d", active, idle);
@@ -1869,123 +1869,123 @@ void CTheScripts::PrintListSizes()
 
 uint32 DbgLineColour = 0x0000FFFF; // r = 0, g = 0, b = 255, a = 255
 
-void CTheScripts::DrawDebugSquare(float infX, float infY, float supX, float supY)
+void TheScripts_DrawDebugSquare(float infX, float infY, float supX, float supY)
 {
 	CColPoint tmpCP;
 	CEntity* tmpEP;
 	CVector p1, p2, p3, p4;
 	p1 = CVector(infX, infY, -1000.0f);
-	CWorld::ProcessVerticalLine(p1, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p1, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p1.z = 2.0f + tmpCP.point.z;
 	p2 = CVector(supX, supY, -1000.0f);
-	CWorld::ProcessVerticalLine(p2, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p2, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p2.z = 2.0f + tmpCP.point.z;
 	p3 = CVector(infX, supY, -1000.0f);
-	CWorld::ProcessVerticalLine(p3, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p3, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p3.z = 2.0f + tmpCP.point.z;
 	p4 = CVector(supX, infY, -1000.0f);
-	CWorld::ProcessVerticalLine(p4, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p4, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p4.z = 2.0f + tmpCP.point.z;
-	CTheScripts::ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(p3.x, p3.y, p3.z, p4.x, p4.y, p4.z, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(p4.x, p4.y, p4.z, p1.x, p1.y, p1.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p3.x, p3.y, p3.z, p4.x, p4.y, p4.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p4.x, p4.y, p4.z, p1.x, p1.y, p1.z, DbgLineColour, DbgLineColour);
 }
 
-void CTheScripts::DrawDebugAngledSquare(float infX, float infY, float supX, float supY, float rotSupX, float rotSupY, float rotInfX, float rotInfY)
+void TheScripts_DrawDebugAngledSquare(float infX, float infY, float supX, float supY, float rotSupX, float rotSupY, float rotInfX, float rotInfY)
 {
 	CColPoint tmpCP;
 	CEntity* tmpEP;
 	CVector p1, p2, p3, p4;
 	p1 = CVector(infX, infY, -1000.0f);
-	CWorld::ProcessVerticalLine(p1, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p1, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p1.z = 2.0f + tmpCP.point.z;
 	p2 = CVector(supX, supY, -1000.0f);
-	CWorld::ProcessVerticalLine(p2, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p2, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p2.z = 2.0f + tmpCP.point.z;
 	p3 = CVector(rotSupX, rotSupY, -1000.0f);
-	CWorld::ProcessVerticalLine(p3, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p3, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p3.z = 2.0f + tmpCP.point.z;
 	p4 = CVector(rotInfX, rotInfY, -1000.0f);
-	CWorld::ProcessVerticalLine(p4, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
+	World_ProcessVerticalLine(p4, 1000.0f, tmpCP, tmpEP, true, false, false, false, true, false, nil);
 	p4.z = 2.0f + tmpCP.point.z;
-	CTheScripts::ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(p3.x, p3.y, p3.z, p4.x, p4.y, p4.z, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(p4.x, p4.y, p4.z, p1.x, p1.y, p1.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p3.x, p3.y, p3.z, p4.x, p4.y, p4.z, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(p4.x, p4.y, p4.z, p1.x, p1.y, p1.z, DbgLineColour, DbgLineColour);
 }
 
-void CTheScripts::DrawDebugCube(float infX, float infY, float infZ, float supX, float supY, float supZ)
+void TheScripts_DrawDebugCube(float infX, float infY, float infZ, float supX, float supY, float supZ)
 {
-	CTheScripts::ScriptDebugLine3D(infX, infY, infZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, infY, infZ, supX, supY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, supY, infZ, infX, supY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, supY, infZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, infY, supZ, supX, infY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, infY, supZ, supX, supY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, supY, supZ, infX, supY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, supY, supZ, infX, infY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, infY, supZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, infY, supZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, supY, supZ, supX, supY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, supY, supZ, infX, supY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, infY, infZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, infY, infZ, supX, supY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, supY, infZ, infX, supY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, supY, infZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, infY, supZ, supX, infY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, infY, supZ, supX, supY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, supY, supZ, infX, supY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, supY, supZ, infX, infY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, infY, supZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, infY, supZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, supY, supZ, supX, supY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, supY, supZ, infX, supY, infZ, DbgLineColour, DbgLineColour);
 }
 
-void CTheScripts::DrawDebugAngledCube(float infX, float infY, float infZ, float supX, float supY, float supZ, float rotSupX, float rotSupY, float rotInfX, float rotInfY)
+void TheScripts_DrawDebugAngledCube(float infX, float infY, float infZ, float supX, float supY, float supZ, float rotSupX, float rotSupY, float rotInfX, float rotInfY)
 {
-	CTheScripts::ScriptDebugLine3D(infX, infY, infZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, infY, infZ, rotSupX, rotSupY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(rotSupX, rotSupY, infZ, rotInfX, rotInfY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(rotInfX, rotInfY, infZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, infY, supZ, supX, infY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, infY, supZ, rotSupX, rotSupY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(rotSupX, rotSupY, rotInfX, rotInfY, supY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(rotInfX, rotInfY, supZ, infX, infY, supZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(infX, infY, supZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(supX, infY, supZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(rotSupX, rotSupY, supZ, rotSupX, rotSupY, infZ, DbgLineColour, DbgLineColour);
-	CTheScripts::ScriptDebugLine3D(rotInfX, rotInfY, supZ, rotInfX, rotInfY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, infY, infZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, infY, infZ, rotSupX, rotSupY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(rotSupX, rotSupY, infZ, rotInfX, rotInfY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(rotInfX, rotInfY, infZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, infY, supZ, supX, infY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, infY, supZ, rotSupX, rotSupY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(rotSupX, rotSupY, rotInfX, rotInfY, supY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(rotInfX, rotInfY, supZ, infX, infY, supZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(infX, infY, supZ, infX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(supX, infY, supZ, supX, infY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(rotSupX, rotSupY, supZ, rotSupX, rotSupY, infZ, DbgLineColour, DbgLineColour);
+	TheScripts_ScriptDebugLine3D(rotInfX, rotInfY, supZ, rotInfX, rotInfY, infZ, DbgLineColour, DbgLineColour);
 }
 
-void CTheScripts::ScriptDebugLine3D(float x1, float y1, float z1, float x2, float y2, float z2, uint32 col, uint32 col2)
+void TheScripts_ScriptDebugLine3D(float x1, float y1, float z1, float x2, float y2, float z2, uint32 col, uint32 col2)
 {
-	if (NumScriptDebugLines >= MAX_NUM_STORED_LINES)
+	if (TheScripts_NumScriptDebugLines >= MAX_NUM_STORED_LINES)
 		return;
-	aStoredLines[NumScriptDebugLines].vecInf = CVector(x1, y1, z1);
-	aStoredLines[NumScriptDebugLines].vecSup = CVector(x2, y2, z2);
-	aStoredLines[NumScriptDebugLines].color1 = col;
-	aStoredLines[NumScriptDebugLines++].color2 = col2;
+	TheScripts_aStoredLines[TheScripts_NumScriptDebugLines].vecInf = CVector(x1, y1, z1);
+	TheScripts_aStoredLines[TheScripts_NumScriptDebugLines].vecSup = CVector(x2, y2, z2);
+	TheScripts_aStoredLines[TheScripts_NumScriptDebugLines].color1 = col;
+	TheScripts_aStoredLines[TheScripts_NumScriptDebugLines++].color2 = col2;
 }
 
-void CTheScripts::RenderTheScriptDebugLines()
+void TheScripts_RenderTheScriptDebugLines()
 {
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)1);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
-	for (int i = 0; i < NumScriptDebugLines; i++) {
+	for (int i = 0; i < TheScripts_NumScriptDebugLines; i++) {
 		// Draw the original endpoints and colors through the C line API
 		Lines_RenderLineWithClipping(
-			aStoredLines[i].vecInf.x,
-			aStoredLines[i].vecInf.y,
-			aStoredLines[i].vecInf.z,
-			aStoredLines[i].vecSup.x,
-			aStoredLines[i].vecSup.y,
-			aStoredLines[i].vecSup.z,
-			aStoredLines[i].color1,
-			aStoredLines[i].color2);
+			TheScripts_aStoredLines[i].vecInf.x,
+			TheScripts_aStoredLines[i].vecInf.y,
+			TheScripts_aStoredLines[i].vecInf.z,
+			TheScripts_aStoredLines[i].vecSup.x,
+			TheScripts_aStoredLines[i].vecSup.y,
+			TheScripts_aStoredLines[i].vecSup.z,
+			TheScripts_aStoredLines[i].color1,
+			TheScripts_aStoredLines[i].color2);
 	}
-	NumScriptDebugLines = 0;
+	TheScripts_NumScriptDebugLines = 0;
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)0);
 }
 
-#define SCRIPT_DATA_SIZE sizeof(CTheScripts::OnAMissionFlag) +\
+#define SCRIPT_DATA_SIZE sizeof(TheScripts_OnAMissionFlag) +\
 	4 * sizeof(uint32) * MAX_NUM_BUILDING_SWAPS + 2 * sizeof(uint32) * MAX_NUM_INVISIBILITY_SETTINGS + 5 * sizeof(uint32)
 
-void CTheScripts::SaveAllScripts(uint8* buf, uint32* size)
+void TheScripts_SaveAllScripts(uint8* buf, uint32* size)
 {
 INITSAVEBUF
-	uint32 varSpace = GetSizeOfVariableSpace();
+	uint32 varSpace = TheScripts_GetSizeOfVariableSpace();
 	uint32 runningScripts = 0;
-	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
+	for (CRunningScript* pScript = TheScripts_pActiveScripts; pScript; pScript = pScript->GetNext())
 		runningScripts++;
 	*size = CRunningScript::nSaveStructSize * runningScripts + varSpace + SCRIPT_DATA_SIZE + SAVE_HEADER_SIZE + 3 * sizeof(uint32);
 	//+ rouz edit (ChatGPT)
@@ -1996,7 +1996,7 @@ INITSAVEBUF
 	for (uint32 i = 0; i < varSpace; i++)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
-		WriteSaveBuf(&buf, &ScriptSpace[i], sizeof(ScriptSpace[i]));
+		WriteSaveBuf(&buf, &TheScripts_ScriptSpace[i], sizeof(TheScripts_ScriptSpace[i]));
 		//- rouz edit (ChatGPT)
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(SCRIPT_DATA_SIZE == 968, "CTheScripts::SaveAllScripts");
@@ -2005,11 +2005,11 @@ INITSAVEBUF
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &script_data_size, sizeof(script_data_size));
-	WriteSaveBuf(&buf, &OnAMissionFlag, sizeof(OnAMissionFlag));
-	WriteSaveBuf(&buf, &LastMissionPassedTime, sizeof(LastMissionPassedTime));
+	WriteSaveBuf(&buf, &TheScripts_OnAMissionFlag, sizeof(TheScripts_OnAMissionFlag));
+	WriteSaveBuf(&buf, &TheScripts_LastMissionPassedTime, sizeof(TheScripts_LastMissionPassedTime));
 	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < MAX_NUM_BUILDING_SWAPS; i++) {
-		CBuilding* pBuilding = BuildingSwapArray[i].m_pBuilding;
+		CBuilding* pBuilding = TheScripts_BuildingSwapArray[i].m_pBuilding;
 		uint32 type, handle;
 		if (!pBuilding) {
 			type = 0;
@@ -2018,25 +2018,25 @@ INITSAVEBUF
 			type = 1;
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetTreadablePool(), (CTreadable*)pBuilding) + 1;
+			handle = CPool_GetJustIndex_NoFreeAssert(Pools_GetTreadablePool(), (CTreadable*)pBuilding) + 1;
 			//- rouz edit (ChatGPT)
 		} else {
 			type = 2;
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), pBuilding) + 1;
+			handle = CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), pBuilding) + 1;
 			//- rouz edit (ChatGPT)
 		}
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &type, sizeof(type));
 		WriteSaveBuf(&buf, &handle, sizeof(handle));
-		WriteSaveBuf(&buf, &BuildingSwapArray[i].m_nNewModel, sizeof(BuildingSwapArray[i].m_nNewModel));
-		WriteSaveBuf(&buf, &BuildingSwapArray[i].m_nOldModel, sizeof(BuildingSwapArray[i].m_nOldModel));
+		WriteSaveBuf(&buf, &TheScripts_BuildingSwapArray[i].m_nNewModel, sizeof(TheScripts_BuildingSwapArray[i].m_nNewModel));
+		WriteSaveBuf(&buf, &TheScripts_BuildingSwapArray[i].m_nOldModel, sizeof(TheScripts_BuildingSwapArray[i].m_nOldModel));
 		//- rouz edit (ChatGPT)
 	}
 	for (uint32 i = 0; i < MAX_NUM_INVISIBILITY_SETTINGS; i++) {
-		CEntity* pEntity = InvisibilitySettingArray[i];
+		CEntity* pEntity = TheScripts_InvisibilitySettingArray[i];
 		uint32 type, handle;
 		if (!pEntity) {
 			type = 0;
@@ -2048,13 +2048,13 @@ INITSAVEBUF
 					type = 1;
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetTreadablePool(), (CTreadable*)pEntity) + 1;
+					handle = CPool_GetJustIndex_NoFreeAssert(Pools_GetTreadablePool(), (CTreadable*)pEntity) + 1;
 					//- rouz edit (ChatGPT)
 				} else {
 					type = 2;
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), (CBuilding*)pEntity) + 1;
+					handle = CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), (CBuilding*)pEntity) + 1;
 					//- rouz edit (ChatGPT)
 				}
 				break;
@@ -2062,14 +2062,14 @@ INITSAVEBUF
 				type = 3;
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), (CObject*)pEntity) + 1;
+				handle = CPool_GetJustIndex_NoFreeAssert(Pools_GetObjectPool(), (CObject*)pEntity) + 1;
 				//- rouz edit (ChatGPT)
 				break;
 			case ENTITY_TYPE_DUMMY:
 				type = 4;
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), (CDummy*)pEntity) + 1;
+				handle = CPool_GetJustIndex_NoFreeAssert(Pools_GetDummyPool(), (CDummy*)pEntity) + 1;
 				//- rouz edit (ChatGPT)
 			default: break;
 			}
@@ -2082,27 +2082,27 @@ INITSAVEBUF
 	}
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
-	WriteSaveBuf(&buf, &bUsingAMultiScriptFile, sizeof(bUsingAMultiScriptFile));
-	WriteSaveBuf(&buf, &bPlayerHasMetDebbieHarry, sizeof(bPlayerHasMetDebbieHarry));
+	WriteSaveBuf(&buf, &TheScripts_bUsingAMultiScriptFile, sizeof(TheScripts_bUsingAMultiScriptFile));
+	WriteSaveBuf(&buf, &TheScripts_bPlayerHasMetDebbieHarry, sizeof(TheScripts_bPlayerHasMetDebbieHarry));
 	{
 		// Materialize the saved value with its original serialized type
 		uint16 saveValue = (uint16)0;
 		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
 	}
-	WriteSaveBuf(&buf, &MainScriptSize, sizeof(MainScriptSize));
-	WriteSaveBuf(&buf, &LargestMissionScriptSize, sizeof(LargestMissionScriptSize));
-	WriteSaveBuf(&buf, &NumberOfMissionScripts, sizeof(NumberOfMissionScripts));
-	WriteSaveBuf(&buf, &NumberOfExclusiveMissionScripts, sizeof(NumberOfExclusiveMissionScripts));
+	WriteSaveBuf(&buf, &TheScripts_MainScriptSize, sizeof(TheScripts_MainScriptSize));
+	WriteSaveBuf(&buf, &TheScripts_LargestMissionScriptSize, sizeof(TheScripts_LargestMissionScriptSize));
+	WriteSaveBuf(&buf, &TheScripts_NumberOfMissionScripts, sizeof(TheScripts_NumberOfMissionScripts));
+	WriteSaveBuf(&buf, &TheScripts_NumberOfExclusiveMissionScripts, sizeof(TheScripts_NumberOfExclusiveMissionScripts));
 	WriteSaveBuf(&buf, &runningScripts, sizeof(runningScripts));
 	//- rouz edit (ChatGPT)
-	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
+	for (CRunningScript* pScript = TheScripts_pActiveScripts; pScript; pScript = pScript->GetNext())
 		pScript->Save(buf);
 VALIDATESAVEBUF(*size)
 }
 
-void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)
+void TheScripts_LoadAllScripts(uint8* buf, uint32 size)
 {
-	Init();
+	TheScripts_Init();
 INITSAVEBUF
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
@@ -2118,7 +2118,7 @@ INITSAVEBUF
 	for (uint32 i = 0; i < varSpace; i++)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
-		ReadSaveBuf(&ScriptSpace[i], &buf, sizeof(ScriptSpace[i]));
+		ReadSaveBuf(&TheScripts_ScriptSpace[i], &buf, sizeof(TheScripts_ScriptSpace[i]));
 		//- rouz edit (ChatGPT)
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
@@ -2127,8 +2127,8 @@ INITSAVEBUF
 	script_assert(tmp == SCRIPT_DATA_SIZE);
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&OnAMissionFlag, &buf, sizeof(OnAMissionFlag));
-	ReadSaveBuf(&LastMissionPassedTime, &buf, sizeof(LastMissionPassedTime));
+	ReadSaveBuf(&TheScripts_OnAMissionFlag, &buf, sizeof(TheScripts_OnAMissionFlag));
+	ReadSaveBuf(&TheScripts_LastMissionPassedTime, &buf, sizeof(TheScripts_LastMissionPassedTime));
 	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < MAX_NUM_BUILDING_SWAPS; i++) {
 		//+ rouz edit (ChatGPT)
@@ -2138,18 +2138,18 @@ INITSAVEBUF
 		//- rouz edit (ChatGPT)
 		switch (type) {
 		case 0:
-			BuildingSwapArray[i].m_pBuilding = nil;
+			TheScripts_BuildingSwapArray[i].m_pBuilding = nil;
 			break;
 		case 1:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			BuildingSwapArray[i].m_pBuilding = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), handle - 1));
+			TheScripts_BuildingSwapArray[i].m_pBuilding = ((CTreadable*)CPool_GetSlot(Pools_GetTreadablePool(), handle - 1));
 			//- rouz edit (ChatGPT)
 			break;
 		case 2:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			BuildingSwapArray[i].m_pBuilding = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), handle - 1));
+			TheScripts_BuildingSwapArray[i].m_pBuilding = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), handle - 1));
 			//- rouz edit (ChatGPT)
 			break;
 		default:
@@ -2157,11 +2157,11 @@ INITSAVEBUF
 		}
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
-		ReadSaveBuf(&BuildingSwapArray[i].m_nNewModel, &buf, sizeof(BuildingSwapArray[i].m_nNewModel));
-		ReadSaveBuf(&BuildingSwapArray[i].m_nOldModel, &buf, sizeof(BuildingSwapArray[i].m_nOldModel));
+		ReadSaveBuf(&TheScripts_BuildingSwapArray[i].m_nNewModel, &buf, sizeof(TheScripts_BuildingSwapArray[i].m_nNewModel));
+		ReadSaveBuf(&TheScripts_BuildingSwapArray[i].m_nOldModel, &buf, sizeof(TheScripts_BuildingSwapArray[i].m_nOldModel));
 		//- rouz edit (ChatGPT)
-		if (BuildingSwapArray[i].m_pBuilding)
-			BuildingSwapArray[i].m_pBuilding->ReplaceWithNewModel(BuildingSwapArray[i].m_nNewModel);
+		if (TheScripts_BuildingSwapArray[i].m_pBuilding)
+			TheScripts_BuildingSwapArray[i].m_pBuilding->ReplaceWithNewModel(TheScripts_BuildingSwapArray[i].m_nNewModel);
 	}
 	for (uint32 i = 0; i < MAX_NUM_INVISIBILITY_SETTINGS; i++) {
 		//+ rouz edit (ChatGPT)
@@ -2171,74 +2171,74 @@ INITSAVEBUF
 		//- rouz edit (ChatGPT)
 		switch (type) {
 		case 0:
-			InvisibilitySettingArray[i] = nil;
+			TheScripts_InvisibilitySettingArray[i] = nil;
 			break;
 		case 1:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			InvisibilitySettingArray[i] = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), handle - 1));
+			TheScripts_InvisibilitySettingArray[i] = ((CTreadable*)CPool_GetSlot(Pools_GetTreadablePool(), handle - 1));
 			//- rouz edit (ChatGPT)
 			break;
 		case 2:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			InvisibilitySettingArray[i] = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), handle - 1));
+			TheScripts_InvisibilitySettingArray[i] = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), handle - 1));
 			//- rouz edit (ChatGPT)
 			break;
 		case 3:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			InvisibilitySettingArray[i] = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), handle - 1));
+			TheScripts_InvisibilitySettingArray[i] = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), handle - 1));
 			//- rouz edit (ChatGPT)
 			break;
 		case 4:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			InvisibilitySettingArray[i] = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), handle - 1));
+			TheScripts_InvisibilitySettingArray[i] = ((CDummy*)CPool_GetSlot(Pools_GetDummyPool(), handle - 1));
 			//- rouz edit (ChatGPT)
 			break;
 		default:
 			script_assert(false);
 		}
-		if (InvisibilitySettingArray[i])
-			InvisibilitySettingArray[i]->bIsVisible = false;
+		if (TheScripts_InvisibilitySettingArray[i])
+			TheScripts_InvisibilitySettingArray[i]->bIsVisible = false;
 	}
 	bool tmpBool;
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&tmpBool, &buf, sizeof(tmpBool));
 	//- rouz edit (ChatGPT)
-	script_assert(tmpBool == bUsingAMultiScriptFile);
+	script_assert(tmpBool == TheScripts_bUsingAMultiScriptFile);
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&bPlayerHasMetDebbieHarry, &buf, sizeof(bPlayerHasMetDebbieHarry));
+	ReadSaveBuf(&TheScripts_bPlayerHasMetDebbieHarry, &buf, sizeof(TheScripts_bPlayerHasMetDebbieHarry));
 	SkipSaveBuf(&buf, 2);
 	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
 	//- rouz edit (ChatGPT)
-	script_assert(tmp == MainScriptSize);
+	script_assert(tmp == TheScripts_MainScriptSize);
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
 	//- rouz edit (ChatGPT)
-	script_assert(tmp == LargestMissionScriptSize);
+	script_assert(tmp == TheScripts_LargestMissionScriptSize);
 	uint16 tmp16;
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&tmp16, &buf, sizeof(tmp16));
 	//- rouz edit (ChatGPT)
-	script_assert(tmp16 == NumberOfMissionScripts);
+	script_assert(tmp16 == TheScripts_NumberOfMissionScripts);
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&tmp16, &buf, sizeof(tmp16));
 	//- rouz edit (ChatGPT)
-	script_assert(tmp16 == NumberOfExclusiveMissionScripts);
+	script_assert(tmp16 == TheScripts_NumberOfExclusiveMissionScripts);
 	uint32 runningScripts;
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&runningScripts, &buf, sizeof(runningScripts));
 	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < runningScripts; i++)
-		StartNewScript(0)->Load(buf);
+		TheScripts_StartNewScript(0)->Load(buf);
 VALIDATESAVEBUF(size)
 }
 
@@ -2370,12 +2370,12 @@ void CRunningScript::Load(uint8*& buf)
 #endif
 }
 
-void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntity)
+void TheScripts_ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntity)
 {
 	static CColPoint aTempColPoints[MAX_COLLISION_POINTS];
 	int16 entities = 0;
 	CEntity* aEntities[16];
-	CWorld::FindObjectsKindaColliding(pos, pEntity->GetBoundRadius(), false, &entities, 16, aEntities, false, true, true, false, false);
+	World_FindObjectsKindaColliding(pos, pEntity->GetBoundRadius(), false, &entities, 16, aEntities, false, true, true, false, false);
 	if (entities <= 0)
 		return;
 	for (uint16 i = 0; i < entities; i++) {
@@ -2388,13 +2388,13 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 		CEntity* pFound = aEntities[i];
 		int cols;
 		if (pEntity->GetColModel()->numLines <= 0)
-			cols = CCollision::ProcessColModels(pEntity->GetMatrix(), *pEntity->GetColModel(),
+			cols = Collision_ProcessColModels(pEntity->GetMatrix(), *pEntity->GetColModel(),
 				pFound->GetMatrix(), *pFound->GetColModel(), aTempColPoints, nil, nil);
 		else {
 			float lines[4];
 			lines[0] = lines[1] = lines[2] = lines[3] = 1.0f;
 			CColPoint tmp[4];
-			cols = CCollision::ProcessColModels(pEntity->GetMatrix(), *pEntity->GetColModel(),
+			cols = Collision_ProcessColModels(pEntity->GetMatrix(), *pEntity->GetColModel(),
 				pFound->GetMatrix(), *pFound->GetColModel(), aTempColPoints,tmp, lines);
 		}
 		if (cols <= 0)
@@ -2407,24 +2407,24 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 			if (pVehicle->bIsLocked || !pVehicle->CanBeDeleted())
 				break;
 			if (pVehicle->pDriver) {
-				CPopulation::RemovePed(pVehicle->pDriver);
+				Population_RemovePed(pVehicle->pDriver);
 				pVehicle->pDriver = nil;
 			}
 			for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++) {
 				if (pVehicle->pPassengers[i]) {
-					CPopulation::RemovePed(pVehicle->pPassengers[i]);
+					Population_RemovePed(pVehicle->pPassengers[i]);
 					pVehicle->pPassengers[i] = 0;
 					pVehicle->m_nNumPassengers--;
 				}
 			}
-			CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
-			CWorld::Remove(pVehicle);
+			CarCtrl_RemoveFromInterestingVehicleList(pVehicle);
+			World_Remove(pVehicle);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the displaced vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			CPool_Delete(Pools_GetVehiclePool(), pVehicle);
 			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			break;
@@ -2434,7 +2434,7 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 			CPed* pPed = (CPed*)pFound;
 			if (pPed->IsPlayer() || !pPed->CanBeDeleted())
 				break;
-			CPopulation::RemovePed(pPed);
+			Population_RemovePed(pPed);
 			printf("Deleted a ped where a mission entity should be\n");
 			break;
 		}
@@ -2443,7 +2443,7 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 	}
 }
 
-void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2, float y2, float z)
+void TheScripts_HighlightImportantArea(uint32 id, float x1, float y1, float x2, float y2, float z)
 {
 	float infX, infY, supX, supY;
 	// Delegate the bounds of the area to the C implementation
@@ -2451,11 +2451,11 @@ void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2
 	CVector center;
 	center.x = (infX + supX) / 2;
 	center.y = (infY + supY) / 2;
-	center.z = (z <= MAP_Z_LOW_LIMIT) ? CWorld::FindGroundZForCoord(center.x, center.y) : z;
+	center.z = (z <= MAP_Z_LOW_LIMIT) ? World_FindGroundZForCoord(center.x, center.y) : z;
 	CShadows::RenderIndicatorShadow(id, 2, gpGoalTex, &center, supX - center.x, 0.0f, 0.0f, center.y - supY, 0);
 }
 
-void CTheScripts::HighlightImportantAngledArea(uint32 id, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float z)
+void TheScripts_HighlightImportantAngledArea(uint32 id, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float z)
 {
 	float infX, infY, supX, supY, X, Y;
 	// Delegate the bounds of the angled area to the C implementation
@@ -2463,40 +2463,40 @@ void CTheScripts::HighlightImportantAngledArea(uint32 id, float x1, float y1, fl
 	CVector center;
 	center.x = (infX + supX) / 2;
 	center.y = (infY + supY) / 2;
-	center.z = (z <= MAP_Z_LOW_LIMIT) ? CWorld::FindGroundZForCoord(center.x, center.y) : z;
+	center.z = (z <= MAP_Z_LOW_LIMIT) ? World_FindGroundZForCoord(center.x, center.y) : z;
 	CShadows::RenderIndicatorShadow(id, 2, gpGoalTex, &center, supX - center.x, 0.0f, 0.0f, center.y - supY, 0);
 }
 
 #ifdef GTA_SCRIPT_COLLECTIVE
-int CTheScripts::AddPedsInVehicleToCollective(int index)
+int TheScripts_AddPedsInVehicleToCollective(int index)
 {
-	int colIndex = NextFreeCollectiveIndex;
-	AdvanceCollectiveIndex();
+	int colIndex = TheScripts_NextFreeCollectiveIndex;
+	TheScripts_AdvanceCollectiveIndex();
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), index));
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), index));
 	//- rouz edit (ChatGPT)
 	script_assert(pVehicle);
 	CPed* pDriver = pVehicle->pDriver;
 	if (pDriver && !pDriver->IsPlayer() && pDriver->CharCreatedBy != MISSION_CHAR && pDriver->m_nPedType != PEDTYPE_COP) {
-		int index = FindFreeSlotInCollectiveArray();
+		int index = TheScripts_FindFreeSlotInCollectiveArray();
 		if (index > -1) {
 			CollectiveArray[index].colIndex = colIndex;
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pDriver);
+			CollectiveArray[index].pedIndex = CPool_GetIndex(Pools_GetPedPool(), pDriver);
 			//- rouz edit (ChatGPT)
 		}
 	}
 	for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++) {
 		CPed* pPassenger = pVehicle->pPassengers[i];
 		if (pPassenger && !pPassenger->IsPlayer() && pPassenger->CharCreatedBy != MISSION_CHAR && pPassenger->m_nPedType != PEDTYPE_COP) {
-			int index = FindFreeSlotInCollectiveArray();
+			int index = TheScripts_FindFreeSlotInCollectiveArray();
 			if (index > -1) {
 				CollectiveArray[index].colIndex = colIndex;
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pPassenger);
+				CollectiveArray[index].pedIndex = CPool_GetIndex(Pools_GetPedPool(), pPassenger);
 				//- rouz edit (ChatGPT)
 			}
 		}
@@ -2504,23 +2504,23 @@ int CTheScripts::AddPedsInVehicleToCollective(int index)
 	return colIndex;
 }
 
-int CTheScripts::AddPedsInAreaToCollective(float x, float y, float z, float radius)
+int TheScripts_AddPedsInAreaToCollective(float x, float y, float z, float radius)
 {
 	int16 numFound;
 	CEntity* pEntities[64];
-	int colIndex = NextFreeCollectiveIndex;
-	AdvanceCollectiveIndex();
-	CWorld::FindObjectsInRange(CVector(x, y, z), radius, true, &numFound, 64, pEntities, false, true, true, false, false);
+	int colIndex = TheScripts_NextFreeCollectiveIndex;
+	TheScripts_AdvanceCollectiveIndex();
+	World_FindObjectsInRange(CVector(x, y, z), radius, true, &numFound, 64, pEntities, false, true, true, false, false);
 	for (int16 i = 0; i < numFound; i++) {
 		if (pEntities[i]->GetType() == ENTITY_TYPE_PED) {
 			CPed* pPed = (CPed*)pEntities[i];
 			if (pPed && !pPed->IsPlayer() && pPed->CharCreatedBy != MISSION_CHAR && pPed->m_nPedType != PEDTYPE_COP) {
-				int index = FindFreeSlotInCollectiveArray();
+				int index = TheScripts_FindFreeSlotInCollectiveArray();
 				if (index > -1) {
 					CollectiveArray[index].colIndex = colIndex;
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pPed);
+					CollectiveArray[index].pedIndex = CPool_GetIndex(Pools_GetPedPool(), pPed);
 					//- rouz edit (ChatGPT)
 				}
 			}
@@ -2529,24 +2529,24 @@ int CTheScripts::AddPedsInAreaToCollective(float x, float y, float z, float radi
 			CVehicle* pVehicle = (CVehicle*)pEntities[i];
 			CPed* pDriver = pVehicle->pDriver;
 			if (pDriver && !pDriver->IsPlayer() && pDriver->CharCreatedBy != MISSION_CHAR && pDriver->m_nPedType != PEDTYPE_COP) {
-				int index = FindFreeSlotInCollectiveArray();
+				int index = TheScripts_FindFreeSlotInCollectiveArray();
 				if (index > -1) {
 					CollectiveArray[index].colIndex = colIndex;
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
-					CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pDriver);
+					CollectiveArray[index].pedIndex = CPool_GetIndex(Pools_GetPedPool(), pDriver);
 					//- rouz edit (ChatGPT)
 				}
 			}
 			for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++) {
 				CPed* pPassenger = pVehicle->pPassengers[i];
 				if (pPassenger && !pPassenger->IsPlayer() && pPassenger->CharCreatedBy != MISSION_CHAR && pPassenger->m_nPedType != PEDTYPE_COP) {
-					int index = FindFreeSlotInCollectiveArray();
+					int index = TheScripts_FindFreeSlotInCollectiveArray();
 					if (index > -1) {
 						CollectiveArray[index].colIndex = colIndex;
 						//+ rouz edit (ChatGPT)
 						// Access raw storage through the C store or pool API
-						CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pPassenger);
+						CollectiveArray[index].pedIndex = CPool_GetIndex(Pools_GetPedPool(), pPassenger);
 						//- rouz edit (ChatGPT)
 					}
 				}
@@ -2556,7 +2556,7 @@ int CTheScripts::AddPedsInAreaToCollective(float x, float y, float z, float radi
 	return colIndex;
 }
 
-int CTheScripts::FindFreeSlotInCollectiveArray()
+int TheScripts_FindFreeSlotInCollectiveArray()
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == -1)
@@ -2565,13 +2565,13 @@ int CTheScripts::FindFreeSlotInCollectiveArray()
 	return -1;
 }
 
-void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, int16 p1, int16 p2)
+void TheScripts_SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, int16 p1, int16 p2)
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CollectiveArray[i].pedIndex));
 			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
@@ -2585,13 +2585,13 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 	}
 }
 
-void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, CVector p1, float p2)
+void TheScripts_SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, CVector p1, float p2)
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CollectiveArray[i].pedIndex));
 			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
@@ -2605,13 +2605,13 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 	}
 }
 
-void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, CVector p1)
+void TheScripts_SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, CVector p1)
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CollectiveArray[i].pedIndex));
 			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
@@ -2625,13 +2625,13 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 	}
 }
 
-void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, void* p1)
+void TheScripts_SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective, void* p1)
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CollectiveArray[i].pedIndex));
 			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
@@ -2645,13 +2645,13 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 	}
 }
 
-void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective)
+void TheScripts_SetObjectiveForAllPedsInCollective(int colIndex, eObjective objective)
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), CollectiveArray[i].pedIndex));
 			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
@@ -2666,19 +2666,19 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 }
 #endif //GTA_SCRIPT_COLLECTIVE
 
-bool CTheScripts::IsPedStopped(CPed* pPed)
+bool TheScripts_IsPedStopped(CPed* pPed)
 {
 	if (pPed->InVehicle())
-		return IsVehicleStopped(pPed->m_pMyVehicle);
+		return TheScripts_IsVehicleStopped(pPed->m_pMyVehicle);
 	return (pPed->m_nMoveState == PEDMOVE_NONE || pPed->m_nMoveState == PEDMOVE_STILL) &&
 		!pPed->bIsInTheAir && !pPed->bIsLanding && pPed->bIsStanding && pPed->m_vecAnimMoveDelta.x == 0.0f && pPed->m_vecAnimMoveDelta.y == 0.0f;
 }
 
-bool CTheScripts::IsPlayerStopped(CPlayerInfo* pPlayer)
+bool TheScripts_IsPlayerStopped(CPlayerInfo* pPlayer)
 {
 	CPed* pPed = pPlayer->m_pPed;
 	if (pPed->InVehicle())
-		return IsVehicleStopped(pPed->m_pMyVehicle);
+		return TheScripts_IsVehicleStopped(pPed->m_pMyVehicle);
 	if (RpAnimBlendClumpGetAssociation(pPed->GetClump(), ANIM_STD_RUNSTOP1) ||
 		RpAnimBlendClumpGetAssociation(pPed->GetClump(), ANIM_STD_RUNSTOP2) ||
 		RpAnimBlendClumpGetAssociation(pPed->GetClump(), ANIM_STD_JUMP_LAUNCH) ||
@@ -2688,12 +2688,12 @@ bool CTheScripts::IsPlayerStopped(CPlayerInfo* pPlayer)
 		!pPed->bIsInTheAir && !pPed->bIsLanding && pPed->bIsStanding && pPed->m_vecAnimMoveDelta.x == 0.0f && pPed->m_vecAnimMoveDelta.y == 0.0f;
 }
 
-bool CTheScripts::IsVehicleStopped(CVehicle* pVehicle)
+bool TheScripts_IsVehicleStopped(CVehicle* pVehicle)
 {
 	return 0.01f * (*Timer_GetTimeStep()) >= pVehicle->m_fDistanceTravelled;
 }
 
-void CTheScripts::RemoveThisPed(CPed* pPed)
+void TheScripts_RemoveThisPed(CPed* pPed)
 {
 	if (pPed) {
 		bool bWasMissionPed = pPed->CharCreatedBy == MISSION_CHAR;
@@ -2710,13 +2710,13 @@ void CTheScripts::RemoveThisPed(CPed* pPed)
 				pPed->m_pMyVehicle->RemovePassenger(pPed);
 			}
 		}
-		CWorld::RemoveReferencesToDeletedObject(pPed);
+		World_RemoveReferencesToDeletedObject(pPed);
 //+ rouz edit (ChatGPT)
 		// Destroy and release the scripted ped without invoking C++ delete.
 		pPed->~CPed();
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetPedPool(), pPed);
+		CPool_Delete(Pools_GetPedPool(), pPed);
 		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		if (bWasMissionPed)
@@ -2724,7 +2724,7 @@ void CTheScripts::RemoveThisPed(CPed* pPed)
 	}
 }
 
-void CTheScripts::CleanUpThisPed(CPed* pPed)
+void TheScripts_CleanUpThisPed(CPed* pPed)
 {
 	if (!pPed)
 		return;
@@ -2736,7 +2736,7 @@ void CTheScripts::CleanUpThisPed(CPed* pPed)
 	if (pPed->InVehicle()) {
 		if (pPed->m_pMyVehicle->pDriver == pPed) {
 			if (pPed->m_pMyVehicle->m_vehType == VEHICLE_TYPE_CAR) {
-				CCarCtrl::JoinCarWithRoadSystem(pPed->m_pMyVehicle);
+				CarCtrl_JoinCarWithRoadSystem(pPed->m_pMyVehicle);
 				pPed->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_CRUISE;
 			}
 		}
@@ -2769,20 +2769,20 @@ void CTheScripts::CleanUpThisPed(CPed* pPed)
 	--Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 }
 
-void CTheScripts::CleanUpThisVehicle(CVehicle* pVehicle)
+void TheScripts_CleanUpThisVehicle(CVehicle* pVehicle)
 {
 	if (!pVehicle)
 		return;
 	if (pVehicle->VehicleCreatedBy != MISSION_VEHICLE)
 		return;
 	pVehicle->bIsLocked = false;
-	CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
+	CarCtrl_RemoveFromInterestingVehicleList(pVehicle);
 	pVehicle->VehicleCreatedBy = RANDOM_VEHICLE;
-	++CCarCtrl::NumRandomCars;
-	--CCarCtrl::NumMissionCars;
+	++CarCtrl_NumRandomCars;
+	--CarCtrl_NumMissionCars;
 }
 
-void CTheScripts::CleanUpThisObject(CObject* pObject)
+void TheScripts_CleanUpThisObject(CObject* pObject)
 {
 	if (!pObject)
 		return;
@@ -2795,24 +2795,24 @@ void CTheScripts::CleanUpThisObject(CObject* pObject)
 	++CObject::nNoTempObjects;
 }
 
-void CTheScripts::ReadObjectNamesFromScript()
+void TheScripts_ReadObjectNamesFromScript()
 {
-	int32 varSpace = GetSizeOfVariableSpace();
+	int32 varSpace = TheScripts_GetSizeOfVariableSpace();
 	uint32 ip = varSpace + 8;
-	NumberOfUsedObjects = Read2BytesFromScript(&ip);
+	TheScripts_NumberOfUsedObjects = TheScripts_Read2BytesFromScript(&ip);
 	ip += 2;
-	for (uint16 i = 0; i < NumberOfUsedObjects; i++) {
+	for (uint16 i = 0; i < TheScripts_NumberOfUsedObjects; i++) {
 		for (int j = 0; j < USED_OBJECT_NAME_LENGTH; j++)
-			UsedObjectArray[i].name[j] = ScriptSpace[ip++];
-		UsedObjectArray[i].index = 0;
+			TheScripts_UsedObjectArray[i].name[j] = TheScripts_ScriptSpace[ip++];
+		TheScripts_UsedObjectArray[i].index = 0;
 	}
 }
 
-void CTheScripts::UpdateObjectIndices()
+void TheScripts_UpdateObjectIndices()
 {
 	char name[USED_OBJECT_NAME_LENGTH];
 	char error[112];
-	for (int i = 1; i < NumberOfUsedObjects; i++) {
+	for (int i = 1; i < TheScripts_NumberOfUsedObjects; i++) {
 		bool found = false;
 		for (int j = 0; j < MODELINFOSIZE && !found; j++) {
 			CBaseModelInfo* pModel = ((CBaseModelInfo*)ModelRegistry_Get(j)); // rouz edit (ChatGPT)
@@ -2825,30 +2825,30 @@ void CTheScripts::UpdateObjectIndices()
 			for (int k = 0; k < USED_OBJECT_NAME_LENGTH; k++)
 #endif
 				name[k] = toupper(name[k]);
-			if (strcmp(name, UsedObjectArray[i].name) == 0) {
+			if (strcmp(name, TheScripts_UsedObjectArray[i].name) == 0) {
 				found = true;
-				UsedObjectArray[i].index = j;
+				TheScripts_UsedObjectArray[i].index = j;
 			}
 		}
 		if (!found) {
-			sprintf(error, "CTheScripts::UpdateObjectIndices - Couldn't find %s", UsedObjectArray[i].name);
+			sprintf(error, "CTheScripts::UpdateObjectIndices - Couldn't find %s", TheScripts_UsedObjectArray[i].name);
 			debug("%s\n", error);
 		}
 	}
 }
 
-void CTheScripts::ReadMultiScriptFileOffsetsFromScript()
+void TheScripts_ReadMultiScriptFileOffsetsFromScript()
 {
-	int32 varSpace = GetSizeOfVariableSpace();
+	int32 varSpace = TheScripts_GetSizeOfVariableSpace();
 	uint32 ip = varSpace + 3;
-	int32 objectSize = Read4BytesFromScript(&ip);
+	int32 objectSize = TheScripts_Read4BytesFromScript(&ip);
 	ip = objectSize + 8;
-	MainScriptSize = Read4BytesFromScript(&ip);
-	LargestMissionScriptSize = Read4BytesFromScript(&ip);
-	NumberOfMissionScripts = Read2BytesFromScript(&ip);
-	NumberOfExclusiveMissionScripts = Read2BytesFromScript(&ip);
-	for (int i = 0; i < NumberOfMissionScripts; i++) {
-		MultiScriptArray[i] = Read4BytesFromScript(&ip);
+	TheScripts_MainScriptSize = TheScripts_Read4BytesFromScript(&ip);
+	TheScripts_LargestMissionScriptSize = TheScripts_Read4BytesFromScript(&ip);
+	TheScripts_NumberOfMissionScripts = TheScripts_Read2BytesFromScript(&ip);
+	TheScripts_NumberOfExclusiveMissionScripts = TheScripts_Read2BytesFromScript(&ip);
+	for (int i = 0; i < TheScripts_NumberOfMissionScripts; i++) {
+		TheScripts_MultiScriptArray[i] = TheScripts_Read4BytesFromScript(&ip);
 	}
 }
 

@@ -328,16 +328,16 @@ CCivilianPed::ProcessControl(void)
 			if (m_nPedType != PEDTYPE_PROSTITUTE)
 				break;
 
-			if (CWorld::Players[CWorld::PlayerInFocus].m_pHooker != this)
+			if (World_Players[World_PlayerInFocus].m_pHooker != this)
 				break;
 
-			if ((*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime) {
+			if ((*Timer_GetTimeInMilliseconds()) > World_Players[World_PlayerInFocus].m_nNextSexFrequencyUpdateTime) {
 				if (m_nPedState == PED_DRIVING
 					&& m_pMyVehicle->pDriver && m_pMyVehicle->pDriver->IsPlayer() && m_pMyVehicle->pDriver->m_nPedState == PED_DRIVING) {
 					CColPoint foundCol;
 					CEntity* foundEnt;
 
-					CWorld::ProcessVerticalLine(m_pMyVehicle->GetPosition(), -100.0f,
+					World_ProcessVerticalLine(m_pMyVehicle->GetPosition(), -100.0f,
 						foundCol, foundEnt, true, false, false, false, false, false, nil);
 
 					if (m_pMyVehicle->m_vecMoveSpeed.MagnitudeSqr() < sq(0.01f)
@@ -351,55 +351,55 @@ CCivilianPed::ProcessControl(void)
 							m_pMyVehicle->pDriver->Say(SOUND_PED_PLAYER_BEFORESEX);
 							Say(SOUND_PED_PLAYER_BEFORESEX);
 
-							int playerSexFrequency = CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency;
-							if (CWorld::Players[CWorld::PlayerInFocus].m_nMoney >= 10 && playerSexFrequency > 250) {
-									CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + playerSexFrequency;
+							int playerSexFrequency = World_Players[World_PlayerInFocus].m_nSexFrequency;
+							if (World_Players[World_PlayerInFocus].m_nMoney >= 10 && playerSexFrequency > 250) {
+									World_Players[World_PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + playerSexFrequency;
 									// Delegate the new service delay to the C implementation
-									CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = PedLogic_SexFrequencyAfterService(playerSexFrequency);
+									World_Players[World_PlayerInFocus].m_nSexFrequency = PedLogic_SexFrequencyAfterService(playerSexFrequency);
 
 									// Delegate the health gain of the driver to the C implementation
-									m_pMyVehicle->pDriver->m_fHealth = PedLogic_DriverHealthAfterService(CWorld::Players[0].m_nMaxHealth, m_pMyVehicle->pDriver->m_fHealth);
-									if (CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency == 250)
-										CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
+									m_pMyVehicle->pDriver->m_fHealth = PedLogic_DriverHealthAfterService(World_Players[0].m_nMaxHealth, m_pMyVehicle->pDriver->m_fHealth);
+									if (World_Players[World_PlayerInFocus].m_nSexFrequency == 250)
+										World_Players[World_PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 							} else {
 								bWanderPathAfterExitingCar = true;
-								CWorld::Players[CWorld::PlayerInFocus].m_pHooker = nil;
+								World_Players[World_PlayerInFocus].m_pHooker = nil;
 								ClearLeader();
 								SetObjective(OBJECTIVE_LEAVE_CAR, m_pMyVehicle);
 								m_pMyVehicle->pDriver->Say(SOUND_PED_PLAYER_AFTERSEX);
 							}
 						} else {
 							bWanderPathAfterExitingCar = true;
-							CWorld::Players[CWorld::PlayerInFocus].m_pHooker = nil;
-							m_pMyVehicle->pDriver->m_fHealth = CWorld::Players[0].m_nMaxHealth + 25.0f;
+							World_Players[World_PlayerInFocus].m_pHooker = nil;
+							m_pMyVehicle->pDriver->m_fHealth = World_Players[0].m_nMaxHealth + 25.0f;
 							ClearLeader();
 							SetObjective(OBJECTIVE_LEAVE_CAR, m_pMyVehicle);
 							m_pMyVehicle->pDriver->Say(SOUND_PED_PLAYER_AFTERSEX);
 						}
 					} else {
-						CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
-						int playerSexFrequency = CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency;
+						World_Players[World_PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
+						int playerSexFrequency = World_Players[World_PlayerInFocus].m_nSexFrequency;
 						if (playerSexFrequency >= 1000 || playerSexFrequency <= 250)
-							CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = 1200;
+							World_Players[World_PlayerInFocus].m_nSexFrequency = 1200;
 						else
-							CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = 250;
+							World_Players[World_PlayerInFocus].m_nSexFrequency = 250;
 					}
 				} else {
 					bWanderPathAfterExitingCar = true;
-					CWorld::Players[CWorld::PlayerInFocus].m_pHooker = nil;
+					World_Players[World_PlayerInFocus].m_pHooker = nil;
 					ClearLeader();
 					SetObjective(OBJECTIVE_LEAVE_CAR, m_pMyVehicle);
 				}
 			}
 
-			if ((*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nNextSexMoneyUpdateTime) {
-				int playerMoney = CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
+			if ((*Timer_GetTimeInMilliseconds()) > World_Players[World_PlayerInFocus].m_nNextSexMoneyUpdateTime) {
+				int playerMoney = World_Players[World_PlayerInFocus].m_nMoney;
 				if (playerMoney <= 1) {
-					CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = 250;
+					World_Players[World_PlayerInFocus].m_nSexFrequency = 250;
 				} else {
-					CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Max(0, playerMoney - 1);
+					World_Players[World_PlayerInFocus].m_nMoney = Max(0, playerMoney - 1);
 				}
-				CWorld::Players[CWorld::PlayerInFocus].m_nNextSexMoneyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 1000;
+				World_Players[World_PlayerInFocus].m_nNextSexMoneyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 1000;
 			}
 			break;
 		default:
@@ -495,8 +495,8 @@ void CCivilianPed::UseNearbyAttractors()
 	float bottom = GetPosition().y + gDistanceToSeekAttractors;
 	// Delegate the range of sectors to the C implementation
 	int xstart, xend, ystart, yend;
-	World_ClampSectorRange(CWorld::GetSectorIndexX(left), CWorld::GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
-	World_ClampSectorRange(CWorld::GetSectorIndexY(top), CWorld::GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
+	World_ClampSectorRange(World_GetSectorIndexX(left), World_GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
+	World_ClampSectorRange(World_GetSectorIndexY(top), World_GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
 	assert(xstart <= xend);
 	assert(ystart <= yend);
 
@@ -506,7 +506,7 @@ void CCivilianPed::UseNearbyAttractors()
 
 	for (int y = ystart; y <= yend; y++) {
 		for (int x = xstart; x <= xend; x++) {
-			CSector* s = CWorld::GetSector(x, y);
+			CSector* s = World_GetSector(x, y);
 			FindNearbyAttractorsSectorList(s->m_lists[ENTITYLIST_BUILDINGS], minDistance, pClosestAttractor, pAttractorEntity);
 			FindNearbyAttractorsSectorList(s->m_lists[ENTITYLIST_OBJECTS], minDistance, pClosestAttractor, pAttractorEntity);
 		}
@@ -547,7 +547,7 @@ CCivilianPed::EnterVacantNearbyCars(void)
 
 				for (int curY = minY; curY <= maxY; curY++) {
 					for (int curX = minX; curX <= maxX; curX++) {
-						CSector* sector = CWorld::GetSector(curX, curY);
+						CSector* sector = World_GetSector(curX, curY);
 						for (CPtrNode* node = sector->m_lists[ENTITYLIST_VEHICLES].first; node; node = node->next) {
 							CVehicle* veh = (CVehicle*)node->item;
 							if (veh && veh->IsCar()) {
@@ -573,7 +573,7 @@ CCivilianPed::EnterVacantNearbyCars(void)
 				if (foundCar) {
 					m_bJustStoleACar = true;
 					bHasAlreadyStoleACar = true;
-					CCarCtrl::JoinCarWithRoadSystem(foundCar);
+					CarCtrl_JoinCarWithRoadSystem(foundCar);
 					SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, foundCar);
 					SetObjectiveTimer(10000);
 				}

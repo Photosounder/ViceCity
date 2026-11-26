@@ -11,26 +11,26 @@
 int32_t Stats_BackendMoney(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    return CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
+    return World_Players[World_PlayerInFocus].m_nMoney;
 }
 
 int32_t Stats_BackendVisibleMoney(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    return CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney;
+    return World_Players[World_PlayerInFocus].m_nVisibleMoney;
 }
 
 
 bool Stats_BackendNastyGame(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    return CGame::nastyGame;
+    return Game_nastyGame;
 }
 
 CPlayerInfo * Stats_BackendPlayerInfo(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    return &CWorld::Players[CWorld::PlayerInFocus];
+    return &World_Players[World_PlayerInFocus];
 }
 
 int32_t Stats_BackendCollectedPackages(CPlayerInfo *player)
@@ -55,7 +55,7 @@ bool Stats_BackendJapanese(void)
 {
     // Access the original typed native primitive at its original C policy access point
     #ifdef MORE_LANGUAGES
-    return CFont::IsJapanese();
+    return Font_IsJapanese();
 #else
     return false;
 #endif
@@ -69,7 +69,7 @@ bool Stats_BackendJapanese(void)
 void Stats_BackendFilter(uint16_t *text)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::FilterOutTokensFromString(text);
+    Font_FilterOutTokensFromString(text);
 }
 
 void Stats_BackendAssertFailed(const char *expression,const char *file,unsigned line,const char *function)

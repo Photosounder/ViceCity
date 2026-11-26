@@ -53,7 +53,7 @@ CPhoneInfo::Update(void)
 		return;
 #endif
 	CPlayerPed *player = FindPlayerPed();
-	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
+	CPlayerInfo *playerInfo = &World_Players[World_PlayerInFocus];
 	if (bDisplayingPhoneMessage && (*Timer_GetTimeInMilliseconds()) > PhoneEnableControlsTimer) {
 		playerInfo->MakePlayerSafe(false);
 		TheCamera.SetWideScreenOff();
@@ -220,7 +220,7 @@ INITSAVEBUF
 		// It's saved as building pool index in save file, convert it to true entity
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		m_aPhones[i].m_pEntity = tmp != 0 ? ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), tmp - 1)) : nil;
+		m_aPhones[i].m_pEntity = tmp != 0 ? ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), tmp - 1)) : nil;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
@@ -239,7 +239,7 @@ INITSAVEBUF
 		if (m_aPhones[i].m_pEntity) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			m_aPhones[i].m_pEntity = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), (uintptr)m_aPhones[i].m_pEntity - 1));
+			m_aPhones[i].m_pEntity = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), (uintptr)m_aPhones[i].m_pEntity - 1));
 			//- rouz edit (ChatGPT)
 		}
 #endif
@@ -273,7 +273,7 @@ CPhoneInfo::GrabPhone(float xPos, float yPos)
 void
 CPhoneInfo::Initialise(void)
 {
-	CBuildingPool *pool = CPools::GetBuildingPool();
+	CBuildingPool *pool = Pools_GetBuildingPool();
 	pCallBackPed = nil;
 	bDisplayingPhoneMessage = false;
 	bPickingUpPhone = false;
@@ -320,7 +320,7 @@ INITSAVEBUF
 		// Convert entity pointer to building pool index while saving
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		int32 tmp = m_aPhones[phoneId].m_pEntity ? CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), (CBuilding*)m_aPhones[phoneId].m_pEntity) + 1 : 0;
+		int32 tmp = m_aPhones[phoneId].m_pEntity ? CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), (CBuilding*)m_aPhones[phoneId].m_pEntity) + 1 : 0;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
@@ -342,7 +342,7 @@ INITSAVEBUF
 		if (phone->m_pEntity) {
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			phone->m_pEntity = (CEntity*) (CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), (CBuilding*)phone->m_pEntity) + 1);
+			phone->m_pEntity = (CEntity*) (CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), (CBuilding*)phone->m_pEntity) + 1);
 			//- rouz edit (ChatGPT)
 		}
 #endif

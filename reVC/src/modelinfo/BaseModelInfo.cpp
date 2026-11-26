@@ -39,7 +39,7 @@ CBaseModelInfo::DeleteCollisionModel(void)
 			ColModel_Destroy(m_colModel);
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetColModelPool(), m_colModel);
+			CPool_Delete(Pools_GetColModelPool(), m_colModel);
 			//- rouz edit (ChatGPT)
 		}
 //- rouz edit (ChatGPT)

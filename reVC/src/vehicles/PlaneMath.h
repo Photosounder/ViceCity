@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include "PlaneNodes.h"
 
@@ -23,7 +24,7 @@ void PlaneMath_FindGroundPoints(CPlaneNode *nodes, int numNodes, float *landingP
 // Keyframes of the flight of the jumbo jets: taxi, take off, cruise, landing, brake and taxi back, the last keyframe only gets its time, totalDuration is the time the flight lasts
 void PlaneMath_BuildFlightTimeline(CPlaneInterpolationLine *bits, float takeOffPoint, float landingPoint, float totalLength, float cruiseSpeed, float taxiSpeed, float *totalDuration);
 // Orientation of a plane following its path from the points of the rear and the front of the path and a second front point: the forward direction (tilted by the pitch when it is not zero), the right direction (with the roll added when asked) and the up direction
-void PlaneMath_PathOrientation(const float front[3], const float rear[3], const float front2[3], float pitch, bool addRoll, float fwdOut[3], float rightOut[3], float upOut[3]);
+void PlaneMath_PathOrientation(const CVector *front, const CVector *rear, const CVector *front2, float pitch, bool addRoll, CVector *fwdOut, CVector *rightOut, CVector *upOut);
 #ifdef __cplusplus
 }
 #endif

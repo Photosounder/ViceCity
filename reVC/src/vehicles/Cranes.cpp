@@ -45,22 +45,22 @@
 #ifdef COMPATIBLE_SAVES
 #define CRANES_SAVE_SIZE 0x3E0
 #else
-#define CRANES_SAVE_SIZE sizeof(aCranes)
+#define CRANES_SAVE_SIZE sizeof(Cranes_aCranes)
 #endif
 
 uint32 TimerForCamInterpolation;
 
-uint32 CCranes::CarsCollectedMilitaryCrane;
-int32 CCranes::NumCranes;
-CCrane CCranes::aCranes[NUM_CRANES];
+uint32 Cranes_CarsCollectedMilitaryCrane;
+int32 Cranes_NumCranes;
+CCrane Cranes_aCranes[NUM_CRANES];
 
-void CCranes::InitCranes(void)
+void Cranes_InitCranes(void)
 {
-	CarsCollectedMilitaryCrane = 0;
-	NumCranes = 0;
+	Cranes_CarsCollectedMilitaryCrane = 0;
+	Cranes_NumCranes = 0;
 	for (int i = 0; i < NUMSECTORS_X; i++) {
 		for (int j = 0; j < NUMSECTORS_Y; j++) {
-			for (CPtrNode* pNode = CWorld::GetSector(i, j)->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
+			for (CPtrNode* pNode = World_GetSector(i, j)->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
 				CEntity* pEntity = (CEntity*)pNode->item;
 				if (MODELID_CRANE_1 == pEntity->GetModelIndex() ||
 					MODELID_CRANE_2 == pEntity->GetModelIndex() ||
@@ -68,11 +68,11 @@ void CCranes::InitCranes(void)
 					MODELID_CRANE_4 == pEntity->GetModelIndex() ||
 					MODELID_CRANE_5 == pEntity->GetModelIndex() ||
 					MODELID_CRANE_6 == pEntity->GetModelIndex())
-					AddThisOneCrane(pEntity);
+					Cranes_AddThisOneCrane(pEntity);
 			}
 		}
 	}
-	for (CPtrNode* pNode = CWorld::GetBigBuildingList(LEVEL_MAINLAND).first; pNode; pNode = pNode->next) {
+	for (CPtrNode* pNode = World_GetBigBuildingList(LEVEL_MAINLAND).first; pNode; pNode = pNode->next) {
 		CEntity* pEntity = (CEntity*)pNode->item;
 		if (MODELID_CRANE_1 == pEntity->GetModelIndex() ||
 			MODELID_CRANE_2 == pEntity->GetModelIndex() ||
@@ -80,20 +80,20 @@ void CCranes::InitCranes(void)
 			MODELID_CRANE_4 == pEntity->GetModelIndex() ||
 			MODELID_CRANE_5 == pEntity->GetModelIndex() ||
 			MODELID_CRANE_6 == pEntity->GetModelIndex())
-			AddThisOneCrane(pEntity);
+			Cranes_AddThisOneCrane(pEntity);
 	}
 }
 
-void CCranes::AddThisOneCrane(CEntity* pEntity)
+void Cranes_AddThisOneCrane(CEntity* pEntity)
 {
 	pEntity->GetMatrix().ResetOrientation();
-	if (NumCranes >= NUM_CRANES)
+	if (Cranes_NumCranes >= NUM_CRANES)
 		return;
-	CCrane* pCrane = &aCranes[NumCranes];
+	CCrane* pCrane = &Cranes_aCranes[Cranes_NumCranes];
 	pCrane->Init();
 	pCrane->m_pCraneEntity = (CBuilding*)pEntity;
 	pCrane->m_nCraneStatus = CCrane::NONE;
-	pCrane->m_fHookAngle = NumCranes; // lol wtf
+	pCrane->m_fHookAngle = Cranes_NumCranes; // lol wtf
 	// Delegate the angle wrapping to the C implementation
 	pCrane->m_fHookAngle = General_ReduceAbove(pCrane->m_fHookAngle, TWOPI, TWOPI);
 	pCrane->m_fHookOffset = DEFAULT_OFFSET;
@@ -103,10 +103,10 @@ void CCranes::AddThisOneCrane(CEntity* pEntity)
 	pCrane->m_bWasMilitaryCrane = false;
 	pCrane->m_bIsTop = (MODELID_CRANE_1 != pEntity->GetModelIndex());
 	pCrane->m_pHook = nil;
-	NumCranes++;
+	Cranes_NumCranes++;
 }
 
-void CCranes::ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, float fDropOffX, float fDropOffY, float fDropOffZ, float fHeading, bool bIsCrusher, bool bIsMilitary, float fPosX, float fPosY)
+void Cranes_ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, float fDropOffX, float fDropOffY, float fDropOffZ, float fHeading, bool bIsCrusher, bool bIsMilitary, float fPosX, float fPosY)
 {
 	float fMinDistance = MAX_DISTANCE;
 	float X = fPosX, Y = fPosY;
@@ -115,8 +115,8 @@ void CCranes::ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, 
 		Y = fDropOffY;
 	}
 	int index = 0;
-	for (int i = 0; i < NumCranes; i++) {
-		float distance = (CVector2D(X, Y) - aCranes[i].m_pCraneEntity->GetPosition()).Magnitude();
+	for (int i = 0; i < Cranes_NumCranes; i++) {
+		float distance = (CVector2D(X, Y) - Cranes_aCranes[i].m_pCraneEntity->GetPosition()).Magnitude();
 		if (distance < fMinDistance && distance < MAX_DISTANCE_TO_FIND_CRANE) {
 			fMinDistance = distance;
 			index = i;
@@ -126,7 +126,7 @@ void CCranes::ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, 
 	if (fMinDistance == MAX_DISTANCE)
 		return;
 #endif
-	CCrane* pCrane = &aCranes[index];
+	CCrane* pCrane = &Cranes_aCranes[index];
 	pCrane->m_fPickupX1 = fInfX;
 	pCrane->m_fPickupX2 = fSupX;
 	pCrane->m_fPickupY1 = fInfY;
@@ -152,17 +152,17 @@ void CCranes::ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, 
 	else if (bIsMilitary)
 		Z = MILITARY_Z;
 	else
-		Z = CWorld::FindGroundZForCoord((fInfX + fSupX) / 2, (fInfY + fSupY) / 2);
+		Z = World_FindGroundZForCoord((fInfX + fSupX) / 2, (fInfY + fSupY) / 2);
 	pCrane->FindParametersForTarget((fInfX + fSupX) / 2, (fInfY + fSupY) / 2, Z, &pCrane->m_fPickupAngle, &pCrane->m_fPickupDistance, &pCrane->m_fPickupHeight);
 	pCrane->FindParametersForTarget(fDropOffX, fDropOffY, fDropOffZ, &pCrane->m_fDropoffAngle, &pCrane->m_fDropoffDistance, &pCrane->m_fDropoffHeight);
 }
 
-void CCranes::DeActivateCrane(float X, float Y)
+void Cranes_DeActivateCrane(float X, float Y)
 {
 	float fMinDistance = MAX_DISTANCE;
 	int index = 0;
-	for (int i = 0; i < NumCranes; i++) {
-		float distance = (CVector2D(X, Y) - aCranes[i].m_pCraneEntity->GetPosition()).Magnitude();
+	for (int i = 0; i < Cranes_NumCranes; i++) {
+		float distance = (CVector2D(X, Y) - Cranes_aCranes[i].m_pCraneEntity->GetPosition()).Magnitude();
 		if (distance < fMinDistance && distance < MAX_DISTANCE_TO_FIND_CRANE) {
 			fMinDistance = distance;
 			index = i;
@@ -172,33 +172,33 @@ void CCranes::DeActivateCrane(float X, float Y)
 	if (fMinDistance == MAX_DISTANCE)
 		return;
 #endif
-	aCranes[index].m_nCraneStatus = CCrane::DEACTIVATED;
-	aCranes[index].m_nCraneState = CCrane::IDLE;
+	Cranes_aCranes[index].m_nCraneStatus = CCrane::DEACTIVATED;
+	Cranes_aCranes[index].m_nCraneState = CCrane::IDLE;
 }
 
-bool CCranes::IsThisCarPickedUp(float X, float Y, CVehicle* pVehicle)
+bool Cranes_IsThisCarPickedUp(float X, float Y, CVehicle* pVehicle)
 {
 	int index = 0;
 	bool result = false;
-	for (int i = 0; i < NumCranes; i++) {
-		float distance = (CVector2D(X, Y) - aCranes[i].m_pCraneEntity->GetPosition()).Magnitude();
-		if (distance < MAX_DISTANCE_TO_FIND_CRANE && aCranes[i].m_pVehiclePickedUp == pVehicle) {
-			if (aCranes[i].m_nCraneState == CCrane::LIFTING_TARGET || aCranes[i].m_nCraneState == CCrane::ROTATING_TARGET)
+	for (int i = 0; i < Cranes_NumCranes; i++) {
+		float distance = (CVector2D(X, Y) - Cranes_aCranes[i].m_pCraneEntity->GetPosition()).Magnitude();
+		if (distance < MAX_DISTANCE_TO_FIND_CRANE && Cranes_aCranes[i].m_pVehiclePickedUp == pVehicle) {
+			if (Cranes_aCranes[i].m_nCraneState == CCrane::LIFTING_TARGET || Cranes_aCranes[i].m_nCraneState == CCrane::ROTATING_TARGET)
 				result = true;
 		}
 	}
 	return result;
 }
 
-void CCranes::UpdateCranes(void)
+void Cranes_UpdateCranes(void)
 {
-	for (int i = 0; i < NumCranes; i++) {
-		if (aCranes[i].m_bIsTop || aCranes[i].m_bIsCrusher ||
-			(TheCamera.GetPosition().x + CRANE_UPDATE_RADIUS > aCranes[i].m_pCraneEntity->GetPosition().x &&
-				TheCamera.GetPosition().x - CRANE_UPDATE_RADIUS < aCranes[i].m_pCraneEntity->GetPosition().x &&
-				TheCamera.GetPosition().y + CRANE_UPDATE_RADIUS > aCranes[i].m_pCraneEntity->GetPosition().y &&
-				TheCamera.GetPosition().y + CRANE_UPDATE_RADIUS < aCranes[i].m_pCraneEntity->GetPosition().y))
-			aCranes[i].Update();
+	for (int i = 0; i < Cranes_NumCranes; i++) {
+		if (Cranes_aCranes[i].m_bIsTop || Cranes_aCranes[i].m_bIsCrusher ||
+			(TheCamera.GetPosition().x + CRANE_UPDATE_RADIUS > Cranes_aCranes[i].m_pCraneEntity->GetPosition().x &&
+				TheCamera.GetPosition().x - CRANE_UPDATE_RADIUS < Cranes_aCranes[i].m_pCraneEntity->GetPosition().x &&
+				TheCamera.GetPosition().y + CRANE_UPDATE_RADIUS > Cranes_aCranes[i].m_pCraneEntity->GetPosition().y &&
+				TheCamera.GetPosition().y + CRANE_UPDATE_RADIUS < Cranes_aCranes[i].m_pCraneEntity->GetPosition().y))
+			Cranes_aCranes[i].Update();
 	}
 }
 
@@ -213,23 +213,23 @@ void CCrane::Update(void)
 		case IDLE:
 			if (GoTowardsTarget(m_fPickupAngle, m_fPickupDistance, GetHeightToPickup()) &&
 				(*Timer_GetTimeInMilliseconds()) > m_nTimeForNextCheck) {
-				CWorld::AdvanceCurrentScanCode();
+				World_AdvanceCurrentScanCode();
 #ifdef FIX_BUGS
 				// Delegate the range of sectors to the C implementation
 				int32_t xstart, ystart, xend, yend;
 				World_SectorRange(m_fPickupX1, m_fPickupY1, m_fPickupX2, m_fPickupY2, &xstart, &ystart, &xend, &yend);
 #else
-				int xstart = CWorld::GetSectorIndexX(m_fPickupX1);
-				int xend = CWorld::GetSectorIndexX(m_fPickupX2);
-				int ystart = CWorld::GetSectorIndexY(m_fPickupY1);
-				int yend = CWorld::GetSectorIndexY(m_fPickupY1);
+				int xstart = World_GetSectorIndexX(m_fPickupX1);
+				int xend = World_GetSectorIndexX(m_fPickupX2);
+				int ystart = World_GetSectorIndexY(m_fPickupY1);
+				int yend = World_GetSectorIndexY(m_fPickupY1);
 #endif
 				assert(xstart <= xend);
 				assert(ystart <= yend);
 				for (int i = xstart; i <= xend; i++) {
 					for (int j = ystart; j <= yend; j++) {
-						FindCarInSectorList(&CWorld::GetSector(i, j)->m_lists[ENTITYLIST_VEHICLES]);
-						FindCarInSectorList(&CWorld::GetSector(i, j)->m_lists[ENTITYLIST_VEHICLES_OVERLAP]);
+						FindCarInSectorList(&World_GetSector(i, j)->m_lists[ENTITYLIST_VEHICLES]);
+						FindCarInSectorList(&World_GetSector(i, j)->m_lists[ENTITYLIST_VEHICLES_OVERLAP]);
 					}
 				}
 			}
@@ -306,18 +306,18 @@ void CCrane::Update(void)
 						m_pVehiclePickedUp->m_nStaticFrames = 0;
 						++m_nVehiclesCollected;
 						if (m_bIsMilitaryCrane) {
-							CCranes::RegisterCarForMilitaryCrane(m_pVehiclePickedUp->GetModelIndex());
-							if (!CCranes::HaveAllCarsBeenCollectedByMilitaryCrane()) {
-								CWorld::Players[CWorld::PlayerInFocus].m_nMoney += CAR_REWARD_MILITARY_CRANE;
-								CGarages::TriggerMessage("GA_10", CAR_REWARD_MILITARY_CRANE, MESSAGE_SHOW_DURATION, -1);
+							Cranes_RegisterCarForMilitaryCrane(m_pVehiclePickedUp->GetModelIndex());
+							if (!Cranes_HaveAllCarsBeenCollectedByMilitaryCrane()) {
+								World_Players[World_PlayerInFocus].m_nMoney += CAR_REWARD_MILITARY_CRANE;
+								Garages_TriggerMessage("GA_10", CAR_REWARD_MILITARY_CRANE, MESSAGE_SHOW_DURATION, -1);
 							}
-							CWorld::Remove(m_pVehiclePickedUp);
+							World_Remove(m_pVehiclePickedUp);
 //+ rouz edit (ChatGPT)
 							// Destroy and release the crane vehicle without invoking C++ delete.
 							m_pVehiclePickedUp->~CVehicle();
 							//+ rouz edit (ChatGPT)
 							// Access raw storage through the C store or pool API
-							CPool_Delete(CPools::GetVehiclePool(), m_pVehiclePickedUp);
+							CPool_Delete(Pools_GetVehiclePool(), m_pVehiclePickedUp);
 							//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 						}
@@ -412,9 +412,9 @@ void CCrane::FindCarInSectorList(CPtrList* pList)
 	CPtrNode* node;
 	for (node = pList->first; node; node = node->next) {
 		CVehicle* pVehicle = (CVehicle*)node->item;
-		if (pVehicle->m_scanCode == CWorld::GetCurrentScanCode())
+		if (pVehicle->m_scanCode == World_GetCurrentScanCode())
 			continue;
-		pVehicle->m_scanCode = CWorld::GetCurrentScanCode();
+		pVehicle->m_scanCode = World_GetCurrentScanCode();
 		if (pVehicle->GetPosition().x < m_fPickupX1 || pVehicle->GetPosition().x > m_fPickupX2 ||
 			pVehicle->GetPosition().y < m_fPickupY1 || pVehicle->GetPosition().y > m_fPickupY2)
 			continue;
@@ -426,15 +426,15 @@ void CCrane::FindCarInSectorList(CPtrList* pList)
 		if (!pVehicle->IsCar() || pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->m_fHealth < 250.0f)
 			continue;
 		if (!DoesCranePickUpThisCarType(pVehicle->GetModelIndex()) ||
-			m_bIsMilitaryCrane && CCranes::DoesMilitaryCraneHaveThisOneAlready(pVehicle->GetModelIndex())) {
+			m_bIsMilitaryCrane && Cranes_DoesMilitaryCraneHaveThisOneAlready(pVehicle->GetModelIndex())) {
 			if (!pVehicle->bCraneMessageDone) {
 				pVehicle->bCraneMessageDone = true;
 				if (!m_bIsMilitaryCrane)
-					CGarages::TriggerMessage("CR_1", -1, MESSAGE_SHOW_DURATION, -1); // Crane cannot lift this vehicle.
+					Garages_TriggerMessage("CR_1", -1, MESSAGE_SHOW_DURATION, -1); // Crane cannot lift this vehicle.
 				else if (DoesCranePickUpThisCarType(pVehicle->GetModelIndex()))
-					CGarages::TriggerMessage("GA_20", -1, MESSAGE_SHOW_DURATION, -1); // We got more of these than we can shift. Sorry man, no deal.
+					Garages_TriggerMessage("GA_20", -1, MESSAGE_SHOW_DURATION, -1); // We got more of these than we can shift. Sorry man, no deal.
 				else
-					CGarages::TriggerMessage("GA_19", -1, MESSAGE_SHOW_DURATION, -1); // We're not interested in that model.
+					Garages_TriggerMessage("GA_19", -1, MESSAGE_SHOW_DURATION, -1); // We're not interested in that model.
 			}
 		}
 		else {
@@ -451,22 +451,22 @@ bool CCrane::DoesCranePickUpThisCarType(uint32 mi)
 	return Crane_DoesPickUpThisCarType(this, mi);
 }
 
-bool CCranes::DoesMilitaryCraneHaveThisOneAlready(uint32 mi)
+bool Cranes_DoesMilitaryCraneHaveThisOneAlready(uint32 mi)
 {
 	// Delegate to the C implementation
-	return Cranes_DoesMilitaryCraneHaveThisOneAlready(CarsCollectedMilitaryCrane, mi);
+	return CraneLogic_DoesMilitaryCraneHaveThisOneAlready(Cranes_CarsCollectedMilitaryCrane, mi);
 }
 
-void CCranes::RegisterCarForMilitaryCrane(uint32 mi)
+void Cranes_RegisterCarForMilitaryCrane(uint32 mi)
 {
 	// Delegate to the C implementation
-	Cranes_RegisterCarForMilitaryCrane(&CarsCollectedMilitaryCrane, mi);
+	CraneLogic_RegisterCarForMilitaryCrane(&Cranes_CarsCollectedMilitaryCrane, mi);
 }
 
-bool CCranes::HaveAllCarsBeenCollectedByMilitaryCrane()
+bool Cranes_HaveAllCarsBeenCollectedByMilitaryCrane()
 {
 	// Delegate to the C implementation
-	return Cranes_HaveAllCarsBeenCollectedByMilitaryCrane(CarsCollectedMilitaryCrane);
+	return CraneLogic_HaveAllCarsBeenCollectedByMilitaryCrane(Cranes_CarsCollectedMilitaryCrane);
 }
 
 bool CCrane::GoTowardsTarget(float fAngleToTarget, float fDistanceToTarget, float fTargetHeight, float fSpeedMultiplier)
@@ -511,15 +511,15 @@ void CCrane::SetHookMatrix()
 	m_pHook->SetOrientation(0.0f, 0.0f, -HALFPI);
 	m_pHook->GetMatrix().UpdateRW();
 	m_pHook->UpdateRwFrame();
-	CWorld::Remove(m_pHook);
-	CWorld::Add(m_pHook);
+	World_Remove(m_pHook);
+	World_Add(m_pHook);
 }
 
-bool CCranes::IsThisCarBeingCarriedByAnyCrane(CVehicle* pVehicle)
+bool Cranes_IsThisCarBeingCarriedByAnyCrane(CVehicle* pVehicle)
 {
-	for (int i = 0; i < NumCranes; i++) {
-		if (pVehicle == aCranes[i].m_pVehiclePickedUp) {
-			switch (aCranes[i].m_nCraneState) {
+	for (int i = 0; i < Cranes_NumCranes; i++) {
+		if (pVehicle == Cranes_aCranes[i].m_pVehiclePickedUp) {
+			switch (Cranes_aCranes[i].m_nCraneState) {
 			case CCrane::GOING_TOWARDS_TARGET_ONLY_HEIGHT:
 			case CCrane::LIFTING_TARGET:
 			case CCrane::ROTATING_TARGET:
@@ -532,30 +532,30 @@ bool CCranes::IsThisCarBeingCarriedByAnyCrane(CVehicle* pVehicle)
 	return false;
 }
 
-bool CCranes::IsThisCarBeingTargettedByAnyCrane(CVehicle* pVehicle)
+bool Cranes_IsThisCarBeingTargettedByAnyCrane(CVehicle* pVehicle)
 {
-	for (int i = 0; i < NumCranes; i++) {
-		if (pVehicle == aCranes[i].m_pVehiclePickedUp)
+	for (int i = 0; i < Cranes_NumCranes; i++) {
+		if (pVehicle == Cranes_aCranes[i].m_pVehiclePickedUp)
 			return true;
 	}
 	return false;
 }
 
-void CCranes::Save(uint8* buf, uint32* size)
+void Cranes_Save(uint8* buf, uint32* size)
 {
 	INITSAVEBUF
 
 	*size = 2 * sizeof(uint32) + CRANES_SAVE_SIZE;
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
-	WriteSaveBuf(&buf, &NumCranes, sizeof(NumCranes));
-	WriteSaveBuf(&buf, &CarsCollectedMilitaryCrane, sizeof(CarsCollectedMilitaryCrane));
+	WriteSaveBuf(&buf, &Cranes_NumCranes, sizeof(Cranes_NumCranes));
+	WriteSaveBuf(&buf, &Cranes_CarsCollectedMilitaryCrane, sizeof(Cranes_CarsCollectedMilitaryCrane));
 	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_CRANES; i++) {
 #ifdef COMPATIBLE_SAVES
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		int32 tmp = aCranes[i].m_pCraneEntity != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), aCranes[i].m_pCraneEntity) + 1 : 0;
+		int32 tmp = Cranes_aCranes[i].m_pCraneEntity != nil ? CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), Cranes_aCranes[i].m_pCraneEntity) + 1 : 0;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
@@ -563,45 +563,45 @@ void CCranes::Save(uint8* buf, uint32* size)
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		tmp = aCranes[i].m_pHook != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), aCranes[i].m_pHook) + 1 : 0;
+		tmp = Cranes_aCranes[i].m_pHook != nil ? CPool_GetJustIndex_NoFreeAssert(Pools_GetObjectPool(), Cranes_aCranes[i].m_pHook) + 1 : 0;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupX1, sizeof(aCranes[i].m_fPickupX1));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupX2, sizeof(aCranes[i].m_fPickupX2));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupY1, sizeof(aCranes[i].m_fPickupY1));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupY2, sizeof(aCranes[i].m_fPickupY2));
-		WriteSaveBuf(&buf, &aCranes[i].m_vecDropoffTarget, sizeof(aCranes[i].m_vecDropoffTarget));
-		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffHeading, sizeof(aCranes[i].m_fDropoffHeading));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupAngle, sizeof(aCranes[i].m_fPickupAngle));
-		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffAngle, sizeof(aCranes[i].m_fDropoffAngle));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupDistance, sizeof(aCranes[i].m_fPickupDistance));
-		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffDistance, sizeof(aCranes[i].m_fDropoffDistance));
-		WriteSaveBuf(&buf, &aCranes[i].m_fPickupHeight, sizeof(aCranes[i].m_fPickupHeight));
-		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffHeight, sizeof(aCranes[i].m_fDropoffHeight));
-		WriteSaveBuf(&buf, &aCranes[i].m_fHookAngle, sizeof(aCranes[i].m_fHookAngle));
-		WriteSaveBuf(&buf, &aCranes[i].m_fHookOffset, sizeof(aCranes[i].m_fHookOffset));
-		WriteSaveBuf(&buf, &aCranes[i].m_fHookHeight, sizeof(aCranes[i].m_fHookHeight));
-		WriteSaveBuf(&buf, &aCranes[i].m_vecHookInitPos, sizeof(aCranes[i].m_vecHookInitPos));
-		WriteSaveBuf(&buf, &aCranes[i].m_vecHookCurPos, sizeof(aCranes[i].m_vecHookCurPos));
-		WriteSaveBuf(&buf, &aCranes[i].m_vecHookVelocity, sizeof(aCranes[i].m_vecHookVelocity));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupX1, sizeof(Cranes_aCranes[i].m_fPickupX1));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupX2, sizeof(Cranes_aCranes[i].m_fPickupX2));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupY1, sizeof(Cranes_aCranes[i].m_fPickupY1));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupY2, sizeof(Cranes_aCranes[i].m_fPickupY2));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_vecDropoffTarget, sizeof(Cranes_aCranes[i].m_vecDropoffTarget));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fDropoffHeading, sizeof(Cranes_aCranes[i].m_fDropoffHeading));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupAngle, sizeof(Cranes_aCranes[i].m_fPickupAngle));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fDropoffAngle, sizeof(Cranes_aCranes[i].m_fDropoffAngle));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupDistance, sizeof(Cranes_aCranes[i].m_fPickupDistance));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fDropoffDistance, sizeof(Cranes_aCranes[i].m_fDropoffDistance));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fPickupHeight, sizeof(Cranes_aCranes[i].m_fPickupHeight));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fDropoffHeight, sizeof(Cranes_aCranes[i].m_fDropoffHeight));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fHookAngle, sizeof(Cranes_aCranes[i].m_fHookAngle));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fHookOffset, sizeof(Cranes_aCranes[i].m_fHookOffset));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_fHookHeight, sizeof(Cranes_aCranes[i].m_fHookHeight));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_vecHookInitPos, sizeof(Cranes_aCranes[i].m_vecHookInitPos));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_vecHookCurPos, sizeof(Cranes_aCranes[i].m_vecHookCurPos));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_vecHookVelocity, sizeof(Cranes_aCranes[i].m_vecHookVelocity));
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		tmp = aCranes[i].m_pVehiclePickedUp != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetVehiclePool(), aCranes[i].m_pVehiclePickedUp) + 1 : 0;
+		tmp = Cranes_aCranes[i].m_pVehiclePickedUp != nil ? CPool_GetJustIndex_NoFreeAssert(Pools_GetVehiclePool(), Cranes_aCranes[i].m_pVehiclePickedUp) + 1 : 0;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
-		WriteSaveBuf(&buf, &aCranes[i].m_nTimeForNextCheck, sizeof(aCranes[i].m_nTimeForNextCheck));
-		WriteSaveBuf(&buf, &aCranes[i].m_nCraneStatus, sizeof(aCranes[i].m_nCraneStatus));
-		WriteSaveBuf(&buf, &aCranes[i].m_nCraneState, sizeof(aCranes[i].m_nCraneState));
-		WriteSaveBuf(&buf, &aCranes[i].m_nVehiclesCollected, sizeof(aCranes[i].m_nVehiclesCollected));
-		WriteSaveBuf(&buf, &aCranes[i].m_bIsCrusher, sizeof(aCranes[i].m_bIsCrusher));
-		WriteSaveBuf(&buf, &aCranes[i].m_bIsMilitaryCrane, sizeof(aCranes[i].m_bIsMilitaryCrane));
-		WriteSaveBuf(&buf, &aCranes[i].m_bWasMilitaryCrane, sizeof(aCranes[i].m_bWasMilitaryCrane));
-		WriteSaveBuf(&buf, &aCranes[i].m_bIsTop, sizeof(aCranes[i].m_bIsTop));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_nTimeForNextCheck, sizeof(Cranes_aCranes[i].m_nTimeForNextCheck));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_nCraneStatus, sizeof(Cranes_aCranes[i].m_nCraneStatus));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_nCraneState, sizeof(Cranes_aCranes[i].m_nCraneState));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_nVehiclesCollected, sizeof(Cranes_aCranes[i].m_nVehiclesCollected));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_bIsCrusher, sizeof(Cranes_aCranes[i].m_bIsCrusher));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_bIsMilitaryCrane, sizeof(Cranes_aCranes[i].m_bIsMilitaryCrane));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_bWasMilitaryCrane, sizeof(Cranes_aCranes[i].m_bWasMilitaryCrane));
+		WriteSaveBuf(&buf, &Cranes_aCranes[i].m_bIsTop, sizeof(Cranes_aCranes[i].m_bIsTop));
 		ZeroSaveBuf(&buf, 1);
 		//- rouz edit (ChatGPT)
 #else
@@ -609,23 +609,23 @@ void CCranes::Save(uint8* buf, uint32* size)
 		// Transfer save data through the C buffer API with explicit sizes
 		// Preserve record assignment semantics and compiler padding behavior
 		CCrane *pCrane = (CCrane*)buf;
-		*pCrane = aCranes[i];
-		SkipSaveBuf(&buf, sizeof(aCranes[i]));
+		*pCrane = Cranes_aCranes[i];
+		SkipSaveBuf(&buf, sizeof(Cranes_aCranes[i]));
 		//- rouz edit (ChatGPT)
 		if (pCrane->m_pCraneEntity != nil)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			pCrane->m_pCraneEntity = (CBuilding*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), pCrane->m_pCraneEntity) + 1);
+			pCrane->m_pCraneEntity = (CBuilding*)(CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), pCrane->m_pCraneEntity) + 1);
 			//- rouz edit (ChatGPT)
 		if (pCrane->m_pHook != nil)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			pCrane->m_pHook = (CObject*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), pCrane->m_pHook) + 1);
+			pCrane->m_pHook = (CObject*)(CPool_GetJustIndex_NoFreeAssert(Pools_GetObjectPool(), pCrane->m_pHook) + 1);
 			//- rouz edit (ChatGPT)
 		if (pCrane->m_pVehiclePickedUp != nil)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			pCrane->m_pVehiclePickedUp = (CVehicle*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetVehiclePool(), pCrane->m_pVehiclePickedUp) + 1);
+			pCrane->m_pVehiclePickedUp = (CVehicle*)(CPool_GetJustIndex_NoFreeAssert(Pools_GetVehiclePool(), pCrane->m_pVehiclePickedUp) + 1);
 			//- rouz edit (ChatGPT)
 #endif
 	}
@@ -633,14 +633,14 @@ void CCranes::Save(uint8* buf, uint32* size)
 	VALIDATESAVEBUF(*size);
 }
 
-void CCranes::Load(uint8* buf, uint32 size)
+void Cranes_Load(uint8* buf, uint32 size)
 {
 	INITSAVEBUF
 
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&NumCranes, &buf, sizeof(NumCranes));
-	ReadSaveBuf(&CarsCollectedMilitaryCrane, &buf, sizeof(CarsCollectedMilitaryCrane));
+	ReadSaveBuf(&Cranes_NumCranes, &buf, sizeof(Cranes_NumCranes));
+	ReadSaveBuf(&Cranes_CarsCollectedMilitaryCrane, &buf, sizeof(Cranes_CarsCollectedMilitaryCrane));
 	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_CRANES; i++) {
 #ifdef COMPATIBLE_SAVES
@@ -651,7 +651,7 @@ void CCranes::Load(uint8* buf, uint32 size)
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		aCranes[i].m_pCraneEntity = tmp != 0 ? ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), tmp - 1)) : nil;
+		Cranes_aCranes[i].m_pCraneEntity = tmp != 0 ? ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), tmp - 1)) : nil;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
@@ -659,70 +659,70 @@ void CCranes::Load(uint8* buf, uint32 size)
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		aCranes[i].m_pHook = tmp != 0 ? ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), tmp - 1)) : nil;
+		Cranes_aCranes[i].m_pHook = tmp != 0 ? ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), tmp - 1)) : nil;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
-		ReadSaveBuf(&aCranes[i].m_fPickupX1, &buf, sizeof(aCranes[i].m_fPickupX1));
-		ReadSaveBuf(&aCranes[i].m_fPickupX2, &buf, sizeof(aCranes[i].m_fPickupX2));
-		ReadSaveBuf(&aCranes[i].m_fPickupY1, &buf, sizeof(aCranes[i].m_fPickupY1));
-		ReadSaveBuf(&aCranes[i].m_fPickupY2, &buf, sizeof(aCranes[i].m_fPickupY2));
-		ReadSaveBuf(&aCranes[i].m_vecDropoffTarget, &buf, sizeof(aCranes[i].m_vecDropoffTarget));
-		ReadSaveBuf(&aCranes[i].m_fDropoffHeading, &buf, sizeof(aCranes[i].m_fDropoffHeading));
-		ReadSaveBuf(&aCranes[i].m_fPickupAngle, &buf, sizeof(aCranes[i].m_fPickupAngle));
-		ReadSaveBuf(&aCranes[i].m_fDropoffAngle, &buf, sizeof(aCranes[i].m_fDropoffAngle));
-		ReadSaveBuf(&aCranes[i].m_fPickupDistance, &buf, sizeof(aCranes[i].m_fPickupDistance));
-		ReadSaveBuf(&aCranes[i].m_fDropoffDistance, &buf, sizeof(aCranes[i].m_fDropoffDistance));
-		ReadSaveBuf(&aCranes[i].m_fPickupHeight, &buf, sizeof(aCranes[i].m_fPickupHeight));
-		ReadSaveBuf(&aCranes[i].m_fDropoffHeight, &buf, sizeof(aCranes[i].m_fDropoffHeight));
-		ReadSaveBuf(&aCranes[i].m_fHookAngle, &buf, sizeof(aCranes[i].m_fHookAngle));
-		ReadSaveBuf(&aCranes[i].m_fHookOffset, &buf, sizeof(aCranes[i].m_fHookOffset));
-		ReadSaveBuf(&aCranes[i].m_fHookHeight, &buf, sizeof(aCranes[i].m_fHookHeight));
-		ReadSaveBuf(&aCranes[i].m_vecHookInitPos, &buf, sizeof(aCranes[i].m_vecHookInitPos));
-		ReadSaveBuf(&aCranes[i].m_vecHookCurPos, &buf, sizeof(aCranes[i].m_vecHookCurPos));
-		ReadSaveBuf(&aCranes[i].m_vecHookVelocity, &buf, sizeof(aCranes[i].m_vecHookVelocity));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupX1, &buf, sizeof(Cranes_aCranes[i].m_fPickupX1));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupX2, &buf, sizeof(Cranes_aCranes[i].m_fPickupX2));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupY1, &buf, sizeof(Cranes_aCranes[i].m_fPickupY1));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupY2, &buf, sizeof(Cranes_aCranes[i].m_fPickupY2));
+		ReadSaveBuf(&Cranes_aCranes[i].m_vecDropoffTarget, &buf, sizeof(Cranes_aCranes[i].m_vecDropoffTarget));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fDropoffHeading, &buf, sizeof(Cranes_aCranes[i].m_fDropoffHeading));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupAngle, &buf, sizeof(Cranes_aCranes[i].m_fPickupAngle));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fDropoffAngle, &buf, sizeof(Cranes_aCranes[i].m_fDropoffAngle));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupDistance, &buf, sizeof(Cranes_aCranes[i].m_fPickupDistance));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fDropoffDistance, &buf, sizeof(Cranes_aCranes[i].m_fDropoffDistance));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fPickupHeight, &buf, sizeof(Cranes_aCranes[i].m_fPickupHeight));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fDropoffHeight, &buf, sizeof(Cranes_aCranes[i].m_fDropoffHeight));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fHookAngle, &buf, sizeof(Cranes_aCranes[i].m_fHookAngle));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fHookOffset, &buf, sizeof(Cranes_aCranes[i].m_fHookOffset));
+		ReadSaveBuf(&Cranes_aCranes[i].m_fHookHeight, &buf, sizeof(Cranes_aCranes[i].m_fHookHeight));
+		ReadSaveBuf(&Cranes_aCranes[i].m_vecHookInitPos, &buf, sizeof(Cranes_aCranes[i].m_vecHookInitPos));
+		ReadSaveBuf(&Cranes_aCranes[i].m_vecHookCurPos, &buf, sizeof(Cranes_aCranes[i].m_vecHookCurPos));
+		ReadSaveBuf(&Cranes_aCranes[i].m_vecHookVelocity, &buf, sizeof(Cranes_aCranes[i].m_vecHookVelocity));
 		ReadSaveBuf(&tmp, &buf, sizeof(tmp));
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		aCranes[i].m_pVehiclePickedUp = tmp != 0 ? ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), tmp - 1)) : nil;
+		Cranes_aCranes[i].m_pVehiclePickedUp = tmp != 0 ? ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), tmp - 1)) : nil;
 		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
-		ReadSaveBuf(&aCranes[i].m_nTimeForNextCheck, &buf, sizeof(aCranes[i].m_nTimeForNextCheck));
-		ReadSaveBuf(&aCranes[i].m_nCraneStatus, &buf, sizeof(aCranes[i].m_nCraneStatus));
-		ReadSaveBuf(&aCranes[i].m_nCraneState, &buf, sizeof(aCranes[i].m_nCraneState));
-		ReadSaveBuf(&aCranes[i].m_nVehiclesCollected, &buf, sizeof(aCranes[i].m_nVehiclesCollected));
-		ReadSaveBuf(&aCranes[i].m_bIsCrusher, &buf, sizeof(aCranes[i].m_bIsCrusher));
-		ReadSaveBuf(&aCranes[i].m_bIsMilitaryCrane, &buf, sizeof(aCranes[i].m_bIsMilitaryCrane));
-		ReadSaveBuf(&aCranes[i].m_bWasMilitaryCrane, &buf, sizeof(aCranes[i].m_bWasMilitaryCrane));
-		ReadSaveBuf(&aCranes[i].m_bIsTop, &buf, sizeof(aCranes[i].m_bIsTop));
+		ReadSaveBuf(&Cranes_aCranes[i].m_nTimeForNextCheck, &buf, sizeof(Cranes_aCranes[i].m_nTimeForNextCheck));
+		ReadSaveBuf(&Cranes_aCranes[i].m_nCraneStatus, &buf, sizeof(Cranes_aCranes[i].m_nCraneStatus));
+		ReadSaveBuf(&Cranes_aCranes[i].m_nCraneState, &buf, sizeof(Cranes_aCranes[i].m_nCraneState));
+		ReadSaveBuf(&Cranes_aCranes[i].m_nVehiclesCollected, &buf, sizeof(Cranes_aCranes[i].m_nVehiclesCollected));
+		ReadSaveBuf(&Cranes_aCranes[i].m_bIsCrusher, &buf, sizeof(Cranes_aCranes[i].m_bIsCrusher));
+		ReadSaveBuf(&Cranes_aCranes[i].m_bIsMilitaryCrane, &buf, sizeof(Cranes_aCranes[i].m_bIsMilitaryCrane));
+		ReadSaveBuf(&Cranes_aCranes[i].m_bWasMilitaryCrane, &buf, sizeof(Cranes_aCranes[i].m_bWasMilitaryCrane));
+		ReadSaveBuf(&Cranes_aCranes[i].m_bIsTop, &buf, sizeof(Cranes_aCranes[i].m_bIsTop));
 		SkipSaveBuf(&buf, 1);
 		//- rouz edit (ChatGPT)
 #else
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
 		// Preserve record assignment semantics and compiler padding behavior
-		aCranes[i] = *(CCrane*)buf;
-		SkipSaveBuf(&buf, sizeof(aCranes[i]));
+		Cranes_aCranes[i] = *(CCrane*)buf;
+		SkipSaveBuf(&buf, sizeof(Cranes_aCranes[i]));
 		//- rouz edit (ChatGPT)
 	}
 	for (int i = 0; i < NUM_CRANES; i++) {
-		CCrane *pCrane = &aCranes[i];
+		CCrane *pCrane = &Cranes_aCranes[i];
 		if (pCrane->m_pCraneEntity != nil)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			pCrane->m_pCraneEntity = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), (uintptr)pCrane->m_pCraneEntity - 1));
+			pCrane->m_pCraneEntity = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), (uintptr)pCrane->m_pCraneEntity - 1));
 			//- rouz edit (ChatGPT)
 		if (pCrane->m_pHook != nil)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			pCrane->m_pHook = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), (uintptr)pCrane->m_pHook - 1));
+			pCrane->m_pHook = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), (uintptr)pCrane->m_pHook - 1));
 			//- rouz edit (ChatGPT)
 		if (pCrane->m_pVehiclePickedUp != nil)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			pCrane->m_pVehiclePickedUp = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), (uintptr)pCrane->m_pVehiclePickedUp - 1));
+			pCrane->m_pVehiclePickedUp = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), (uintptr)pCrane->m_pVehiclePickedUp - 1));
 			//- rouz edit (ChatGPT)
 #endif
 	}

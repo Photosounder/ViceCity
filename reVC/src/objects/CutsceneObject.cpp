@@ -207,7 +207,7 @@ CCutsceneObject::SetupLighting(void)
 void
 CCutsceneObject::RemoveLighting(bool reset)
 {
-	CRenderer::RemoveVehiclePedLights(this, reset);
+	Renderer_RemoveVehiclePedLights(this, reset);
 }
 
 //- rouz edit (ChatGPT)

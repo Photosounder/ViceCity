@@ -165,7 +165,7 @@ float PathLogic_FindNodeOrientationForCarPlacementFacingDestination(const CPathN
 	GroundDirection(n, &nodes[bestNode], &dx, &dy);
 	return RADTODEG(atan2f(-dx, dy));
 }
-void PedPath_RemoveNodeFromList(CPedPathNode *node)
+void PathLogic_RemoveNodeFromList(CPedPathNode *node)
 {
 	// Link the neighbours to each other
 	node->next->prev = node->prev;
@@ -173,7 +173,7 @@ void PedPath_RemoveNodeFromList(CPedPathNode *node)
 		node->prev->next = node->next;
 }
 
-void PedPath_AddNodeToList(CPedPathNode *node, int16_t index, CPedPathNode *list)
+void PathLogic_AddNodeToList(CPedPathNode *node, int16_t index, CPedPathNode *list)
 {
 	// Insert before the sentinel of the list
 	node->prev = list[index].prev;

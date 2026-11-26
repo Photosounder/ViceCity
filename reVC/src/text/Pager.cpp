@@ -13,21 +13,21 @@ bool Pager_BackendWidescreen(void)
 bool Pager_BackendDrawHud(void)
 {
     // Read the live HUD visibility flag after the original camera test
-    return CHud::m_Wants_To_Draw_Hud;
+    return Hud_m_Wants_To_Draw_Hud;
 }
 uint16_t Pager_BackendBigMessage0(void)
 {
     // Read the original first message channel only when the preceding gates permit it
-    return CHud::m_BigMessage[0][0];
+    return Hud_m_BigMessage[0][0];
 }
 uint16_t Pager_BackendBigMessage2(void)
 {
     // Read the original third message channel only when the preceding gates permit it
-    return CHud::m_BigMessage[2][0];
+    return Hud_m_BigMessage[2][0];
 }
 void Pager_BackendSetMessage(uint16_t *message)
 {
     // Publish the original scroll slice through the existing synchronous HUD copy
-    CHud::SetPagerMessage(message);
+    Hud_SetPagerMessage(message);
 }
 //- rouz edit (ChatGPT)

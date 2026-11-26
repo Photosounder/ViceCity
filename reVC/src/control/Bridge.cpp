@@ -9,7 +9,7 @@
 CPool * Bridge_BackendBuildingPool(void)
 {
     // Enter the original typed native field or action at the C decision point
-    return CPools::GetBuildingPool();
+    return Pools_GetBuildingPool();
 }
 CEntity * Bridge_BackendBuilding(void *slot)
 {

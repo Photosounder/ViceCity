@@ -415,7 +415,7 @@ CPlayerInfo::Process(void)
 								if (!veh->bIsInWater)
 									m_pPed->SetObjective(OBJECTIVE_LEAVE_CAR, veh);
 
-							} else if (veh->GetStatus() != STATUS_PLAYER && veh != CGameLogic::pShortCutTaxi) {
+							} else if (veh->GetStatus() != STATUS_PLAYER && veh != GameLogic_pShortCutTaxi) {
 								veh->AutoPilot.m_nTempAction = TEMPACT_WAIT;
 								veh->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 1000;
 							}
@@ -453,11 +453,11 @@ CPlayerInfo::Process(void)
 					int32_t minXSector, minYSector, maxXSector, maxYSector;
 					World_SectorRange(minX, minY, maxX, maxY, &minXSector, &minYSector, &maxXSector, &maxYSector);
 
-					CWorld::AdvanceCurrentScanCode();
+					World_AdvanceCurrentScanCode();
 
 					for (int curY = minYSector; curY <= maxYSector; curY++) {
 						for (int curX = minXSector; curX <= maxXSector; curX++) {
-							CSector *sector = CWorld::GetSector(curX, curY);
+							CSector *sector = World_GetSector(curX, curY);
 							FindClosestCarSectorList(sector->m_lists[ENTITYLIST_VEHICLES], m_pPed,
 								minX, minY, maxX, maxY, &lastCloseness, &carBelow);
 							FindClosestCarSectorList(sector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], m_pPed,
@@ -496,13 +496,13 @@ CPlayerInfo::Process(void)
 				TheCamera.Process();
 				Timer_Stop();
 				CullZones_ForceCullZoneCoors(CullZonesPosition_FromVector(TheCamera.GetPosition()));
-				CRenderer::RequestObjectsInFrustum();
-				CStreaming::LoadAllRequestedModels(false);
+				Renderer_RequestObjectsInFrustum();
+				Streaming_LoadAllRequestedModels(false);
 				Timer_Update();
 			}
 			m_bInRemoteMode = false;
-			CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle->bRemoveFromWorld = true;
-			CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle = nil;
+			World_Players[World_PlayerInFocus].m_pRemoteVehicle->bRemoveFromWorld = true;
+			World_Players[World_PlayerInFocus].m_pRemoteVehicle = nil;
 			if (FindPlayerVehicle()) {
 				FindPlayerVehicle()->SetStatus(STATUS_PLAYER);
 			}
@@ -562,7 +562,7 @@ CPlayerInfo::Process(void)
 		Stats_DistanceTravelledOnFoot += FindPlayerPed()->m_fDistanceTravelled;
 	}
 
-	if (Wanted_GetWantedLevel(m_pPed->m_pWanted) && !CTheScripts::IsPlayerOnAMission()) {
+	if (Wanted_GetWantedLevel(m_pPed->m_pWanted) && !TheScripts_IsPlayerOnAMission()) {
 		float maxDelta = 0.0f;
 		static bool movedSignificantly = true;
 		static bool thereIsACarPathNear = true;
@@ -599,7 +599,7 @@ CPlayerInfo::Process(void)
 		float increaseDelta = maxDelta - m_fMediaAttention;
 		float increaseAttentionBy = (*Timer_GetTimeStep()) * 0.0001f * increaseDelta;
 		if (increaseAttentionBy < 0.0f
-			|| movedSignificantly && thereIsACarPathNear && !CullZones_NoPolice() && !CullZones_PoliceAbandonCars() && CGame::currArea == AREA_MAIN_MAP) {
+			|| movedSignificantly && thereIsACarPathNear && !CullZones_NoPolice() && !CullZones_PoliceAbandonCars() && Game_currArea == AREA_MAIN_MAP) {
 			m_fMediaAttention += increaseAttentionBy;
 		}
 	} else {
@@ -626,25 +626,25 @@ CPlayerInfo::SavePlayerInfo(uint8 *buf, uint32 *size)
 	*size = sizeof(CPlayerInfo);
 
 #define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); buf += sizeof(data);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nMoney);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_WBState);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nWBTime);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nTrafficMultiplier);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_fRoadDensity);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nCollectedPackages);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nTotalPackages);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bInfiniteSprint);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bFastReload);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bFireproof);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nMaxHealth);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nMaxArmour);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bGetOutOfJailFree);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bGetOutOfHospitalFree);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bDriveByAllowed);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_aPlayerName);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nBustedAudioStatus);
-	CopyToBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nCurrentBustedAudio);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nMoney);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_WBState);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nWBTime);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nTrafficMultiplier);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_fRoadDensity);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nVisibleMoney);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nCollectedPackages);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nTotalPackages);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_bInfiniteSprint);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_bFastReload);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_bFireproof);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nMaxHealth);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nMaxArmour);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_bGetOutOfJailFree);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_bGetOutOfHospitalFree);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_bDriveByAllowed);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_aPlayerName);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nBustedAudioStatus);
+	CopyToBuf(buf, World_Players[World_PlayerInFocus].m_nCurrentBustedAudio);
 #undef CopyToBuf
 }
 
@@ -652,25 +652,25 @@ void
 CPlayerInfo::LoadPlayerInfo(uint8 *buf, uint32 size)
 {
 #define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); buf += sizeof(data);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nMoney);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_WBState);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nWBTime);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nTrafficMultiplier);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_fRoadDensity);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nCollectedPackages);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nTotalPackages);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bInfiniteSprint);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bFastReload);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bFireproof);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nMaxHealth);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nMaxArmour);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bGetOutOfJailFree);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bGetOutOfHospitalFree);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_bDriveByAllowed);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_aPlayerName);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nBustedAudioStatus);
-	CopyFromBuf(buf, CWorld::Players[CWorld::PlayerInFocus].m_nCurrentBustedAudio)
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nMoney);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_WBState);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nWBTime);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nTrafficMultiplier);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_fRoadDensity);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nVisibleMoney);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nCollectedPackages);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nTotalPackages);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_bInfiniteSprint);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_bFastReload);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_bFireproof);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nMaxHealth);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nMaxArmour);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_bGetOutOfJailFree);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_bGetOutOfHospitalFree);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_bDriveByAllowed);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_aPlayerName);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nBustedAudioStatus);
+	CopyFromBuf(buf, World_Players[World_PlayerInFocus].m_nCurrentBustedAudio)
 #undef CopyFromBuf
 }
 
@@ -679,17 +679,17 @@ CPlayerInfo::FindClosestCarSectorList(CPtrList& carList, CPed* ped, float unk1, 
 {
 	for (CPtrNode* node = carList.first; node; node = node->next) {
 		CVehicle *car = (CVehicle*)node->item;
-		if(car->m_scanCode != CWorld::GetCurrentScanCode()) {
+		if(car->m_scanCode != World_GetCurrentScanCode()) {
 			if (!car->bUsesCollision || !car->IsVehicle())
 				continue;
 
-			car->m_scanCode = CWorld::GetCurrentScanCode();
+			car->m_scanCode = World_GetCurrentScanCode();
 			// The candidate test is done in C once the centre is known
 			CVector carCentre = car->GetBoundCentre();
 			if (PlayerInfoLogic_IsCarCandidate(car->GetStatus(), car->GetUp().z, car->IsVehicle() && ((CVehicle*)car)->m_vehType == VEHICLE_TYPE_BIKE, car->IsCar(), ped->GetPosition().z, carCentre.z)) {
 				{
 					float dist = (ped->GetPosition() - carCentre).Magnitude2D();
-					if (dist <= 10.0f && !CCranes::IsThisCarBeingCarriedByAnyCrane(car)) {
+					if (dist <= 10.0f && !Cranes_IsThisCarBeingCarriedByAnyCrane(car)) {
 						EvaluateCarPosition(car, ped, dist, lastCloseness, closestCarOutput);
 					}
 				}
@@ -787,7 +787,7 @@ FindPlayerTrain(void)
 CPlayerPed *
 FindPlayerPed(void)
 {
-	return CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+	return World_Players[World_PlayerInFocus].m_pPed;
 }
 
 const CVector &
@@ -796,10 +796,10 @@ FindPlayerCentreOfWorld(int32 player)
 #ifdef FIX_BUGS
 	if(Replay_IsPlayingBack()) return TheCamera.GetPosition(); // rouz edit (ChatGPT)
 #endif
-	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
-	if(CWorld::Players[player].m_pRemoteVehicle) return CWorld::Players[player].m_pRemoteVehicle->GetPosition();
+	if(CarCtrl_bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
+	if(World_Players[player].m_pRemoteVehicle) return World_Players[player].m_pRemoteVehicle->GetPosition();
 	if(FindPlayerVehicle()) return FindPlayerVehicle()->GetPosition();
-	return CWorld::Players[player].m_pPed->GetPosition();
+	return World_Players[player].m_pPed->GetPosition();
 }
 
 const CVector &
@@ -808,9 +808,9 @@ FindPlayerCentreOfWorld_NoSniperShift(void)
 #ifdef FIX_BUGS
 	if (Replay_IsPlayingBack()) return TheCamera.GetPosition(); // rouz edit (ChatGPT)
 #endif
-	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
-	if(CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
-		return CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle->GetPosition();
+	if(CarCtrl_bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
+	if(World_Players[World_PlayerInFocus].m_pRemoteVehicle)
+		return World_Players[World_PlayerInFocus].m_pRemoteVehicle->GetPosition();
 	if(FindPlayerVehicle()) return FindPlayerVehicle()->GetPosition();
 	return FindPlayerPed()->GetPosition();
 }
@@ -818,8 +818,8 @@ FindPlayerCentreOfWorld_NoSniperShift(void)
 float
 FindPlayerHeading(void)
 {
-	if(CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
-		return CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle->GetForward().Heading();
+	if(World_Players[World_PlayerInFocus].m_pRemoteVehicle)
+		return World_Players[World_PlayerInFocus].m_pRemoteVehicle->GetForward().Heading();
 	if(FindPlayerVehicle()) return FindPlayerVehicle()->GetForward().Heading();
 	return FindPlayerPed()->GetForward().Heading();
 }
@@ -887,7 +887,7 @@ CPlayerInfo::MakePlayerSafe(bool toggle)
 {
 	if (toggle) {
 		m_pPed->m_pWanted->m_bIgnoredByEveryone = true;
-		CWorld::StopAllLawEnforcersInTheirTracks();
+		World_StopAllLawEnforcersInTheirTracks();
 		CPad::GetPad(0)->SetDisablePlayerControls(PLAYERCONTROL_PLAYERINFO);
 		CPad::StopPadsShaking();
 		m_pPed->bBulletProof = true;
@@ -905,8 +905,8 @@ CPlayerInfo::MakePlayerSafe(bool toggle)
 		ExplosionPosition explosionPosition = {explosionNativePosition.x,explosionNativePosition.y,explosionNativePosition.z};
 		Explosion_RemoveAllExplosionsInArea(explosionPosition, 4000.0f);
 		ProjectileInfo_RemoveAllProjectiles();
-		CWorld::SetAllCarsCanBeDamaged(false);
-		CWorld::ExtinguishAllCarFiresInArea(GetPos(), 4000.0f);
+		World_SetAllCarsCanBeDamaged(false);
+		World_ExtinguishAllCarFiresInArea(GetPos(), 4000.0f);
 		CReplay::DisableReplays();
 
 	} else {
@@ -919,7 +919,7 @@ CPlayerInfo::MakePlayerSafe(bool toggle)
 		m_pPed->bOnlyDamagedByPlayer = false;
 		m_pPed->bExplosionProof = false;
 		m_pPed->m_bCanBeDamaged = true;
-		CWorld::SetAllCarsCanBeDamaged(true);
+		World_SetAllCarsCanBeDamaged(true);
 		CReplay::EnableReplays();
 	}
 }

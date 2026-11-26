@@ -21,7 +21,7 @@ void ColModel_BackendFree(void *memory)
 void ColModel_BackendRemoveCachedPlanes(CColModel *model)
 {
     // Enter the separate collision-cache owner at the original removal boundary
-    CCollision::RemoveTrianglePlanes(model);
+    Collision_RemoveTrianglePlanes(model);
 }
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

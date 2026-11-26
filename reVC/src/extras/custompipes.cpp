@@ -394,13 +394,13 @@ RenderEnvMapScene(void)
 	// Register reflection-only entity lights before drawing the reflected scene
 #ifdef REVC_SOFTWARE_POLYGONS
 	CCoronas::ResetEnvMapCoronas();
-	CRenderer::RegisterSoftwareReflectionLights();
+	Renderer_RegisterSoftwareReflectionLights();
 #endif
 	//- rouz edit (ChatGPT)
 	// Fill the reflection target with distant water before world geometry
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
-	CWaterLevel::RenderWater();
+	WaterLevel_RenderWater();
 	// Render the reflection camera's sky layers before opaque world geometry
 	//+ rouz edit (ChatGPT)
 	// Enter the complete C cloud effect with the original arguments
@@ -411,32 +411,32 @@ RenderEnvMapScene(void)
 	//- rouz edit (ChatGPT)
 	// Include the opaque and transparent building passes in vehicle reflections
 	//+ rouz edit (ChatGPT)
-	CRenderer::RenderWorld(0);
-	CRenderer::RenderWorld(1);
+	Renderer_RenderWorld(0);
+	Renderer_RenderWorld(1);
 	//- rouz edit (ChatGPT)
-	CRenderer::RenderRoads();
+	Renderer_RenderRoads();
 	// Render boats before cutting their hull silhouettes into the transparent water pass
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
-	CRenderer::RenderBoats();
+	Renderer_RenderBoats();
 	// Keep fading submerged entities beneath the transparent reflection-water pass
-	CRenderer::RenderFadingInUnderwaterEntities();
-	CRenderer::RenderTransparentWater();
+	Renderer_RenderFadingInUnderwaterEntities();
+	Renderer_RenderTransparentWater();
 #endif
 	//- rouz edit (ChatGPT)
-	CRenderer::RenderEverythingBarRoads();
+	Renderer_RenderEverythingBarRoads();
 	//+ rouz edit (ChatGPT)
 	// Sort reflection-camera actors and props together for alpha blending
 #ifdef REVC_SOFTWARE_POLYGONS
-	CRenderer::RenderSoftwareReflectionEntities();
+	Renderer_RenderSoftwareReflectionEntities();
 	DefinedState();
 #endif
 	//- rouz edit (ChatGPT)
 	// Render transparent buildings after the opaque environment and dynamic props
 	//+ rouz edit (ChatGPT)
-	CRenderer::RenderWorld(2);
+	Renderer_RenderWorld(2);
 	//- rouz edit (ChatGPT)
-	CRenderer::RenderFadingInEntities();
+	Renderer_RenderFadingInEntities();
 	// Render reflection-safe world effects without advancing their shared simulations
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
@@ -451,7 +451,7 @@ RenderEnvMapScene(void)
 	Rubbish_Render();
 	// Draw persistent shattered glass panes into vehicle reflections
 	//+ rouz edit (ChatGPT)
-	CGlass::Render();
+	Glass_Render();
 	DefinedState();
 	//- rouz edit (ChatGPT)
 	// Draw sun glints, rain streaks, and fire-fighting spray in reflections

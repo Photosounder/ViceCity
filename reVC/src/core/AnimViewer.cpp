@@ -60,7 +60,7 @@ extern "C" void AnimViewer_HostRequestAnimation(int block,int flags)
 extern "C" void AnimViewer_HostLoadRequests(bool priority)
 {
     // Load the selected native streaming requests
-    CStreaming::LoadAllRequestedModels(priority);
+    Streaming_LoadAllRequestedModels(priority);
 }
 extern "C" void AnimViewer_HostSetSpecialGroup(int modelId,int groupId)
 {
@@ -70,12 +70,12 @@ extern "C" void AnimViewer_HostSetSpecialGroup(int modelId,int groupId)
 extern "C" void AnimViewer_HostRequestSpecial(int lineId,const char *name,int flags)
 {
     // Forward the selected special-character streaming request
-    CStreaming::RequestSpecialChar(lineId,name,flags);
+    Streaming_RequestSpecialChar(lineId,name,flags);
 }
 extern "C" void AnimViewer_HostRemoveTarget(CEntity *entity)
 {
     // Remove the selected native entity from the world
-    CWorld::Remove(entity);
+    World_Remove(entity);
 }
 extern "C" bool AnimViewer_HostTargetMatches(CEntity *entity,int kind)
 {
@@ -137,7 +137,7 @@ extern "C" void AnimViewer_HostAnimateCollision(void)
 extern "C" void AnimViewer_HostProcessWorld(void)
 {
     // Process the native game world
-    CWorld::Process();
+    World_Process();
 }
 extern "C" void AnimViewer_HostProcessCamera(void)
 {
@@ -147,7 +147,7 @@ extern "C" void AnimViewer_HostProcessCamera(void)
 extern "C" void AnimViewer_HostHideHud(void)
 {
     // Preserve the original HUD visibility assignment
-    CHud::m_Wants_To_Draw_Hud=false;
+    Hud_m_Wants_To_Draw_Hud=false;
 }
 extern "C" bool AnimViewer_HostIsPed(CEntity *entity)
 {
@@ -167,7 +167,7 @@ extern "C" void AnimViewer_HostRender(CEntity *entity)
 extern "C" void AnimViewer_HostRenderNonRoad(CEntity *entity)
 {
     // Pass the selected native entity to the renderer
-    CRenderer::RenderOneNonRoad(entity);
+    Renderer_RenderOneNonRoad(entity);
 }
 //- rouz edit (ChatGPT)
 
@@ -175,7 +175,7 @@ extern "C" void AnimViewer_HostRenderNonRoad(CEntity *entity)
 extern "C" void AnimViewer_HostInitPools(void)
 {
     // Initialize the native game pools
-    CPools::Initialise();
+    Pools_Initialise();
 }
 extern "C" void AnimViewer_HostInitWorld(void)
 {
@@ -185,33 +185,33 @@ extern "C" void AnimViewer_HostInitWorld(void)
     TheCamera.Cams[TheCamera.ActiveCam].Distance=5.0f;
     ThePaths.Init();
     ThePaths.AllocatePathFindInfoMem(4500);
-    CCollision::Init();
-    CWorld::Initialise();
+    Collision_Init();
+    World_Initialise();
     mod_HandlingManager.Initialise();
-    CTempColModels::Initialise();
+    TempColModels_Initialise();
 }
 extern "C" void AnimViewer_HostInitModelSystems(void)
 {
     // Initialize native model, particle, and vehicle-control systems
     ModelRegistry_Initialise(); // rouz edit (ChatGPT)
     CParticle::Initialise();
-    CCarCtrl::Init();
+    CarCtrl_Init();
 }
 extern "C" void AnimViewer_HostLoadLevels(void)
 {
     // Load the original image and viewer levels before streaming initialization
     CdStreamAddImage("MODELS\\GTA3.IMG");
-    CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
-    CFileLoader::LoadLevel("DATA\\ANIMVIEWER.DAT");
-    CStreaming::Init();
+    FileLoader_LoadLevel("DATA\\DEFAULT.DAT");
+    FileLoader_LoadLevel("DATA\\ANIMVIEWER.DAT");
+    Streaming_Init();
 }
 extern "C" void AnimViewer_HostInitRenderer(void)
 {
     // Load the original player models and initialize the native renderer
-    CStreaming::LoadInitialPeds();
-    CStreaming::RequestSpecialModel(MI_PLAYER,"player",STREAMFLAGS_DONT_REMOVE);
-    CStreaming::LoadAllRequestedModels(false);
-    CRenderer::Init();
+    Streaming_LoadInitialPeds();
+    Streaming_RequestSpecialModel(MI_PLAYER,"player",STREAMFLAGS_DONT_REMOVE);
+    Streaming_LoadAllRequestedModels(false);
+    Renderer_Init();
     CVehicleModelInfo::LoadVehicleColours();
 #ifdef FIX_BUGS
     CVehicleModelInfo::LoadEnvironmentMaps();
@@ -220,14 +220,14 @@ extern "C" void AnimViewer_HostInitRenderer(void)
 extern "C" void AnimViewer_HostInitPlayerSystems(void)
 {
     // Set the player focus and initialize native weapon and pedestrian systems
-    CWorld::PlayerInFocus=0;
+    World_PlayerInFocus=0;
     CWeapon::InitialiseWeapons();
     CPed::Initialise();
 }
 extern "C" void AnimViewer_HostInitCarControl(void)
 {
     // Preserve the original native vehicle-control initialization
-    CCarCtrl::Init();
+    CarCtrl_Init();
 }
 extern "C" void AnimViewer_HostConstructPlayer(void *player)
 {
@@ -242,7 +242,7 @@ extern "C" void AnimViewer_HostPositionPlayer(void *player,float x,float y,float
 extern "C" void AnimViewer_HostAssignPlayer(void *player)
 {
     // Assign the same native player to player zero
-    CWorld::Players[0].m_pPed=(CPlayerPed*)((CPed*)player);
+    World_Players[0].m_pPed=(CPlayerPed*)((CPed*)player);
 }
 extern "C" void AnimViewer_HostSetLodDistance(void)
 {
@@ -281,7 +281,7 @@ extern "C" void *AnimViewer_HostUpdatePads(void)
 extern "C" void AnimViewer_HostUpdateStreaming(void)
 {
     // Process native streaming for the viewer
-    CStreaming::UpdateForAnimViewer();
+    Streaming_UpdateForAnimViewer();
 }
 extern "C" void AnimViewer_HostRequestModel(int modelId)
 {
@@ -307,7 +307,7 @@ extern "C" void AnimViewer_HostDestroyTemporaryObject(void *object)
 {
     // Remove and destroy the selected native temporary object
     CObject *existing=(CObject*)object;
-    CWorld::Remove(existing);
+    World_Remove(existing);
     existing->~CObject();
 }
 extern "C" CEntity *AnimViewer_HostObjectEntity(void *object)
@@ -343,7 +343,7 @@ extern "C" void AnimViewer_HostConstructBike(CEntity *target,int modelId)
 extern "C" void AnimViewer_HostSetFallbackCollision(void *model)
 {
     // Set the original native fallback collision model
-    ((CBaseModelInfo*)model)->SetColModel(&CTempColModels::ms_colModelWheel1);
+    ((CBaseModelInfo*)model)->SetColModel(&TempColModels_ms_colModelWheel1);
 }
 extern "C" void AnimViewer_HostSetAbandoned(CEntity *target)
 {
@@ -373,7 +373,7 @@ extern "C" void AnimViewer_HostSetTargetPosition(CEntity *target,float x,float y
 extern "C" void AnimViewer_HostAddTarget(CEntity *target)
 {
     // Add the selected native target to the world
-    CWorld::Add(target);
+    World_Add(target);
 }
 extern "C" void AnimViewer_HostCameraTakeTarget(CEntity *target)
 {
@@ -401,7 +401,7 @@ extern "C" void AnimViewer_HostKeepPedInPlace(void)
 extern "C" void *AnimViewer_HostPlayer(void)
 {
     // Read the current native player pointer
-    return CWorld::Players[0].m_pPed;
+    return World_Players[0].m_pPed;
 }
 extern "C" void AnimViewer_HostDestroyPlayer(void *player)
 {
@@ -411,7 +411,7 @@ extern "C" void AnimViewer_HostDestroyPlayer(void *player)
 extern "C" void AnimViewer_HostShutdownWorld(void)
 {
     // Shut down the native world subsystem
-    CWorld::ShutDown();
+    World_ShutDown();
 }
 extern "C" void AnimViewer_HostShutdownModels(void)
 {
@@ -421,7 +421,7 @@ extern "C" void AnimViewer_HostShutdownModels(void)
 extern "C" void AnimViewer_HostShutdownStreaming(void)
 {
     // Shut down the native streaming subsystem
-    CStreaming::Shutdown();
+    Streaming_Shutdown();
 }
 //- rouz edit (ChatGPT)
 

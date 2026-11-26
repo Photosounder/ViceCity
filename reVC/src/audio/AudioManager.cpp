@@ -108,7 +108,7 @@ AudioReflectionsHost_Line(const AudioSoundPosition *start, const AudioSoundPosit
     // Preserve the original line query flags and copy only a successful collision position
     CColPoint point;
     CEntity *entity;
-    if (!CWorld::ProcessLineOfSight(AudioSoundPosition_ToVector(start), AudioSoundPosition_ToVector(end), point, entity, true, false, false, true, false, true, true))
+    if (!World_ProcessLineOfSight(AudioSoundPosition_ToVector(start), AudioSoundPosition_ToVector(end), point, entity, true, false, false, true, false, true, true))
         return 0;
     *hit = AudioSoundPosition_FromVector(CollisionVector_ToNative(point.point));
     return 1;
@@ -120,7 +120,7 @@ AudioReflectionsHost_Vertical(const AudioSoundPosition *start, float endZ, float
     // Preserve the original vertical query flags and read only the successful height
     CColPoint point;
     CEntity *entity;
-    if (!CWorld::ProcessVerticalLine(AudioSoundPosition_ToVector(start), endZ, point, entity, true, false, false, false, true, false, nil))
+    if (!World_ProcessVerticalLine(AudioSoundPosition_ToVector(start), endZ, point, entity, true, false, false, false, true, false, nil))
         return 0;
     *hitZ = point.point.z;
     return 1;
@@ -175,7 +175,7 @@ uint8_t
 AudioReleaseHost_LineClear(const AudioSoundPosition *position)
 {
     // Retain the original camera ray and world collision category flags
-    return CWorld::GetIsLineOfSightClear(TheCamera.GetPosition(), AudioSoundPosition_ToVector(position), true, false, false, false, false, false);
+    return World_GetIsLineOfSightClear(TheCamera.GetPosition(), AudioSoundPosition_ToVector(position), true, false, false, false, false, false);
 }
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)

@@ -1226,9 +1226,9 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 				return Text_Get(&TheText,"FEC_SPC"); // "SPC"
 			else
 			{
-				ActionText[0] = CFont::character_code(c);
+				ActionText[0] = Font_character_code(c);
 				if (ActionText[0] == '\0')
-					ActionText[0] = CFont::character_code('#');
+					ActionText[0] = Font_character_code('#');
 				ActionText[1] = '\0';
 				return ActionText;
 			}
@@ -1870,14 +1870,14 @@ void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *
 		case CMenuManager::CONTROLLER_DUALSHOCK2:
 		case CMenuManager::CONTROLLER_DUALSHOCK3:
 		case CMenuManager::CONTROLLER_DUALSHOCK4:
-			Buttons = CFont::ButtonsSlot != -1 ? PlayStationButtons : PlayStationButtons_noIcons;
+			Buttons = Font_ButtonsSlot != -1 ? PlayStationButtons : PlayStationButtons_noIcons;
 			break;
 		case CMenuManager::CONTROLLER_NINTENDO_SWITCH:
-			Buttons = CFont::ButtonsSlot != -1 ? NintendoSwitchButtons : NintendoSwitchButtons_noIcons;
+			Buttons = Font_ButtonsSlot != -1 ? NintendoSwitchButtons : NintendoSwitchButtons_noIcons;
 			break;
 		default:
 	#endif
-			Buttons = CFont::ButtonsSlot != -1 ? XboxButtons : XboxButtons_noIcons;
+			Buttons = Font_ButtonsSlot != -1 ? XboxButtons : XboxButtons_noIcons;
 	#ifdef GAMEPAD_MENU
 			break;
 		}

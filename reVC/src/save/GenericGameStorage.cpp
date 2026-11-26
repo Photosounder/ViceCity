@@ -161,7 +161,7 @@ GenericSave(int file)
 #else
 	WriteDataToBufferPointer(buf, SIZE_OF_ONE_GAME_IN_BYTES);
 #endif
-	WriteDataToBufferPointer(buf, CGame::currLevel);
+	WriteDataToBufferPointer(buf, Game_currLevel);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().x);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().y);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().z);
@@ -195,7 +195,7 @@ GenericSave(int file)
 	WriteDataToBufferPointer(buf, TheCamera.CarZoomIndicator);
 	WriteDataToBufferPointer(buf, TheCamera.PedZoomIndicator);
 #endif
-	WriteDataToBufferPointer(buf, CGame::currArea);
+	WriteDataToBufferPointer(buf, Game_currArea);
 	WriteDataToBufferPointer(buf, CVehicle::bAllTaxisHaveNitro);
 	WriteDataToBufferPointer(buf, Input_invertPadLook); // rouz edit (ChatGPT)
 	WriteDataToBufferPointer(buf, TimeCycle_m_ExtraColour);
@@ -209,7 +209,7 @@ GenericSave(int file)
 	presize = buf;
 	buf += 4;
 	postsize = buf;
-	CTheScripts::SaveAllScripts(buf, &size);
+	TheScripts_SaveAllScripts(buf, &size);
 	debug("ScriptSize== %i \n", size);
 	CopySizeAndPreparePointer(presize, buf, postsize, reserved, size);
 	if (!PcSaveHelper.PcClassSaveRoutine(file, work_buff, buf - work_buff))
@@ -218,28 +218,28 @@ GenericSave(int file)
 	totalSize = buf - work_buff;
 
 	// Save the rest
-	WriteSaveDataBlock(CPools::SavePedPool, "PedPoolSize");
-	WriteSaveDataBlock(CGarages::Save, "GaragesSize");
-	WriteSaveDataBlock(CGameLogic::Save, "GameLogicSize");
-	WriteSaveDataBlock(CPools::SaveVehiclePool, "VehPoolSize");
-	WriteSaveDataBlock(CPools::SaveObjectPool, "ObjectPoolSize");
+	WriteSaveDataBlock(Pools_SavePedPool, "PedPoolSize");
+	WriteSaveDataBlock(Garages_Save, "GaragesSize");
+	WriteSaveDataBlock(GameLogic_Save, "GameLogicSize");
+	WriteSaveDataBlock(Pools_SaveVehiclePool, "VehPoolSize");
+	WriteSaveDataBlock(Pools_SaveObjectPool, "ObjectPoolSize");
 	WriteSaveDataBlock(ThePaths.Save, "ThePathsSize");
-	WriteSaveDataBlock(CCranes::Save, "CranesSize");
-	WriteSaveDataBlock(CPickups::Save, "PickUpsSize");
+	WriteSaveDataBlock(Cranes_Save, "CranesSize");
+	WriteSaveDataBlock(Pickups_Save, "PickUpsSize");
 	WriteSaveDataBlock(gPhoneInfo.Save, "PhoneInfoSize");
 	WriteSaveDataBlock(Restart_SaveAllRestartPoints, "RestartPointsBufferSize"); // rouz edit (ChatGPT)
-	WriteSaveDataBlock(CRadar::SaveAllRadarBlips, "RadarBlipsBufferSize");
+	WriteSaveDataBlock(Radar_SaveAllRadarBlips, "RadarBlipsBufferSize");
 	WriteSaveDataBlock(Zones_SaveAllZones, "AllZonesBufferSize");
 	WriteSaveDataBlock(Gangs_SaveAllGangData, "AllGangDataSize");
-	WriteSaveDataBlock(CTheCarGenerators::SaveAllCarGenerators, "AllCarGeneratorsSize");
+	WriteSaveDataBlock(TheCarGenerators_SaveAllCarGenerators, "AllCarGeneratorsSize");
 	WriteSaveDataBlock(CParticleObject::SaveParticle, "ParticlesSize");
 	WriteSaveDataBlock(AudioScriptObject_SaveAll, "AllAudioScriptObjectsSize");
 	// Enter the C scripted-path operation at the original call point
 	WriteSaveDataBlock(ScriptPaths_Save, "ScriptPathsSize");
-	WriteSaveDataBlock(CWorld::Players[CWorld::PlayerInFocus].SavePlayerInfo, "PlayerInfoSize");
+	WriteSaveDataBlock(World_Players[World_PlayerInFocus].SavePlayerInfo, "PlayerInfoSize");
 	WriteSaveDataBlock(Stats_SaveStats, "StatsSize");
 	WriteSaveDataBlock(SetPieces_Save, "SetPiecesSize"); // rouz edit (ChatGPT)
-	WriteSaveDataBlock(CStreaming::MemoryCardSave, "StreamingSize");
+	WriteSaveDataBlock(Streaming_MemoryCardSave, "StreamingSize");
 	WriteSaveDataBlock(PedType_Save, "PedTypeSize");
 
 	// sure just write garbage data repeatedly ...
@@ -301,7 +301,7 @@ GenericLoad()
 #ifdef MISSION_REPLAY // a hack to keep compatibility but get new data from save
 	qs = saveSize >> 24;
 #endif
-	ReadDataFromBufferPointer(buf, CGame::currLevel);
+	ReadDataFromBufferPointer(buf, Game_currLevel);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().x);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().y);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().z);
@@ -341,7 +341,7 @@ GenericLoad()
 	ReadDataFromBufferPointer(buf, TheCamera.CarZoomIndicator);
 	ReadDataFromBufferPointer(buf, TheCamera.PedZoomIndicator);
 #endif
-	ReadDataFromBufferPointer(buf, CGame::currArea);
+	ReadDataFromBufferPointer(buf, Game_currArea);
 	ReadDataFromBufferPointer(buf, CVehicle::bAllTaxisHaveNitro);
 #ifdef LOAD_INI_SETTINGS
 	buf += align4bytes(sizeof(Input_invertPadLook)); // rouz edit (ChatGPT)
@@ -358,39 +358,39 @@ GenericLoad()
 	if (FrontEndMenuManager.m_nCurrSaveSlot == PAUSE_SAVE_SLOT && qs == 3)
 		WaitForMissionActivate = (*Timer_GetTimeInMilliseconds()) + 2000;
 #endif
-	ReadDataFromBlock("Loading Scripts \n", CTheScripts::LoadAllScripts);
+	ReadDataFromBlock("Loading Scripts \n", TheScripts_LoadAllScripts);
 
 	// Load the rest
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading PedPool \n", CPools::LoadPedPool);
+	ReadDataFromBlock("Loading PedPool \n", Pools_LoadPedPool);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Garages \n", CGarages::Load);
+	ReadDataFromBlock("Loading Garages \n", Garages_Load);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading GameLogic \n", CGameLogic::Load);
+	ReadDataFromBlock("Loading GameLogic \n", GameLogic_Load);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Vehicles \n", CPools::LoadVehiclePool);
+	ReadDataFromBlock("Loading Vehicles \n", Pools_LoadVehiclePool);
 	LoadSaveDataBlock();
 	ProjectileInfo_RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
-	ReadDataFromBlock("Loading Objects \n", CPools::LoadObjectPool);
+	ReadDataFromBlock("Loading Objects \n", Pools_LoadObjectPool);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Paths \n", ThePaths.Load);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Cranes \n", CCranes::Load);
+	ReadDataFromBlock("Loading Cranes \n", Cranes_Load);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Pickups \n", CPickups::Load);
+	ReadDataFromBlock("Loading Pickups \n", Pickups_Load);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Phoneinfo \n", gPhoneInfo.Load);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Restart \n", Restart_LoadAllRestartPoints); // rouz edit (ChatGPT)
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Radar Blips \n", CRadar::LoadAllRadarBlips);
+	ReadDataFromBlock("Loading Radar Blips \n", Radar_LoadAllRadarBlips);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Zones \n", Zones_LoadAllZones);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Gang Data \n", Gangs_LoadAllGangData);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Car Generators \n", CTheCarGenerators::LoadAllCarGenerators);
+	ReadDataFromBlock("Loading Car Generators \n", TheCarGenerators_LoadAllCarGenerators);
 	CParticle::ReloadConfig();
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Particles \n", CParticleObject::LoadParticle);
@@ -400,13 +400,13 @@ GenericLoad()
 	// Enter the C scripted-path operation at the original call point
 	ReadDataFromBlock("Loading ScriptPaths \n", ScriptPaths_Load);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Player Info \n", CWorld::Players[CWorld::PlayerInFocus].LoadPlayerInfo);
+	ReadDataFromBlock("Loading Player Info \n", World_Players[World_PlayerInFocus].LoadPlayerInfo);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Stats \n", Stats_LoadStats);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Set Pieces \n", SetPieces_Load); // rouz edit (ChatGPT)
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Streaming Stuff \n", CStreaming::MemoryCardLoad);
+	ReadDataFromBlock("Loading Streaming Stuff \n", Streaming_MemoryCardLoad);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading PedType Stuff \n", PedType_Load);
 
@@ -466,14 +466,14 @@ CloseFile(int32 file)
 void
 DoGameSpecificStuffAfterSucessLoad()
 {
-	CCollision::SortOutCollisionAfterLoad();
-	CStreaming::LoadSceneCollision(TheCamera.GetPosition());
-	CStreaming::LoadScene(TheCamera.GetPosition());
-	CGame::TidyUpMemory(true, false);
+	Collision_SortOutCollisionAfterLoad();
+	Streaming_LoadSceneCollision(TheCamera.GetPosition());
+	Streaming_LoadScene(TheCamera.GetPosition());
+	Game_TidyUpMemory(true, false);
 	StillToFadeOut = true;
 	JustLoadedDontFadeInYet = true;
 	TheCamera.Fade(0.0f, FADE_OUT);
-	CTheScripts::Process();
+	TheScripts_Process();
 }
 
 bool
@@ -481,7 +481,7 @@ CheckSlotDataValid(int32 slot)
 {
 	PcSaveHelper.nErrorCode = SAVESTATUS_SUCCESSFUL;
 	if (CheckDataNotCorrupt(slot, LoadFileName)) {
-		CStreaming::DeleteAllRwObjects();
+		Streaming_DeleteAllRwObjects();
 		return true;
 	}
 
@@ -509,10 +509,10 @@ CopySizeAndPreparePointer(uint8 *&buf, uint8 *&postbuf, uint8 *&postbuf2, uint32
 void
 DoGameSpecificStuffBeforeSave()
 {
-	CGameLogic::PassTime(360);
+	GameLogic_PassTime(360);
 	CPlayerPed *ped = FindPlayerPed();
 	ped->m_fCurrentStamina = ped->m_fMaxStamina;
-	CGame::TidyUpMemory(true, false);
+	Game_TidyUpMemory(true, false);
 }
 
 
@@ -615,12 +615,12 @@ RestoreForStartLoad()
 		return false;
 	} else {
 		uint8 *_buf = buf + sizeof(int32) + sizeof(wchar[24]) + sizeof(SYSTEMTIME) + sizeof(SIZE_OF_ONE_GAME_IN_BYTES);
-		ReadDataFromBufferPointer(_buf, CGame::currLevel);
+		ReadDataFromBufferPointer(_buf, Game_currLevel);
 		ReadDataFromBufferPointer(_buf, TheCamera.GetMatrix().GetPosition().x);
 		ReadDataFromBufferPointer(_buf, TheCamera.GetMatrix().GetPosition().y);
 		ReadDataFromBufferPointer(_buf, TheCamera.GetMatrix().GetPosition().z);
-		CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
-		CStreaming::RemoveUnusedBuildings(CGame::currLevel);
+		Streaming_RemoveUnusedBigBuildings(Game_currLevel);
+		Streaming_RemoveUnusedBuildings(Game_currLevel);
 
 		if (CloseFile(file)) {
 			return true;
@@ -1223,11 +1223,11 @@ bool SaveGameForPause(int type)
 		return false;
 	}
 	WaitForSave = 0;
-	if (gGameState != GS_PLAYING_GAME || (CTheScripts::bAlreadyRunningAMissionScript && type != SAVE_TYPE_QUICKSAVE_FOR_SCRIPT_ON_A_MISSION)) {
+	if (gGameState != GS_PLAYING_GAME || (TheScripts_bAlreadyRunningAMissionScript && type != SAVE_TYPE_QUICKSAVE_FOR_SCRIPT_ON_A_MISSION)) {
 		DisplaySaveResult(3, Stats_LastMissionPassedName);
 		return false;
 	}
-	debug("SaveGameForPause ******************************** %s doSave %d", Stats_LastMissionPassedName, !CTheScripts::bAlreadyRunningAMissionScript);
+	debug("SaveGameForPause ******************************** %s doSave %d", Stats_LastMissionPassedName, !TheScripts_bAlreadyRunningAMissionScript);
 	IsQuickSave = type;
 	MissionStartTime = 0;
 	int res = PcSaveHelper.SaveSlot(PAUSE_SAVE_SLOT);

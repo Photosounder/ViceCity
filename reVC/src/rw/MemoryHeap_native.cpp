@@ -17,17 +17,17 @@ size_t MemoryHeap_HostMemoryUsed(void)
 void MemoryHeap_HostMakeSpaceFor(int32_t size)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::MakeSpaceFor(size);
+    Streaming_MakeSpaceFor(size);
 }
 void MemoryHeap_HostTidyGame(bool a,bool b)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CGame::TidyUpMemory(a,b);
+    Game_TidyUpMemory(a,b);
 }
 bool MemoryHeap_HostPlayingIntro(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    return CGame::playingIntro;
+    return Game_playingIntro;
 }
 void MemoryHeap_HostRemoveOtherCollision(void)
 {
@@ -37,7 +37,7 @@ void MemoryHeap_HostRemoveOtherCollision(void)
 int32_t MemoryHeap_HostCollisionLevel(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    return CCollision::ms_collisionInMemory;
+    return Collision_ms_collisionInMemory;
 }
 void MemoryHeap_HostLoadCollision(int32_t level)
 {
@@ -47,17 +47,17 @@ void MemoryHeap_HostLoadCollision(int32_t level)
 int32_t MemoryHeap_HostCurrentLevel(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    return CGame::currLevel;
+    return Game_currLevel;
 }
 void MemoryHeap_HostRequestBuildings(int32_t level)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RequestBigBuildings(static_cast<eLevelName>(level));
+    Streaming_RequestBigBuildings(static_cast<eLevelName>(level));
 }
 void MemoryHeap_HostLoadRequested(bool priority)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::LoadAllRequestedModels(priority);
+    Streaming_LoadAllRequestedModels(priority);
 }
 void MemoryHeap_HostLoadingScreen(const char *a,const char *b,const char *c)
 {
@@ -67,32 +67,32 @@ void MemoryHeap_HostLoadingScreen(const char *a,const char *b,const char *c)
 void MemoryHeap_HostRemoveIslandsIndustrial(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RemoveIslandsNotUsed(LEVEL_INDUSTRIAL);
+    Streaming_RemoveIslandsNotUsed(LEVEL_INDUSTRIAL);
 }
 void MemoryHeap_HostRemoveIslandsCommercial(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RemoveIslandsNotUsed(LEVEL_COMMERCIAL);
+    Streaming_RemoveIslandsNotUsed(LEVEL_COMMERCIAL);
 }
 void MemoryHeap_HostRemoveIslandsSuburban(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RemoveIslandsNotUsed(LEVEL_SUBURBAN);
+    Streaming_RemoveIslandsNotUsed(LEVEL_SUBURBAN);
 }
 void MemoryHeap_HostRemoveBuildingsIndustrial(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RemoveBigBuildings(LEVEL_INDUSTRIAL);
+    Streaming_RemoveBigBuildings(LEVEL_INDUSTRIAL);
 }
 void MemoryHeap_HostRemoveBuildingsCommercial(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RemoveBigBuildings(LEVEL_COMMERCIAL);
+    Streaming_RemoveBigBuildings(LEVEL_COMMERCIAL);
 }
 void MemoryHeap_HostRemoveBuildingsSuburban(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    CStreaming::RemoveBigBuildings(LEVEL_SUBURBAN);
+    Streaming_RemoveBigBuildings(LEVEL_SUBURBAN);
 }
 #endif
 //- rouz edit (ChatGPT)

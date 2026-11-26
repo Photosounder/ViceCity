@@ -2,10 +2,9 @@
 
 class CAutomobile;
 
-class CGameLogic
-{
-public:
-	enum {
+//+ rouz edit (Claude)
+// Formerly the static class CGameLogic, now C globals and functions shared with C
+enum {
 		SHORTCUT_NONE = 0,
 		SHORTCUT_INIT,
 		SHORTCUT_IDLE,
@@ -14,38 +13,41 @@ public:
 		SHORTCUT_ARRIVING,
 		SHORTCUT_GETTING_OUT
 	};
-
-	static void InitAtStartOfGame();
-	static void PassTime(uint32 time);
-	static void SortOutStreamingAndMemory(const CVector &pos);
-	static void Update();
-	static void RestorePlayerStuffDuringResurrection(class CPlayerPed *pPlayerPed, CVector pos, float angle);
-
-	static void ClearShortCut();
-	static void SetUpShortCut(CVector, float, CVector, float);
-	static void AbandonShortCutIfTaxiHasBeenMessedWith();
-	static void AbandonShortCutIfPlayerMilesAway();
-	static void UpdateShortCut();
-	static void AddShortCutPointAfterDeath(CVector, float);
-	static void AddShortCutDropOffPointForMission(CVector, float);
-	static void RemoveShortCutDropOffPointForMission();
-	static void AfterDeathArrestSetUpShortCutTaxi();
-
-	static void Save(uint8*, uint32*);
-	static void Load(uint8*, uint32);
-
-	static uint8 ActivePlayers;
-	static uint8 ShortCutState;
-	static CAutomobile* pShortCutTaxi;
-	static uint32 NumAfterDeathStartPoints;
-	static CVector ShortCutStart;
-	static float ShortCutStartOrientation;
-	static CVector ShortCutDestination;
-	static float ShortCutDestinationOrientation;
-	static uint32 ShortCutTimer;
-	static CVector AfterDeathStartPoints[NUM_SHORTCUT_START_POINTS];
-	static float AfterDeathStartPointOrientation[NUM_SHORTCUT_START_POINTS];
-	static CVector ShortCutDropOffForMission;
-	static float ShortCutDropOffOrientationForMission;
-	static bool MissionDropOffReadyToBeUsed;
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
+void GameLogic_InitAtStartOfGame();
+void GameLogic_PassTime(uint32 time);
+void GameLogic_Update();
+void GameLogic_RestorePlayerStuffDuringResurrection(class CPlayerPed *pPlayerPed, CVector pos, float angle);
+void GameLogic_ClearShortCut();
+void GameLogic_SetUpShortCut(CVector, float, CVector, float);
+void GameLogic_AbandonShortCutIfTaxiHasBeenMessedWith();
+void GameLogic_AbandonShortCutIfPlayerMilesAway();
+void GameLogic_UpdateShortCut();
+void GameLogic_AddShortCutPointAfterDeath(CVector, float);
+void GameLogic_AddShortCutDropOffPointForMission(CVector, float);
+void GameLogic_RemoveShortCutDropOffPointForMission();
+void GameLogic_AfterDeathArrestSetUpShortCutTaxi();
+void GameLogic_Save(uint8*, uint32*);
+void GameLogic_Load(uint8*, uint32);
+extern uint8 GameLogic_ActivePlayers;
+extern uint8 GameLogic_ShortCutState;
+extern CAutomobile* GameLogic_pShortCutTaxi;
+extern uint32 GameLogic_NumAfterDeathStartPoints;
+extern CVector GameLogic_ShortCutStart;
+extern float GameLogic_ShortCutStartOrientation;
+extern CVector GameLogic_ShortCutDestination;
+extern float GameLogic_ShortCutDestinationOrientation;
+extern uint32 GameLogic_ShortCutTimer;
+extern CVector GameLogic_AfterDeathStartPoints[NUM_SHORTCUT_START_POINTS];
+extern float GameLogic_AfterDeathStartPointOrientation[NUM_SHORTCUT_START_POINTS];
+extern CVector GameLogic_ShortCutDropOffForMission;
+extern float GameLogic_ShortCutDropOffOrientationForMission;
+extern bool GameLogic_MissionDropOffReadyToBeUsed;
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+void GameLogic_SortOutStreamingAndMemory(const CVector &pos);
+#endif
+//- rouz edit (Claude)

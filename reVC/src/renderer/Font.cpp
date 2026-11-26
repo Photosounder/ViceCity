@@ -11,31 +11,31 @@
 #endif
 #include "Timer.h"
 
-CFontDetails CFont::Details;
-bool16 CFont::NewLine;
-Sprite2d CFont::Sprite[MAX_FONTS];
+CFontDetails Font_Details;
+bool16 Font_NewLine;
+Sprite2d Font_Sprite[MAX_FONTS];
 static void Sprite2d_Exit_CFont_Sprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(CFont::Sprite,(size_t)(MAX_FONTS));
+    Sprite2d_DeinitArray(Font_Sprite,(size_t)(MAX_FONTS));
 }
 static int Sprite2d_Start_CFont_Sprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(CFont::Sprite,(size_t)(MAX_FONTS));atexit(Sprite2d_Exit_CFont_Sprite);return 0;
+    Sprite2d_InitArray(Font_Sprite,(size_t)(MAX_FONTS));atexit(Sprite2d_Exit_CFont_Sprite);return 0;
 }
 static const int Sprite2d_Started_CFont_Sprite=Sprite2d_Start_CFont_Sprite();
-CFontRenderState CFont::RenderState;
+CFontRenderState Font_RenderState;
 
 #ifdef MORE_LANGUAGES
-uint8 CFont::LanguageSet = FONT_LANGSET_EFIGS;
-int32 CFont::Slot = -1;
+uint8 Font_LanguageSet = FONT_LANGSET_EFIGS;
+int32 Font_Slot = -1;
 #define JAP_TERMINATION (0x8000 | '~')
 
-int16 CFont::Size[LANGSET_MAX][MAX_FONTS][210] = {
+int16 Font_Size[LANGSET_MAX][MAX_FONTS][210] = {
 	{
 #else
-int16 CFont::Size[MAX_FONTS][210] = {
+int16 Font_Size[MAX_FONTS][210] = {
 #endif
 	{
 		//FONT2 EFIGS
@@ -282,20 +282,20 @@ static int Sprite2d_Start_fontButtonSprites(void)
     Sprite2d_InitArray(fontButtonSprites,(size_t)(MAX_BUTTON_ICONS));atexit(Sprite2d_Exit_fontButtonSprites);return 0;
 }
 static const int Sprite2d_Started_fontButtonSprites=Sprite2d_Start_fontButtonSprites();
-int CFont::PS2Symbol = BUTTON_NONE;
-int CFont::ButtonsSlot = -1;
+int Font_PS2Symbol = BUTTON_NONE;
+int Font_ButtonsSlot = -1;
 #endif // BUTTON_ICONS
 
 void
-CFont::Initialise(void)
+Font_Initialise(void)
 {
 	int slot;
 
 	// Use the complete C texture dictionary owner with the original live arguments
 	slot = TxdStore_AddTxdSlot("fonts");
 #ifdef MORE_LANGUAGES
-	Slot = slot;
-	switch (LanguageSet)
+	Font_Slot = slot;
+	switch (Font_LanguageSet)
 	{
 	case FONT_LANGSET_EFIGS:
 	default:
@@ -328,57 +328,57 @@ CFont::Initialise(void)
 	([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[0]),"font2", "font2m");
+})(&(Font_Sprite[0]),"font2", "font2m");
 #ifdef MORE_LANGUAGES
-	if (IsJapanese()) {
+	if (Font_IsJapanese()) {
 		([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[1]),"FONTJAP", "FONTJAP_mask");
+})(&(Font_Sprite[1]),"FONTJAP", "FONTJAP_mask");
 		([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[3]),"FONTJAP", "FONTJAP_mask");
+})(&(Font_Sprite[3]),"FONTJAP", "FONTJAP_mask");
 	}
 #endif // MORE_LANGUAGES
 	([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[1]),"font1", "font1m");
-	SetScale(1.0f, 1.0f);
-	SetSlantRefPoint(SCREEN_WIDTH, 0.0f);
-	SetSlant(0.0f);
-	SetColor(CRGBA(255, 255, 255, 0));
-	SetJustifyOff();
-	SetCentreOff();
-	SetWrapx(SCREEN_WIDTH);
-	SetCentreSize(SCREEN_WIDTH);
-	SetBackgroundOff();
-	SetBackgroundColor(CRGBA(128, 128, 128, 128));
-	SetBackGroundOnlyTextOff();
-	SetPropOn();
-	SetFontStyle(FONT_BANK);
-	SetRightJustifyWrap(0.0f);
-	SetAlphaFade(255.0f);
-	SetDropShadowPosition(0);
+})(&(Font_Sprite[1]),"font1", "font1m");
+	Font_SetScale(1.0f, 1.0f);
+	Font_SetSlantRefPoint(SCREEN_WIDTH, 0.0f);
+	Font_SetSlant(0.0f);
+	Font_SetColor(CRGBA(255, 255, 255, 0));
+	Font_SetJustifyOff();
+	Font_SetCentreOff();
+	Font_SetWrapx(SCREEN_WIDTH);
+	Font_SetCentreSize(SCREEN_WIDTH);
+	Font_SetBackgroundOff();
+	Font_SetBackgroundColor(CRGBA(128, 128, 128, 128));
+	Font_SetBackGroundOnlyTextOff();
+	Font_SetPropOn();
+	Font_SetFontStyle(FONT_BANK);
+	Font_SetRightJustifyWrap(0.0f);
+	Font_SetAlphaFade(255.0f);
+	Font_SetDropShadowPosition(0);
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_PopCurrentTxd();
 
 #if !defined(GAMEPAD_MENU) && defined(BUTTON_ICONS)
 	// loaded in CMenuManager with GAMEPAD_MENU defined
-	LoadButtons("MODELS/X360BTNS.TXD");
+	Font_LoadButtons("MODELS/X360BTNS.TXD");
 #endif
 }
 
 #ifdef BUTTON_ICONS
 void
-CFont::LoadButtons(const char *txdPath)
+Font_LoadButtons(const char *txdPath)
 {
 	if (int file = FileMgr_OpenFileDefault(txdPath)) {
 		FileMgr_CloseFile(file);
-		if (ButtonsSlot == -1)
+		if (Font_ButtonsSlot == -1)
 			// Use the complete C texture dictionary owner with the original live arguments
-			ButtonsSlot = TxdStore_AddTxdSlot("buttons");
+			Font_ButtonsSlot = TxdStore_AddTxdSlot("buttons");
 		else {
 			for (int i = 0; i < MAX_BUTTON_ICONS; i++)
 				([](Sprite2d *spriteSelf){
@@ -386,16 +386,16 @@ CFont::LoadButtons(const char *txdPath)
     Sprite2d_Delete(spriteSelf);
 })(&(fontButtonSprites[i]));
 			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_RemoveTxd(ButtonsSlot);
+			TxdStore_RemoveTxd(Font_ButtonsSlot);
 		}
 		// Use the complete C texture dictionary owner with the original live arguments
-		TxdStore_LoadFile(ButtonsSlot, txdPath);
+		TxdStore_LoadFile(Font_ButtonsSlot, txdPath);
 		// Use the complete C texture dictionary owner with the original live arguments
-		TxdStore_AddRef(ButtonsSlot);
+		TxdStore_AddRef(Font_ButtonsSlot);
 		// Use the complete C texture dictionary owner with the original live arguments
 		TxdStore_PushCurrentTxd();
 		// Use the complete C texture dictionary owner with the original live arguments
-		TxdStore_SetCurrentTxd(ButtonsSlot);
+		TxdStore_SetCurrentTxd(Font_ButtonsSlot);
 		([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
@@ -472,15 +472,15 @@ CFont::LoadButtons(const char *txdPath)
 		TxdStore_PopCurrentTxd();
 	}
 	else {
-		if (ButtonsSlot != -1) {
+		if (Font_ButtonsSlot != -1) {
 			for (int i = 0; i < MAX_BUTTON_ICONS; i++)
 				([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
 })(&(fontButtonSprites[i]));
 			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_RemoveTxdSlot(ButtonsSlot);
-			ButtonsSlot = -1;
+			TxdStore_RemoveTxdSlot(Font_ButtonsSlot);
+			Font_ButtonsSlot = -1;
 		}
 	}
 }
@@ -488,101 +488,101 @@ CFont::LoadButtons(const char *txdPath)
 
 #ifdef MORE_LANGUAGES
 void
-CFont::ReloadFonts(uint8 set)
+Font_ReloadFonts(uint8 set)
 {
-	if (Slot != -1 && LanguageSet != set) {
+	if (Font_Slot != -1 && Font_LanguageSet != set) {
 		([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprite[0]));
+})(&(Font_Sprite[0]));
 		([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprite[1]));
-		if (IsJapanese())
+})(&(Font_Sprite[1]));
+		if (Font_IsJapanese())
 			([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprite[2]));
+})(&(Font_Sprite[2]));
 		// Use the complete C texture dictionary owner with the original live arguments
 		TxdStore_PushCurrentTxd();
 		// Use the complete C texture dictionary owner with the original live arguments
-		TxdStore_RemoveTxd(Slot);
+		TxdStore_RemoveTxd(Font_Slot);
 		switch (set)
 		{
 		case FONT_LANGSET_EFIGS:
 		default:
 			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_LoadFile(Slot, "MODELS/FONTS.TXD");
+			TxdStore_LoadFile(Font_Slot, "MODELS/FONTS.TXD");
 			break;
 		case FONT_LANGSET_POLISH:
 			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_LoadFile(Slot, "MODELS/FONTS_P.TXD");
+			TxdStore_LoadFile(Font_Slot, "MODELS/FONTS_P.TXD");
 			break;
 		case FONT_LANGSET_RUSSIAN:
 			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_LoadFile(Slot, "MODELS/FONTS_R.TXD");
+			TxdStore_LoadFile(Font_Slot, "MODELS/FONTS_R.TXD");
 			break;
 		case FONT_LANGSET_JAPANESE:
 			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_LoadFile(Slot, "MODELS/FONTS_J.TXD");
+			TxdStore_LoadFile(Font_Slot, "MODELS/FONTS_J.TXD");
 			break;
 		}
 		// Use the complete C texture dictionary owner with the original live arguments
-		TxdStore_SetCurrentTxd(Slot);
+		TxdStore_SetCurrentTxd(Font_Slot);
 		([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[0]),"font2", "font2_mask");
+})(&(Font_Sprite[0]),"font2", "font2_mask");
 		if (set == FONT_LANGSET_JAPANESE) {
 			([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[2]),"FONTJAP", "FONTJAP_mask");
+})(&(Font_Sprite[2]),"FONTJAP", "FONTJAP_mask");
 		}
 		([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprite[1]),"font1", "font1_mask");
+})(&(Font_Sprite[1]),"font1", "font1_mask");
 		// Use the complete C texture dictionary owner with the original live arguments
 		TxdStore_PopCurrentTxd();
 	}
-	LanguageSet = set;
+	Font_LanguageSet = set;
 }
 #endif
 
 void
-CFont::Shutdown(void)
+Font_Shutdown(void)
 {
 #ifdef BUTTON_ICONS
-	if (ButtonsSlot != -1) {
+	if (Font_ButtonsSlot != -1) {
 		for (int i = 0; i < MAX_BUTTON_ICONS; i++)
 			([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
 })(&(fontButtonSprites[i]));
 		// Use the complete C texture dictionary owner with the original live arguments
-		TxdStore_RemoveTxdSlot(ButtonsSlot);
-		ButtonsSlot = -1;
+		TxdStore_RemoveTxdSlot(Font_ButtonsSlot);
+		Font_ButtonsSlot = -1;
 	}
 #endif
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprite[0]));
+})(&(Font_Sprite[0]));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprite[1]));
+})(&(Font_Sprite[1]));
 #ifdef MORE_LANGUAGES
-	if (IsJapanese())
+	if (Font_IsJapanese())
 		([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprite[3]));
+})(&(Font_Sprite[3]));
 	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_RemoveTxdSlot(Slot);
-	Slot = -1;
+	TxdStore_RemoveTxdSlot(Font_Slot);
+	Font_Slot = -1;
 #else
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_RemoveTxdSlot(TxdStore_FindTxdSlot("fonts"));
@@ -590,49 +590,49 @@ CFont::Shutdown(void)
 }
 
 void
-CFont::InitPerFrame(void)
+Font_InitPerFrame(void)
 {
-	RenderState.style = -1;
-	Details.anonymous_25 = 0;
+	Font_RenderState.style = -1;
+	Font_Details.anonymous_25 = 0;
 	FontRenderStatePointer.pRenderState = (CFontRenderState*)FontRenderStateBuf;
-	SetDropShadowPosition(0);
-	NewLine = false;
+	Font_SetDropShadowPosition(0);
+	Font_NewLine = false;
 #ifdef BUTTON_ICONS
-	PS2Symbol = BUTTON_NONE;
+	Font_PS2Symbol = BUTTON_NONE;
 #endif
 }
 
 #ifdef BUTTON_ICONS
 void
-CFont::DrawButton(float x, float y)
+Font_DrawButton(float x, float y)
 {
 	if (x <= 0.0f || x > SCREEN_WIDTH || y <= 0.0f || y > SCREEN_HEIGHT)
 		return;
 
-	if (PS2Symbol != BUTTON_NONE) {
+	if (Font_PS2Symbol != BUTTON_NONE) {
 		CRect rect;
 		// Initialize rectangle bounds at the former local constructor boundary
 		Rect_Init(&rect);
 		rect.left = x;
-		rect.top = RenderState.scaleY + RenderState.scaleY + y;
-		rect.right = RenderState.scaleY * 17.0f + x;
-		rect.bottom = RenderState.scaleY * 19.0f + y;
+		rect.top = Font_RenderState.scaleY + Font_RenderState.scaleY + y;
+		rect.right = Font_RenderState.scaleY * 17.0f + x;
+		rect.bottom = Font_RenderState.scaleY * 19.0f + y;
 
 		int vertexAlphaState;
 		void *raster;
 		RwRenderStateGet(rwRENDERSTATEVERTEXALPHAENABLE, &vertexAlphaState);
 		RwRenderStateGet(rwRENDERSTATETEXTURERASTER, &raster);
 		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)TRUE);
-		if (RenderState.bIsShadow)
+		if (Font_RenderState.bIsShadow)
 			([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(fontButtonSprites[PS2Symbol]),rect, RenderState.color);
+})(&(fontButtonSprites[Font_PS2Symbol]),rect, Font_RenderState.color);
 		else
 			([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(fontButtonSprites[PS2Symbol]),rect, CRGBA(255, 255, 255, RenderState.color.a));
+})(&(fontButtonSprites[Font_PS2Symbol]),rect, CRGBA(255, 255, 255, Font_RenderState.color.a));
 		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
 		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)vertexAlphaState);
 	}
@@ -640,7 +640,7 @@ CFont::DrawButton(float x, float y)
 #endif
 
 void
-CFont::PrintChar(float x, float y, wchar c)
+Font_PrintChar(float x, float y, wchar c)
 {
 	bool bDontPrint = false;
 	if(x <= 0.0f || x > SCREEN_WIDTH ||
@@ -648,22 +648,22 @@ CFont::PrintChar(float x, float y, wchar c)
 		return;
 
 	bDontPrint = c == '\0';
-	float w = GetCharacterWidth(c) / 32.0f;
-	if (Details.bFontHalfTexture && c == 208)
+	float w = Font_GetCharacterWidth(c) / 32.0f;
+	if (Font_Details.bFontHalfTexture && c == 208)
 		c = '\0';
 	float xoff = c % 16;
 	float yoff = c / 16;
 #ifdef MORE_LANGUAGES
-	if (IsJapaneseFont()) {
+	if (Font_IsJapaneseFont()) {
 		w = 21.0f;
 		xoff = (float)(c % 48);
 		yoff = c / 48;
 	}
 #endif
 
-	if(RenderState.style == FONT_BANK || RenderState.style == FONT_STANDARD){
+	if(Font_RenderState.style == FONT_BANK || Font_RenderState.style == FONT_STANDARD){
 		if (bDontPrint) return;
-		if (RenderState.slant == 0.0f) {
+		if (Font_RenderState.slant == 0.0f) {
 #ifdef FIX_BUGS
 			if (c < 192) {
 #else
@@ -674,9 +674,9 @@ CFont::PrintChar(float x, float y, wchar c)
     Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
 })(
 					Rect_Make(x, y,
-						x + 32.0f * RenderState.scaleX * 1.0f,
-						y + 40.0f * RenderState.scaleY * 0.5f),
-					RenderState.color,
+						x + 32.0f * Font_RenderState.scaleX * 1.0f,
+						y + 40.0f * Font_RenderState.scaleY * 0.5f),
+					Font_RenderState.color,
 					xoff / 16.0f, yoff / 12.8f + 0.0021f,
 					(xoff + 1.0f) / 16.0f - 0.001f, yoff / 12.8f + 0.0021f,
 					xoff / 16.0f, (yoff + 1.0f) / 12.8f - 0.0021f,
@@ -687,9 +687,9 @@ CFont::PrintChar(float x, float y, wchar c)
     Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
 })(
 					Rect_Make(x, y,
-						x + 32.0f * RenderState.scaleX * 1.0f,
-						y + 33.0f * RenderState.scaleY * 0.5f),
-					RenderState.color,
+						x + 32.0f * Font_RenderState.scaleX * 1.0f,
+						y + 33.0f * Font_RenderState.scaleY * 0.5f),
+					Font_RenderState.color,
 					xoff / 16.0f, yoff / 12.8f + 0.0021f,
 					(xoff + 1.0f) / 16.0f - 0.001f, yoff / 12.8f + 0.0021f,
 					xoff / 16.0f, (yoff + 1.0f) / 12.8f - 0.017f,
@@ -701,9 +701,9 @@ CFont::PrintChar(float x, float y, wchar c)
     Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
 })(
 				Rect_Make(x, y,
-					x + 32.0f * RenderState.scaleX * 1.0f,
-					y + 40.0f * RenderState.scaleY * 0.5f),
-				RenderState.color,
+					x + 32.0f * Font_RenderState.scaleX * 1.0f,
+					y + 40.0f * Font_RenderState.scaleY * 0.5f),
+				Font_RenderState.color,
 				xoff / 16.0f, yoff / 12.8f + 0.00055f,
 				(xoff + 1.0f) / 16.0f - 0.001f, yoff / 12.8f + 0.0021f + 0.01f,
 				xoff / 16.0f, (yoff + 1.0f) / 12.8f - 0.009f,
@@ -739,9 +739,9 @@ CFont::PrintChar(float x, float y, wchar c)
     Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
 })(
 			Rect_Make(x, y,
-				x + 32.0f * RenderState.scaleX * w,
-				y + 32.0f * RenderState.scaleY * 0.5f),
-			RenderState.color,
+				x + 32.0f * Font_RenderState.scaleX * w,
+				y + 32.0f * Font_RenderState.scaleY * 0.5f),
+			Font_RenderState.color,
 			xoff / 16.0f, yoff / 16.0f,
 			(xoff + w) / 16.0f, yoff / 16.0f,
 			xoff / 16.0f, (yoff + 1.0f) / 16.0f,
@@ -750,12 +750,12 @@ CFont::PrintChar(float x, float y, wchar c)
 }
 
 #ifdef MORE_LANGUAGES
-bool CFont::IsJapanesePunctuation(wchar *str)
+bool Font_IsJapanesePunctuation(wchar *str)
 {
 	return (*str == 0xE7 || *str == 0x124 || *str == 0x126 || *str == 0x128 || *str == 0x104 || *str == ',' || *str == '>' || *str == '!' || *str == 0x99 || *str == '?' || *str == ':');
 }
 
-bool CFont::IsAnsiCharacter(wchar *s)
+bool Font_IsAnsiCharacter(wchar *s)
 {
 	if (*s >= 'A' && *s <= 'Z')
 		return true;
@@ -772,7 +772,7 @@ bool CFont::IsAnsiCharacter(wchar *s)
 #endif
 
 void
-CFont::RenderFontBuffer()
+Font_RenderFontBuffer()
 {
 	if (FontRenderStatePointer.pRenderState == (CFontRenderState*)FontRenderStateBuf) return;
 
@@ -785,12 +785,12 @@ CFont::RenderFontBuffer()
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetRenderState(spriteSelf);
-})(&(Sprite[RenderState.style]));
+})(&(Font_Sprite[Font_RenderState.style]));
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RenderState = *(CFontRenderState*)&FontRenderStateBuf[0];
-	textPosX = RenderState.fTextPosX;
-	textPosY = RenderState.fTextPosY;
-	color = RenderState.color;
+	Font_RenderState = *(CFontRenderState*)&FontRenderStateBuf[0];
+	textPosX = Font_RenderState.fTextPosX;
+	textPosY = Font_RenderState.fTextPosY;
+	color = Font_RenderState.color;
 	tFontRenderStatePointer pRenderStateBufPointer;
 	pRenderStateBufPointer.pRenderState = (CFontRenderState*)&FontRenderStateBuf[0];
 	for (++pRenderStateBufPointer.pRenderState; pRenderStateBufPointer.pStr < FontRenderStatePointer.pStr; pRenderStateBufPointer.pStr++) {
@@ -801,58 +801,58 @@ CFont::RenderFontBuffer()
 			if (tmpPointer.pStr >= FontRenderStatePointer.pStr)
 				break;
 
-			RenderState = *(tmpPointer.pRenderState++);
+			Font_RenderState = *(tmpPointer.pRenderState++);
 
 			pRenderStateBufPointer = tmpPointer;
 
-			textPosX = RenderState.fTextPosX;
-			textPosY = RenderState.fTextPosY;
-			color = RenderState.color;
+			textPosX = Font_RenderState.fTextPosX;
+			textPosY = Font_RenderState.fTextPosY;
+			color = Font_RenderState.color;
 		}
 		if (*pRenderStateBufPointer.pStr == '~') {
 #ifdef BUTTON_ICONS
-			PS2Symbol = BUTTON_NONE;
+			Font_PS2Symbol = BUTTON_NONE;
 #endif
-			pRenderStateBufPointer.pStr = ParseToken(pRenderStateBufPointer.pStr, color, bFlash, bBold);
+			pRenderStateBufPointer.pStr = Font_ParseToken(pRenderStateBufPointer.pStr, color, bFlash, bBold);
 #ifdef BUTTON_ICONS
-			if(PS2Symbol != BUTTON_NONE) {
-				DrawButton(textPosX, textPosY);
-				textPosX += RenderState.scaleY * 17.0f;
-				PS2Symbol = BUTTON_NONE;
+			if(Font_PS2Symbol != BUTTON_NONE) {
+				Font_DrawButton(textPosX, textPosY);
+				textPosX += Font_RenderState.scaleY * 17.0f;
+				Font_PS2Symbol = BUTTON_NONE;
 			}
 #endif
 			if (bFlash) {
-				if ((*Timer_GetTimeInMilliseconds()) - Details.nFlashTimer > 300) {
-					Details.bFlashState = !Details.bFlashState;
-					Details.nFlashTimer = (*Timer_GetTimeInMilliseconds());
+				if ((*Timer_GetTimeInMilliseconds()) - Font_Details.nFlashTimer > 300) {
+					Font_Details.bFlashState = !Font_Details.bFlashState;
+					Font_Details.nFlashTimer = (*Timer_GetTimeInMilliseconds());
 				}
-				Details.color.alpha = Details.bFlashState ? 0 : 255;
+				Font_Details.color.alpha = Font_Details.bFlashState ? 0 : 255;
 			}
-			if (!RenderState.bIsShadow)
-				RenderState.color = color;
+			if (!Font_RenderState.bIsShadow)
+				Font_RenderState.color = color;
 		}
 		wchar c = *pRenderStateBufPointer.pStr;
 		c -= ' ';
-		if (RenderState.bFontHalfTexture) 
-			c = FindNewCharacter(c); 
+		if (Font_RenderState.bFontHalfTexture) 
+			c = Font_FindNewCharacter(c); 
 		else if (c > 155) 
 			c = '\0'; 
 
-		if (RenderState.slant != 0.0f)
-			textPosY = (RenderState.slantRefX - textPosX) * RenderState.slant + RenderState.slantRefY;
-		PrintChar(textPosX, textPosY, c);
+		if (Font_RenderState.slant != 0.0f)
+			textPosY = (Font_RenderState.slantRefX - textPosX) * Font_RenderState.slant + Font_RenderState.slantRefY;
+		Font_PrintChar(textPosX, textPosY, c);
 		if (bBold) {
-			PrintChar(textPosX + 1.0f, textPosY, c);
-			PrintChar(textPosX + 2.0f, textPosY, c);
+			Font_PrintChar(textPosX + 1.0f, textPosY, c);
+			Font_PrintChar(textPosX + 2.0f, textPosY, c);
 			textPosX += 2.0f;
 		}
 #ifdef FIX_BUGS
 		// PS2 uses different chars for some symbols
-		if (!RenderState.bFontHalfTexture && c == 30) c = 61; // wanted star
+		if (!Font_RenderState.bFontHalfTexture && c == 30) c = 61; // wanted star
 #endif
-		textPosX += RenderState.scaleX * GetCharacterWidth(c);
+		textPosX += Font_RenderState.scaleX * Font_GetCharacterWidth(c);
 		if (c == '\0')
-			textPosX += RenderState.fExtraSpace;
+			textPosX += Font_RenderState.fExtraSpace;
 	}
 	// Preserve the original operation through the C sprite interface
 	Sprite2d_RenderVertexBuffer();
@@ -861,106 +861,106 @@ CFont::RenderFontBuffer()
 
 #if 0 //def MORE_LANGUAGES
 bool
-CFont::PrintString(float x, float y, wchar *start, wchar *&end, float spwidth, float japX)
+Font_PrintString(float x, float y, wchar *start, wchar *&end, float spwidth, float japX)
 {
 	wchar *s, c, unused;
 
-	if (IsJapanese()) {
+	if (Font_IsJapanese()) {
 		float jx = 0.0f;
 		for (s = start; s < end; s++) {
 			if (*s == JAP_TERMINATION || *s == '~')
-				s = ParseToken(s, &unused, true);
-			if (NewLine) {
-				NewLine = false;
+				s = Font_ParseToken(s, &unused, true);
+			if (Font_NewLine) {
+				Font_NewLine = false;
 				break;
 			}
-			jx += GetCharacterSize(*s - ' ');
+			jx += Font_GetCharacterSize(*s - ' ');
 		}
 		s = start;
-		if (Details.centre)
+		if (Font_Details.centre)
 			x = japX - jx / 2.0f;
-		else if (Details.rightJustify)
+		else if (Font_Details.rightJustify)
 			x = japX - jx;
 	}
 
 	for (s = start; s < end; s++) {
-		if (*s == '~' || (IsJapanese() && *s == JAP_TERMINATION))
-			s = ParseToken(s, &unused);
-		if (NewLine && IsJapanese()) {
-			NewLine = false;
+		if (*s == '~' || (Font_IsJapanese() && *s == JAP_TERMINATION))
+			s = Font_ParseToken(s, &unused);
+		if (Font_NewLine && Font_IsJapanese()) {
+			Font_NewLine = false;
 			end = s;
 			return true;
 		}
 		c = *s - ' ';
-		if (Details.slant != 0.0f && !IsJapanese())
-			y = (Details.slantRefX - x) * Details.slant + Details.slantRefY;
+		if (Font_Details.slant != 0.0f && !Font_IsJapanese())
+			y = (Font_Details.slantRefX - x) * Font_Details.slant + Font_Details.slantRefY;
 
-		PrintChar(x, y, c);
-		x += GetCharacterSize(c);
-		if (c == 0 && (!NewLine || !IsJapanese()))	// space
+		Font_PrintChar(x, y, c);
+		x += Font_GetCharacterSize(c);
+		if (c == 0 && (!Font_NewLine || !Font_IsJapanese()))	// space
 			x += spwidth;
 	}
 	return false;
 }
 #else
 void
-CFont::PrintString(float x, float y, uint32, wchar *start, wchar *end, float spwidth)
+Font_PrintString(float x, float y, uint32, wchar *start, wchar *end, float spwidth)
 {
 	wchar *s;
 
-	if (RenderState.style != Details.style) {
-		RenderFontBuffer();
-		RenderState.style = Details.style;
+	if (Font_RenderState.style != Font_Details.style) {
+		Font_RenderFontBuffer();
+		Font_RenderState.style = Font_Details.style;
 	}
 
-	float dropShadowPosition = Details.dropShadowPosition;
-	if (dropShadowPosition != 0.0f && (Details.style == FONT_BANK || Details.style == FONT_STANDARD)) {
-		CRGBA color = Details.color;
-		Details.color = Details.dropColor;
-		Details.dropShadowPosition = 0;
-		Details.bIsShadow = true;
-		if (Details.slant != 0.0f) {
-			Details.slantRefX += SCREEN_SCALE_X(dropShadowPosition);
-			Details.slantRefY += SCREEN_SCALE_Y(dropShadowPosition);
-			PrintString(SCREEN_SCALE_X(dropShadowPosition) + x, SCREEN_SCALE_Y(dropShadowPosition) + y, Details.anonymous_25, start, end, spwidth);
-			Details.slantRefX -= SCREEN_SCALE_X(dropShadowPosition);
-			Details.slantRefY -= SCREEN_SCALE_Y(dropShadowPosition);
+	float dropShadowPosition = Font_Details.dropShadowPosition;
+	if (dropShadowPosition != 0.0f && (Font_Details.style == FONT_BANK || Font_Details.style == FONT_STANDARD)) {
+		CRGBA color = Font_Details.color;
+		Font_Details.color = Font_Details.dropColor;
+		Font_Details.dropShadowPosition = 0;
+		Font_Details.bIsShadow = true;
+		if (Font_Details.slant != 0.0f) {
+			Font_Details.slantRefX += SCREEN_SCALE_X(dropShadowPosition);
+			Font_Details.slantRefY += SCREEN_SCALE_Y(dropShadowPosition);
+			Font_PrintString(SCREEN_SCALE_X(dropShadowPosition) + x, SCREEN_SCALE_Y(dropShadowPosition) + y, Font_Details.anonymous_25, start, end, spwidth);
+			Font_Details.slantRefX -= SCREEN_SCALE_X(dropShadowPosition);
+			Font_Details.slantRefY -= SCREEN_SCALE_Y(dropShadowPosition);
 		} else {
-			PrintString(SCREEN_SCALE_X(dropShadowPosition) + x, SCREEN_SCALE_Y(dropShadowPosition) + y, Details.anonymous_25, start, end, spwidth);
+			Font_PrintString(SCREEN_SCALE_X(dropShadowPosition) + x, SCREEN_SCALE_Y(dropShadowPosition) + y, Font_Details.anonymous_25, start, end, spwidth);
 		}
-		Details.color = color;
-		Details.dropShadowPosition = dropShadowPosition;
-		Details.bIsShadow = false;
+		Font_Details.color = color;
+		Font_Details.dropShadowPosition = dropShadowPosition;
+		Font_Details.bIsShadow = false;
 	}
 	if (FontRenderStatePointer.pStr >= (wchar*)&FontRenderStateBuf[ARRAY_SIZE(FontRenderStateBuf)] - (end - start + 26)) // why 26?
-		RenderFontBuffer();
+		Font_RenderFontBuffer();
 	CFontRenderState *pRenderState = FontRenderStatePointer.pRenderState;
 	pRenderState->fTextPosX = x;
 	pRenderState->fTextPosY = y;
-	pRenderState->scaleX = Details.scaleX;
-	pRenderState->scaleY = Details.scaleY;
-	pRenderState->color = Details.color;
+	pRenderState->scaleX = Font_Details.scaleX;
+	pRenderState->scaleY = Font_Details.scaleY;
+	pRenderState->color = Font_Details.color;
 	pRenderState->fExtraSpace = spwidth;
-	pRenderState->slant = Details.slant;
-	pRenderState->slantRefX = Details.slantRefX;
-	pRenderState->slantRefY = Details.slantRefY;
-	pRenderState->bFontHalfTexture = Details.bFontHalfTexture;
-	pRenderState->proportional = Details.proportional;
-	pRenderState->style = Details.style;
-	pRenderState->bIsShadow = Details.bIsShadow;
+	pRenderState->slant = Font_Details.slant;
+	pRenderState->slantRefX = Font_Details.slantRefX;
+	pRenderState->slantRefY = Font_Details.slantRefY;
+	pRenderState->bFontHalfTexture = Font_Details.bFontHalfTexture;
+	pRenderState->proportional = Font_Details.proportional;
+	pRenderState->style = Font_Details.style;
+	pRenderState->bIsShadow = Font_Details.bIsShadow;
 	FontRenderStatePointer.pRenderState++;
 
 	for(s = start; s < end;){
 		if (*s == '~') {
-			for (wchar *i = ParseToken(s); s != i; FontRenderStatePointer.pStr++) {
+			for (wchar *i = Font_ParseToken(s); s != i; FontRenderStatePointer.pStr++) {
 				*FontRenderStatePointer.pStr = *(s++);
 			}
-			if (Details.bFlash) {
-				if ((*Timer_GetTimeInMilliseconds()) - Details.nFlashTimer > 300) {
-					Details.bFlashState = !Details.bFlashState;
-					Details.nFlashTimer = (*Timer_GetTimeInMilliseconds());
+			if (Font_Details.bFlash) {
+				if ((*Timer_GetTimeInMilliseconds()) - Font_Details.nFlashTimer > 300) {
+					Font_Details.bFlashState = !Font_Details.bFlashState;
+					Font_Details.nFlashTimer = (*Timer_GetTimeInMilliseconds());
 				}
-				Details.color.a = Details.bFlashState ? 0 : 255;
+				Font_Details.color.a = Font_Details.bFlashState ? 0 : 255;
 			}
 		} else
 			*(FontRenderStatePointer.pStr++) = *(s++);
@@ -971,16 +971,16 @@ CFont::PrintString(float x, float y, uint32, wchar *start, wchar *end, float spw
 #endif
 
 void
-CFont::PrintStringFromBottom(float x, float y, wchar *str)
+Font_PrintStringFromBottom(float x, float y, wchar *str)
 {
-	y -= (32.0f * Details.scaleY / 2.0f + 2.0f * Details.scaleY) * GetNumberLines(x, y, str);
-	if (Details.slant != 0.0f)
-		y -= ((Details.slantRefX - x) * Details.slant + Details.slantRefY);
-	PrintString(x, y, str);
+	y -= (32.0f * Font_Details.scaleY / 2.0f + 2.0f * Font_Details.scaleY) * Font_GetNumberLines(x, y, str);
+	if (Font_Details.slant != 0.0f)
+		y -= ((Font_Details.slantRefX - x) * Font_Details.slant + Font_Details.slantRefY);
+	Font_PrintString(x, y, str);
 }
 
 void
-CFont::PrintString(float xstart, float ystart, wchar *s)
+Font_PrintString(float xstart, float ystart, wchar *s)
 {
 	CRect rect;
 	// Initialize rectangle bounds at the former local constructor boundary
@@ -991,26 +991,26 @@ CFont::PrintString(float xstart, float ystart, wchar *s)
 	bool first;
 	wchar *start, *t;
 
-	Details.bFlash = false;
+	Font_Details.bFlash = false;
 
 	if(*s == '*')
 		return;
 
-	Details.anonymous_25++;
-	if(Details.background){
-		RenderState.color = Details.color;
-		GetNumberLines(xstart, ystart, s);	// BUG: result not used
-		GetTextRect(&rect, xstart, ystart, s);
+	Font_Details.anonymous_25++;
+	if(Font_Details.background){
+		Font_RenderState.color = Font_Details.color;
+		Font_GetNumberLines(xstart, ystart, s);	// BUG: result not used
+		Font_GetTextRect(&rect, xstart, ystart, s);
 		([](const CRect &r,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(rect, Details.backgroundColor);
+})(rect, Font_Details.backgroundColor);
 	}
 
 	lineLength = 0.0f;
 	numSpaces = 0;
 	first = true;
-	if(Details.centre || Details.rightJustify)
+	if(Font_Details.centre || Font_Details.rightJustify)
 		x = 0.0f;
 	else
 		x = xstart;
@@ -1023,79 +1023,79 @@ CFont::PrintString(float xstart, float ystart, wchar *s)
 			for(;;){
 				if(*s == '\0')
 					return;
-				float xend = Details.centre ? Details.centreSize :
-				           Details.rightJustify ? xstart - Details.rightJustifyWrap :
-				           Details.wrapX;
+				float xend = Font_Details.centre ? Font_Details.centreSize :
+				           Font_Details.rightJustify ? xstart - Font_Details.rightJustifyWrap :
+				           Font_Details.wrapX;
 #ifdef MORE_LANGUAGES
-				if (IsJapaneseFont())
+				if (Font_IsJapaneseFont())
 					xend -= SCREEN_SCALE_X(21.0f * 2.0f);
 #endif
-				if(x + GetStringWidth(s) > xend && !first){
+				if(x + Font_GetStringWidth(s) > xend && !first){
 #ifdef MORE_LANGUAGES
-					if (IsJapanese() && IsJapanesePunctuation(s))
+					if (Font_IsJapanese() && Font_IsJapanesePunctuation(s))
 						s--;
 #endif
 					// flush line
-					float spaceWidth = !Details.justify || Details.centre ? 0.0f :
-						(Details.wrapX - lineLength) / numSpaces;
-					float xleft = Details.centre ? xstart - x/2 :
-					              Details.rightJustify ? xstart - x :
+					float spaceWidth = !Font_Details.justify || Font_Details.centre ? 0.0f :
+						(Font_Details.wrapX - lineLength) / numSpaces;
+					float xleft = Font_Details.centre ? xstart - x/2 :
+					              Font_Details.rightJustify ? xstart - x :
 					              xstart;
 #if 0//def MORE_LANGUAGES
-					PrintString(xleft, y, start, s, spaceWidth, xstart);
+					Font_PrintString(xleft, y, start, s, spaceWidth, xstart);
 #else
-					PrintString(xleft, y, Details.anonymous_25, start, s, spaceWidth);
+					Font_PrintString(xleft, y, Font_Details.anonymous_25, start, s, spaceWidth);
 #endif
 					// reset things
 					lineLength = 0.0f;
 					numSpaces = 0;
 					first = true;
-					if(Details.centre || Details.rightJustify)
+					if(Font_Details.centre || Font_Details.rightJustify)
 						x = 0.0f;
 					else
 						x = xstart;
 #ifdef MORE_LANGUAGES
-					if (IsJapaneseFont())
-						y += 32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY;
+					if (Font_IsJapaneseFont())
+						y += 32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY;
 					else
 #endif
-						y += 32.0f * Details.scaleY * 0.5f + 2.0f * Details.scaleY;
+						y += 32.0f * Font_Details.scaleY * 0.5f + 2.0f * Font_Details.scaleY;
 					start = s;
 				}else
 					break;
 			}
 			// advance by one word
-			t = GetNextSpace(s);
+			t = Font_GetNextSpace(s);
 			if(t[0] == '\0' ||
 			   t[0] == ' ' && t[1] == '\0')
 				break;
 			if(!first)
 				numSpaces++;
 			first = false;
-			x += GetStringWidth(s) + GetCharacterSize(*t - ' ');
+			x += Font_GetStringWidth(s) + Font_GetCharacterSize(*t - ' ');
 #ifdef MORE_LANGUAGES
-			if (IsJapaneseFont() && IsAnsiCharacter(s))
+			if (Font_IsJapaneseFont() && Font_IsAnsiCharacter(s))
 				x += 21.0f;
 #endif
 			lineLength = x;
 			s = t+1;
 #if 0 //def MORE_LANGUAGES
-			if (IsJapaneseFont() && !*s) {
-				x += GetStringWidth(s);
-				if (IsAnsiCharacter(s))
+			if (Font_IsJapaneseFont() && !*s) {
+				x += Font_GetStringWidth(s);
+				if (Font_IsAnsiCharacter(s))
 					x += 21.0f;
-				float xleft = Details.centre ? xstart - x / 2 :
-					Details.rightJustify ? xstart - x :
+				float xleft = Font_Details.centre ? xstart - x / 2 :
+					Font_Details.rightJustify ? xstart - x :
 					xstart;
-				if (PrintString(xleft, y, start, s, 0.0f, xstart))
+				if (Font_PrintString(xleft, y, start, s, 0.0f, xstart))
 				{
 					start = s;
-					if (!Details.centre && !Details.rightJustify)
+					if (!Font_Details.centre && !Font_Details.rightJustify)
 						x = xstart;
 					else
 						x = 0.0f;
 
-					y += 32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY;
+					y += 32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY;
 					numSpaces = 0;
 					first = true;
 					lineLength = 0.0f;
@@ -1106,31 +1106,31 @@ CFont::PrintString(float xstart, float ystart, wchar *s)
 		// print rest
 		if(t[0] == ' ' && t[1] == '\0')
 			t[0] = '\0';
-		x += GetStringWidth(s);
+		x += Font_GetStringWidth(s);
 		s = t;
-		float xleft = Details.centre ? xstart - x/2 :
-		              Details.rightJustify ? xstart - x :
+		float xleft = Font_Details.centre ? xstart - x/2 :
+		              Font_Details.rightJustify ? xstart - x :
 		              xstart;
 #if 0 //def MORE_LANGUAGES
-		if (PrintString(xleft, y, start, s, 0.0f, xstart) && IsJapaneseFont()) {
+		if (Font_PrintString(xleft, y, start, s, 0.0f, xstart) && Font_IsJapaneseFont()) {
 			start = s;
-			if (!Details.centre && !Details.rightJustify)
+			if (!Font_Details.centre && !Font_Details.rightJustify)
 				x = xstart;
 			else
 				x = 0.0f;
-			y += 32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY;
+			y += 32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY;
 			numSpaces = 0;
 			first = true;
 			lineLength = 0.0f;
 		}
 #else
-		PrintString(xleft, y, Details.anonymous_25, start, s, 0.0f);
+		Font_PrintString(xleft, y, Font_Details.anonymous_25, start, s, 0.0f);
 #endif
 	}
 }
 
 int
-CFont::GetNumberLines(float xstart, float ystart, wchar *s)
+Font_GetNumberLines(float xstart, float ystart, wchar *s)
 {
 	int n;
 	float x, y;
@@ -1140,15 +1140,15 @@ CFont::GetNumberLines(float xstart, float ystart, wchar *s)
 #if 0//def MORE_LANGUAGES
 	bool bSomeJapBool = false;
 
-	if (IsJapanese()) {
+	if (Font_IsJapanese()) {
 		t = s;
 		wchar unused;
 		while (*t) {
 			if (*t == JAP_TERMINATION || *t == '~')
-				t = ParseToken(t, &unused, true);
-			if (NewLine) {
+				t = Font_ParseToken(t, &unused, true);
+			if (Font_NewLine) {
 				n++;
-				NewLine = false;
+				Font_NewLine = false;
 				bSomeJapBool = true;
 			}
 			t++;
@@ -1158,7 +1158,7 @@ CFont::GetNumberLines(float xstart, float ystart, wchar *s)
 	if (bSomeJapBool) n--;
 #endif
 
-	if(Details.centre || Details.rightJustify)
+	if(Font_Details.centre || Font_Details.rightJustify)
 		x = 0.0f;
 	else
 		x = xstart;
@@ -1166,61 +1166,61 @@ CFont::GetNumberLines(float xstart, float ystart, wchar *s)
 
 	while(*s){
 #ifdef FIX_BUGS
-		float f = Details.centre ? Details.centreSize :
-		           Details.rightJustify ? xstart - Details.rightJustifyWrap :
-		           Details.wrapX;
+		float f = Font_Details.centre ? Font_Details.centreSize :
+		           Font_Details.rightJustify ? xstart - Font_Details.rightJustifyWrap :
+		           Font_Details.wrapX;
 #else
-		float f = (Details.centre ? Details.centreSize : Details.wrapX);
+		float f = (Font_Details.centre ? Font_Details.centreSize : Font_Details.wrapX);
 #endif
 
 #ifdef MORE_LANGUAGES
-		if (IsJapaneseFont())
+		if (Font_IsJapaneseFont())
 			f -= SCREEN_SCALE_X(21.0f * 2.0f);
 #endif
 
-		if(x + GetStringWidth(s) > f){
+		if(x + Font_GetStringWidth(s) > f){
 #ifdef MORE_LANGUAGES
-			if (IsJapanese())
+			if (Font_IsJapanese())
 			{
-				if (IsJapanesePunctuation(s))
+				if (Font_IsJapanesePunctuation(s))
 					s--;
 			}
 #endif
 			// reached end of line
-			if(Details.centre || Details.rightJustify)
+			if(Font_Details.centre || Font_Details.rightJustify)
 				x = 0.0f;
 			else
 				x = xstart;
 			n++;
 			// Why even?
 #ifdef MORE_LANGUAGES
-			if (IsJapanese())
-				y += 32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY;
+			if (Font_IsJapanese())
+				y += 32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY;
 			else
 #endif
-				y += 32.0f * Details.scaleY * 0.5f + 2.0f * Details.scaleY;
+				y += 32.0f * Font_Details.scaleY * 0.5f + 2.0f * Font_Details.scaleY;
 		}else{
 			// still space in current line
-			t = GetNextSpace(s);
+			t = Font_GetNextSpace(s);
 			if(*t == '\0'){
 				// end of string
-				x += GetStringWidth(s);
+				x += Font_GetStringWidth(s);
 #ifdef MORE_LANGUAGES
-				if (IsJapanese() && IsAnsiCharacter(s))
+				if (Font_IsJapanese() && Font_IsAnsiCharacter(s))
 					x += 21.0f;
 #endif
 				n++;
 				s = t;
 			}else{
-				x += GetStringWidth(s);
+				x += Font_GetStringWidth(s);
 #ifdef MORE_LANGUAGES
-				if (IsJapanese() && IsAnsiCharacter(s))
+				if (Font_IsJapanese() && Font_IsAnsiCharacter(s))
 					x += 21.0f;
 #endif
 				s = t+1;
-				x += GetCharacterSize(*t - ' ');
+				x += Font_GetCharacterSize(*t - ' ');
 #ifdef MORE_LANGUAGES
-				if (IsJapanese() && !*s)
+				if (Font_IsJapanese() && !*s)
 					n++;
 #endif
 			}
@@ -1231,7 +1231,7 @@ CFont::GetNumberLines(float xstart, float ystart, wchar *s)
 }
 
 void
-CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
+Font_GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
 {
 	int numLines;
 	float x, y;
@@ -1242,47 +1242,47 @@ CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
 	numLines = 0;
 
 #ifdef MORE_LANGUAGES
-	if (IsJapanese()) {
-		numLines = GetNumberLines(xstart, ystart, s);
+	if (Font_IsJapanese()) {
+		numLines = Font_GetNumberLines(xstart, ystart, s);
 	}else{
 #endif
-		if(Details.centre || Details.rightJustify)
+		if(Font_Details.centre || Font_Details.rightJustify)
 			x = 0.0f;
 		else
 			x = xstart;
 		y = ystart;
 
 #ifdef FIX_BUGS
-		float xEnd = Details.centre ? Details.centreSize :
-		           Details.rightJustify ? xstart - Details.rightJustifyWrap :
-		           Details.wrapX;
+		float xEnd = Font_Details.centre ? Font_Details.centreSize :
+		           Font_Details.rightJustify ? xstart - Font_Details.rightJustifyWrap :
+		           Font_Details.wrapX;
 #else
-		float xEnd = (Details.centre ? Details.centreSize : Details.wrapX);
+		float xEnd = (Font_Details.centre ? Font_Details.centreSize : Font_Details.wrapX);
 #endif
 		while(*s){
-			if(x + GetStringWidth(s) > xEnd){
+			if(x + Font_GetStringWidth(s) > xEnd){
 				// reached end of line
 				if(x > maxlength)
 					maxlength = x;
-				if(Details.centre || Details.rightJustify)
+				if(Font_Details.centre || Font_Details.rightJustify)
 					x = 0.0f;
 				else
 					x = xstart;
 				numLines++;
-				y += 32.0f * Details.scaleY * 0.5f + 2.0f * Details.scaleY;
+				y += 32.0f * Font_Details.scaleY * 0.5f + 2.0f * Font_Details.scaleY;
 			}else{
 				// still space in current line
-				t = GetNextSpace(s);
+				t = Font_GetNextSpace(s);
 				if(*t == '\0'){
 					// end of string
-					x += GetStringWidth(s);
+					x += Font_GetStringWidth(s);
 					if(x > maxlength)
 						maxlength = x;
 					numLines++;
 					s = t;
 				}else{
-					x += GetStringWidth(s);
-					x += GetCharacterSize(*t - ' ');
+					x += Font_GetStringWidth(s);
+					x += Font_GetCharacterSize(*t - ' ');
 					s = t+1;
 				}
 			}
@@ -1291,31 +1291,31 @@ CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
 	}
 #endif
 
-	if(Details.centre){
-		if(Details.backgroundOnlyText){
+	if(Font_Details.centre){
+		if(Font_Details.backgroundOnlyText){
 			rect->left = xstart - maxlength/2 - 4.0f;
 			rect->right = xstart + maxlength/2 + 4.0f;
 #ifdef MORE_LANGUAGES
-			if (IsJapaneseFont()) {
-				rect->bottom = (32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY) * numLines + ystart + (4.0f / 2.75f);
+			if (Font_IsJapaneseFont()) {
+				rect->bottom = (32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY) * numLines + ystart + (4.0f / 2.75f);
 				rect->top = ystart - (4.0f / 2.75f);
 			} else {
 #endif
-				rect->bottom = (32.0f * Details.scaleY * 0.5f + 2.0f * Details.scaleY) * numLines + ystart + 2.0f;
+				rect->bottom = (32.0f * Font_Details.scaleY * 0.5f + 2.0f * Font_Details.scaleY) * numLines + ystart + 2.0f;
 				rect->top = ystart - 2.0f;
 #ifdef MORE_LANGUAGES
 			}
 #endif
 		}else{
-			rect->left = xstart - Details.centreSize*0.5f - 4.0f;
-			rect->right = xstart + Details.centreSize*0.5f + 4.0f;
+			rect->left = xstart - Font_Details.centreSize*0.5f - 4.0f;
+			rect->right = xstart + Font_Details.centreSize*0.5f + 4.0f;
 #ifdef MORE_LANGUAGES
-			if (IsJapaneseFont()) {
-				rect->bottom = (32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY) * numLines + ystart + (4.0f / 2.75f);
+			if (Font_IsJapaneseFont()) {
+				rect->bottom = (32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY) * numLines + ystart + (4.0f / 2.75f);
 				rect->top = ystart - (4.0f / 2.75f);
 			} else {
 #endif
-				rect->bottom = (32.0f * Details.scaleY * 0.5f + 2.0f * Details.scaleY) * numLines + ystart + 2.0f;
+				rect->bottom = (32.0f * Font_Details.scaleY * 0.5f + 2.0f * Font_Details.scaleY) * numLines + ystart + 2.0f;
 				rect->top = ystart - 2.0f;
 #ifdef MORE_LANGUAGES
 			}
@@ -1323,121 +1323,121 @@ CFont::GetTextRect(CRect *rect, float xstart, float ystart, wchar *s)
 		}
 	}else{
 		rect->left = xstart - 4.0f;
-		rect->right = Details.wrapX;
+		rect->right = Font_Details.wrapX;
 		// WTF?
 		rect->bottom = ystart - 4.0f + 4.0f;
 #ifdef MORE_LANGUAGES
-		if (IsJapaneseFont())
-			rect->top = (32.0f * Details.scaleY / 2.75f + 2.0f * Details.scaleY) * numLines + ystart + 2.0f + (4.0f / 2.75f);
+		if (Font_IsJapaneseFont())
+			rect->top = (32.0f * Font_Details.scaleY / 2.75f + 2.0f * Font_Details.scaleY) * numLines + ystart + 2.0f + (4.0f / 2.75f);
 		else
 #endif
-			rect->top = (32.0f * Details.scaleY * 0.5f + 2.0f * Details.scaleY) * numLines + ystart + 2.0f + 2.0f;
+			rect->top = (32.0f * Font_Details.scaleY * 0.5f + 2.0f * Font_Details.scaleY) * numLines + ystart + 2.0f + 2.0f;
 	}
 }
 
 float
-CFont::GetCharacterWidth(wchar c)
+Font_GetCharacterWidth(wchar c)
 {
 #ifdef MORE_LANGUAGES
-	if (IsJapanese()) {
-		if (!RenderState.proportional)
-			return Size[0][Details.style][192];
-		if (c <= 94 || Details.style == FONT_HEADING || RenderState.style == FONT_BANK) {
-			switch (RenderState.style)
+	if (Font_IsJapanese()) {
+		if (!Font_RenderState.proportional)
+			return Font_Size[0][Font_Details.style][192];
+		if (c <= 94 || Font_Details.style == FONT_HEADING || Font_RenderState.style == FONT_BANK) {
+			switch (Font_RenderState.style)
 			{
 			case FONT_JAPANESE:
 				return Size_jp[c];
 			default:
-				return Size[0][RenderState.style][c];
+				return Font_Size[0][Font_RenderState.style][c];
 			}
 		}
 
-		switch (RenderState.style)
+		switch (Font_RenderState.style)
 		{
 		case FONT_JAPANESE:
 			return 29.4f;
 		case FONT_BANK:
 			return 10.0f;
 		default:
-			return Size[0][RenderState.style][c];
+			return Font_Size[0][Font_RenderState.style][c];
 		}
 	}
 
-	else if (RenderState.proportional)
-		return Size[LanguageSet][RenderState.style][c];
+	else if (Font_RenderState.proportional)
+		return Font_Size[Font_LanguageSet][Font_RenderState.style][c];
 	else
-		return Size[LanguageSet][RenderState.style][209];
+		return Font_Size[Font_LanguageSet][Font_RenderState.style][209];
 #else
 
-	if (RenderState.proportional)
-		return Size[RenderState.style][c];
+	if (Font_RenderState.proportional)
+		return Font_Size[Font_RenderState.style][c];
 	else
-		return Size[RenderState.style][209];
+		return Font_Size[Font_RenderState.style][209];
 #endif // MORE_LANGUAGES
 }
 
 float
-CFont::GetCharacterSize(wchar c)
+Font_GetCharacterSize(wchar c)
 {
 #ifdef MORE_LANGUAGES
 
-	if (IsJapanese())
+	if (Font_IsJapanese())
 	{
-		if (!Details.proportional)
-			return Size[0][Details.style][209] * Details.scaleX;
-		if (c <= 94 || Details.style == FONT_HEADING || Details.style == FONT_BANK) {
-			switch (Details.style)
+		if (!Font_Details.proportional)
+			return Font_Size[0][Font_Details.style][209] * Font_Details.scaleX;
+		if (c <= 94 || Font_Details.style == FONT_HEADING || Font_Details.style == FONT_BANK) {
+			switch (Font_Details.style)
 			{
 			case FONT_JAPANESE:
-				return Size_jp[c] * Details.scaleX;
+				return Size_jp[c] * Font_Details.scaleX;
 			default:
-				return Size[0][Details.style][c] * Details.scaleX;
+				return Font_Size[0][Font_Details.style][c] * Font_Details.scaleX;
 			}
 		}
 
-		switch (Details.style)
+		switch (Font_Details.style)
 		{
 		case FONT_JAPANESE:
-			return 29.4f * Details.scaleX;
+			return 29.4f * Font_Details.scaleX;
 		case FONT_BANK:
-			return 10.0f * Details.scaleX;
+			return 10.0f * Font_Details.scaleX;
 		default:
-			return Size[0][Details.style][c] * Details.scaleX;
+			return Font_Size[0][Font_Details.style][c] * Font_Details.scaleX;
 		}
 	}
 	else
 	{
-		if (!Details.bFontHalfTexture && c == 30) c = 61; // wanted star
-		if (Details.bFontHalfTexture)
-			c = FindNewCharacter(c);
-		if (Details.proportional)
-			return Size[LanguageSet][Details.style][c] * Details.scaleX;
+		if (!Font_Details.bFontHalfTexture && c == 30) c = 61; // wanted star
+		if (Font_Details.bFontHalfTexture)
+			c = Font_FindNewCharacter(c);
+		if (Font_Details.proportional)
+			return Font_Size[Font_LanguageSet][Font_Details.style][c] * Font_Details.scaleX;
 		else
-			return Size[LanguageSet][Details.style][209] * Details.scaleX;
+			return Font_Size[Font_LanguageSet][Font_Details.style][209] * Font_Details.scaleX;
 	}
 #else
 
 #ifdef FIX_BUGS
 	// PS2 don't call FindNewCharacter in here at all, and also uses different chars for some symbols
-	if (!Details.bFontHalfTexture && c == 30) c = 61; // wanted star
+	if (!Font_Details.bFontHalfTexture && c == 30) c = 61; // wanted star
 #endif
-	if (Details.bFontHalfTexture)
-		c = FindNewCharacter(c);
-	if (Details.proportional)
-		return Size[Details.style][c] * Details.scaleX;
+	if (Font_Details.bFontHalfTexture)
+		c = Font_FindNewCharacter(c);
+	if (Font_Details.proportional)
+		return Font_Size[Font_Details.style][c] * Font_Details.scaleX;
 	else
-		return Size[Details.style][209] * Details.scaleX;
+		return Font_Size[Font_Details.style][209] * Font_Details.scaleX;
 #endif // MORE_LANGUAGES
 }
 
 float
-CFont::GetStringWidth(wchar *s, bool spaces)
+Font_GetStringWidth(wchar *s, bool spaces)
 {
 	float w;
 
 	w = 0.0f;
 #ifdef MORE_LANGUAGES
-	if (IsJapanese())
+	if (Font_IsJapanese())
 	{
 		do
 		{
@@ -1463,7 +1463,7 @@ CFont::GetStringWidth(wchar *s, bool spaces)
 						case 'C':
 						case '(':
 						case ')':
-							w += 17.0f * Details.scaleY;
+							w += 17.0f * Font_Details.scaleY;
 							break;
 						default:
 							break;
@@ -1472,11 +1472,11 @@ CFont::GetStringWidth(wchar *s, bool spaces)
 						while (!(*s == '~' || *s == JAP_TERMINATION)) s++;
 						s++;
 					}
-					w += GetCharacterSize(*s - ' ');
+					w += Font_GetCharacterSize(*s - ' ');
 					++s;
 				} while (*s == '~' || *s == JAP_TERMINATION);
 			}
-		} while (IsAnsiCharacter(s));
+		} while (Font_IsAnsiCharacter(s));
 	} else
 #endif
 	{
@@ -1501,7 +1501,7 @@ CFont::GetStringWidth(wchar *s, bool spaces)
 				case 'C':
 				case '(':
 				case ')':
-					w += 17.0f * Details.scaleY;
+					w += 17.0f * Font_Details.scaleY;
 					break;
 				default:
 					break;
@@ -1512,7 +1512,7 @@ CFont::GetStringWidth(wchar *s, bool spaces)
 				}
 			}
 			else {
-				w += GetCharacterSize(c - ' ');
+				w += Font_GetCharacterSize(c - ' ');
 			}
 		}
 	}
@@ -1522,7 +1522,7 @@ CFont::GetStringWidth(wchar *s, bool spaces)
 
 #ifdef MORE_LANGUAGES
 float
-CFont::GetStringWidth_Jap(wchar* s)
+Font_GetStringWidth_Jap(wchar* s)
 {
 	float w;
 
@@ -1534,7 +1534,7 @@ CFont::GetStringWidth_Jap(wchar* s)
 				while (!(*s == '~' || *s == JAP_TERMINATION)) s++;
 				s++;
 			}
-			w += GetCharacterSize(*s - ' ');
+			w += Font_GetCharacterSize(*s - ' ');
 			++s;
 		} while (*s == '~' || *s == JAP_TERMINATION);
 	}
@@ -1543,10 +1543,10 @@ CFont::GetStringWidth_Jap(wchar* s)
 #endif
 
 wchar*
-CFont::GetNextSpace(wchar *s)
+Font_GetNextSpace(wchar *s)
 {
 #ifdef MORE_LANGUAGES
-	if (IsJapanese()) {
+	if (Font_IsJapanese()) {
 		do
 		{
 			if (*s != ' ' && *s != '\0') {
@@ -1559,22 +1559,22 @@ CFont::GetNextSpace(wchar *s)
 					++s;
 				} while (*s == '~' || *s == JAP_TERMINATION);
 			}
-		} while (IsAnsiCharacter(s));
+		} while (Font_IsAnsiCharacter(s));
 	} else
 #endif
 	{
 		// Delegate the plain case to the C implementation
-		s = Font_GetNextSpace(s);
+		s = FontText_GetNextSpace(s);
 	}
 	return s;
 }
 
 wchar*
-CFont::ParseToken(wchar* str, CRGBA &color, bool &flash, bool &bold)
+Font_ParseToken(wchar* str, CRGBA &color, bool &flash, bool &bold)
 {
-	Details.anonymous_23 = false;
+	Font_Details.anonymous_23 = false;
 	wchar *s = str + 1;
-	if (Details.color.r || Details.color.g || Details.color.b)
+	if (Font_Details.color.r || Font_Details.color.g || Font_Details.color.b)
 	{
 		switch (*s)
 		{
@@ -1653,24 +1653,24 @@ CFont::ParseToken(wchar* str, CRGBA &color, bool &flash, bool &bold)
 			color.b = 79;
 			break;
 #ifdef BUTTON_ICONS
-		case 'U': PS2Symbol = BUTTON_UP; break;
-		case 'D': PS2Symbol = BUTTON_DOWN; break;
-		case '<': PS2Symbol = BUTTON_LEFT; break;
-		case '>': PS2Symbol = BUTTON_RIGHT; break;
-		case 'X': PS2Symbol = BUTTON_CROSS; break;
-		case 'O': PS2Symbol = BUTTON_CIRCLE; break;
-		case 'Q': PS2Symbol = BUTTON_SQUARE; break;
-		case 'T': PS2Symbol = BUTTON_TRIANGLE; break;
-		case 'K': PS2Symbol = BUTTON_L1; break;
-		case 'M': PS2Symbol = BUTTON_L2; break;
-		case 'A': PS2Symbol = BUTTON_L3; break;
-		case 'J': PS2Symbol = BUTTON_R1; break;
-		case 'V': PS2Symbol = BUTTON_R2; break;
-		case 'C': PS2Symbol = BUTTON_R3; break;
-		case 'H': PS2Symbol = BUTTON_RSTICK_UP; break;
-		case 'L': PS2Symbol = BUTTON_RSTICK_DOWN; break;
-		case '(': PS2Symbol = BUTTON_RSTICK_LEFT; break;
-		case ')': PS2Symbol = BUTTON_RSTICK_RIGHT; break;
+		case 'U': Font_PS2Symbol = BUTTON_UP; break;
+		case 'D': Font_PS2Symbol = BUTTON_DOWN; break;
+		case '<': Font_PS2Symbol = BUTTON_LEFT; break;
+		case '>': Font_PS2Symbol = BUTTON_RIGHT; break;
+		case 'X': Font_PS2Symbol = BUTTON_CROSS; break;
+		case 'O': Font_PS2Symbol = BUTTON_CIRCLE; break;
+		case 'Q': Font_PS2Symbol = BUTTON_SQUARE; break;
+		case 'T': Font_PS2Symbol = BUTTON_TRIANGLE; break;
+		case 'K': Font_PS2Symbol = BUTTON_L1; break;
+		case 'M': Font_PS2Symbol = BUTTON_L2; break;
+		case 'A': Font_PS2Symbol = BUTTON_L3; break;
+		case 'J': Font_PS2Symbol = BUTTON_R1; break;
+		case 'V': Font_PS2Symbol = BUTTON_R2; break;
+		case 'C': Font_PS2Symbol = BUTTON_R3; break;
+		case 'H': Font_PS2Symbol = BUTTON_RSTICK_UP; break;
+		case 'L': Font_PS2Symbol = BUTTON_RSTICK_DOWN; break;
+		case '(': Font_PS2Symbol = BUTTON_RSTICK_LEFT; break;
+		case ')': Font_PS2Symbol = BUTTON_RSTICK_RIGHT; break;
 #endif
 		default:
 			break;
@@ -1679,201 +1679,201 @@ CFont::ParseToken(wchar* str, CRGBA &color, bool &flash, bool &bold)
 	while (*s != '~')
 		++s;
 	if (*(++s) == '~')
-		s = ParseToken(s, color, flash, bold);
+		s = Font_ParseToken(s, color, flash, bold);
 	return s;
 }
 
 #if 0//def MORE_LANGUAGES
 wchar*
-CFont::ParseToken(wchar *s, bool japShit)
+Font_ParseToken(wchar *s, bool japShit)
 {
 	s++;
-	if ((Details.color.r || Details.color.g || Details.color.b) && !japShit) {
+	if ((Font_Details.color.r || Font_Details.color.g || Font_Details.color.b) && !japShit) {
 		wchar c = *s;
-		if (IsJapanese())
+		if (Font_IsJapanese())
 			c &= 0x7FFF;
 		switch (c) {
 		case 'N':
 		case 'n':
-			NewLine = true;
+			Font_NewLine = true;
 			break;
-		case 'b': SetColor(CRGBA(128, 167, 243, 255)); break;
-		case 'g': SetColor(CRGBA(95, 160, 106, 255)); break;
-		case 'h': SetColor(CRGBA(225, 225, 225, 255)); break;
-		case 'l': SetColor(CRGBA(0, 0, 0, 255)); break;
-		case 'p': SetColor(CRGBA(168, 110, 252, 255)); break;
-		case 'r': SetColor(CRGBA(113, 43, 73, 255)); break;
-		case 'w': SetColor(CRGBA(175, 175, 175, 255)); break;
-		case 'y': SetColor(CRGBA(210, 196, 106, 255)); break;
+		case 'b': Font_SetColor(CRGBA(128, 167, 243, 255)); break;
+		case 'g': Font_SetColor(CRGBA(95, 160, 106, 255)); break;
+		case 'h': Font_SetColor(CRGBA(225, 225, 225, 255)); break;
+		case 'l': Font_SetColor(CRGBA(0, 0, 0, 255)); break;
+		case 'p': Font_SetColor(CRGBA(168, 110, 252, 255)); break;
+		case 'r': Font_SetColor(CRGBA(113, 43, 73, 255)); break;
+		case 'w': Font_SetColor(CRGBA(175, 175, 175, 255)); break;
+		case 'y': Font_SetColor(CRGBA(210, 196, 106, 255)); break;
 #ifdef BUTTON_ICONS
-		case 'U': PS2Symbol = BUTTON_UP; break;
-		case 'D': PS2Symbol = BUTTON_DOWN; break;
-		case '<': PS2Symbol = BUTTON_LEFT; break;
-		case '>': PS2Symbol = BUTTON_RIGHT; break;
-		case 'X': PS2Symbol = BUTTON_CROSS; break;
-		case 'O': PS2Symbol = BUTTON_CIRCLE; break;
-		case 'Q': PS2Symbol = BUTTON_SQUARE; break;
-		case 'T': PS2Symbol = BUTTON_TRIANGLE; break;
-		case 'K': PS2Symbol = BUTTON_L1; break;
-		case 'M': PS2Symbol = BUTTON_L2; break;
-		case 'A': PS2Symbol = BUTTON_L3; break;
-		case 'J': PS2Symbol = BUTTON_R1; break;
-		case 'V': PS2Symbol = BUTTON_R2; break;
-		case 'C': PS2Symbol = BUTTON_R3; break;
-		case 'H': PS2Symbol = BUTTON_RSTICK_UP; break;
-		case 'L': PS2Symbol = BUTTON_RSTICK_DOWN; break;
-		case '(': PS2Symbol = BUTTON_RSTICK_LEFT; break;
-		case ')': PS2Symbol = BUTTON_RSTICK_RIGHT; break;
+		case 'U': Font_PS2Symbol = BUTTON_UP; break;
+		case 'D': Font_PS2Symbol = BUTTON_DOWN; break;
+		case '<': Font_PS2Symbol = BUTTON_LEFT; break;
+		case '>': Font_PS2Symbol = BUTTON_RIGHT; break;
+		case 'X': Font_PS2Symbol = BUTTON_CROSS; break;
+		case 'O': Font_PS2Symbol = BUTTON_CIRCLE; break;
+		case 'Q': Font_PS2Symbol = BUTTON_SQUARE; break;
+		case 'T': Font_PS2Symbol = BUTTON_TRIANGLE; break;
+		case 'K': Font_PS2Symbol = BUTTON_L1; break;
+		case 'M': Font_PS2Symbol = BUTTON_L2; break;
+		case 'A': Font_PS2Symbol = BUTTON_L3; break;
+		case 'J': Font_PS2Symbol = BUTTON_R1; break;
+		case 'V': Font_PS2Symbol = BUTTON_R2; break;
+		case 'C': Font_PS2Symbol = BUTTON_R3; break;
+		case 'H': Font_PS2Symbol = BUTTON_RSTICK_UP; break;
+		case 'L': Font_PS2Symbol = BUTTON_RSTICK_DOWN; break;
+		case '(': Font_PS2Symbol = BUTTON_RSTICK_LEFT; break;
+		case ')': Font_PS2Symbol = BUTTON_RSTICK_RIGHT; break;
 #endif
 		}
-	} else if (IsJapanese()) {
+	} else if (Font_IsJapanese()) {
 		if ((*s & 0x7FFF) == 'N' || (*s & 0x7FFF) == 'n')
-			NewLine = true;
+			Font_NewLine = true;
 	}
-	while ((!IsJapanese() || (*s != JAP_TERMINATION)) && *s != '~') s++;
+	while ((!Font_IsJapanese() || (*s != JAP_TERMINATION)) && *s != '~') s++;
 	return s + 1;
 }
 #else
 wchar*
-CFont::ParseToken(wchar *s)
+Font_ParseToken(wchar *s)
 {
-	Details.anonymous_23 = false;
+	Font_Details.anonymous_23 = false;
 	s++;
-	if(Details.color.r || Details.color.g || Details.color.b)
+	if(Font_Details.color.r || Font_Details.color.g || Font_Details.color.b)
 		switch(*s){
 		case 'B':
-			Details.bBold = !Details.bBold;
+			Font_Details.bBold = !Font_Details.bBold;
 			break;
 		case 'N':
 		case 'n':
-			NewLine = true;
+			Font_NewLine = true;
 			break;
 		case 'b':
-			Details.color.r = 27;
-			Details.color.g = 89;
-			Details.color.b = 130;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 27;
+			Font_Details.color.g = 89;
+			Font_Details.color.b = 130;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'f':
-			Details.bFlash = !Details.bFlash;
-			if (!Details.bFlash)
-				Details.color.a = 255;
+			Font_Details.bFlash = !Font_Details.bFlash;
+			if (!Font_Details.bFlash)
+				Font_Details.color.a = 255;
 			break;
 		case 'g':
-			Details.color.r = 255;
-			Details.color.g = 150;
-			Details.color.b = 225;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 255;
+			Font_Details.color.g = 150;
+			Font_Details.color.b = 225;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'h':
-			Details.color.r = 225;
-			Details.color.g = 225;
-			Details.color.b = 225;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 225;
+			Font_Details.color.g = 225;
+			Font_Details.color.b = 225;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'l':
-			Details.color.r = 0;
-			Details.color.g = 0;
-			Details.color.b = 0;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 0;
+			Font_Details.color.g = 0;
+			Font_Details.color.b = 0;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'o':
-			Details.color.r = 229;
-			Details.color.g = 125;
-			Details.color.b = 126;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 229;
+			Font_Details.color.g = 125;
+			Font_Details.color.b = 126;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'p':
-			Details.color.r = 168;
-			Details.color.g = 110;
-			Details.color.b = 252;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 168;
+			Font_Details.color.g = 110;
+			Font_Details.color.b = 252;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'q':
-			Details.color.r = 199;
-			Details.color.g = 144;
-			Details.color.b = 203;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 199;
+			Font_Details.color.g = 144;
+			Font_Details.color.b = 203;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'r':
-			Details.color.r = 255;
-			Details.color.g = 150;
-			Details.color.b = 225;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 255;
+			Font_Details.color.g = 150;
+			Font_Details.color.b = 225;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 't':
-			Details.color.r = 86;
-			Details.color.g = 212;
-			Details.color.b = 146;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 86;
+			Font_Details.color.g = 212;
+			Font_Details.color.b = 146;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'w':
-			Details.color.r = 175;
-			Details.color.g = 175;
-			Details.color.b = 175;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 175;
+			Font_Details.color.g = 175;
+			Font_Details.color.b = 175;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'x':
 #ifdef FIX_BUGS
-			Details.color.r = 0;
-			Details.color.g = 255;
-			Details.color.b = 255;
+			Font_Details.color.r = 0;
+			Font_Details.color.g = 255;
+			Font_Details.color.b = 255;
 #else
-			Details.color.r = 132;
-			Details.color.g = 146;
-			Details.color.b = 197;
+			Font_Details.color.r = 132;
+			Font_Details.color.g = 146;
+			Font_Details.color.b = 197;
 #endif
-			Details.anonymous_23 = true;
+			Font_Details.anonymous_23 = true;
 			break;
 		case 'y':
-			Details.color.r = 255;
-			Details.color.g = 227;
-			Details.color.b = 79;
-			Details.anonymous_23 = true;
+			Font_Details.color.r = 255;
+			Font_Details.color.g = 227;
+			Font_Details.color.b = 79;
+			Font_Details.anonymous_23 = true;
 			break;
 #ifdef BUTTON_ICONS
-		case 'U': PS2Symbol = BUTTON_UP; break;
-		case 'D': PS2Symbol = BUTTON_DOWN; break;
-		case '<': PS2Symbol = BUTTON_LEFT; break;
-		case '>': PS2Symbol = BUTTON_RIGHT; break;
-		case 'X': PS2Symbol = BUTTON_CROSS; break;
-		case 'O': PS2Symbol = BUTTON_CIRCLE; break;
-		case 'Q': PS2Symbol = BUTTON_SQUARE; break;
-		case 'T': PS2Symbol = BUTTON_TRIANGLE; break;
-		case 'K': PS2Symbol = BUTTON_L1; break;
-		case 'M': PS2Symbol = BUTTON_L2; break;
-		case 'A': PS2Symbol = BUTTON_L3; break;
-		case 'J': PS2Symbol = BUTTON_R1; break;
-		case 'V': PS2Symbol = BUTTON_R2; break;
-		case 'C': PS2Symbol = BUTTON_R3; break;
-		case 'H': PS2Symbol = BUTTON_RSTICK_UP; break;
-		case 'L': PS2Symbol = BUTTON_RSTICK_DOWN; break;
-		case '(': PS2Symbol = BUTTON_RSTICK_LEFT; break;
-		case ')': PS2Symbol = BUTTON_RSTICK_RIGHT; break;
+		case 'U': Font_PS2Symbol = BUTTON_UP; break;
+		case 'D': Font_PS2Symbol = BUTTON_DOWN; break;
+		case '<': Font_PS2Symbol = BUTTON_LEFT; break;
+		case '>': Font_PS2Symbol = BUTTON_RIGHT; break;
+		case 'X': Font_PS2Symbol = BUTTON_CROSS; break;
+		case 'O': Font_PS2Symbol = BUTTON_CIRCLE; break;
+		case 'Q': Font_PS2Symbol = BUTTON_SQUARE; break;
+		case 'T': Font_PS2Symbol = BUTTON_TRIANGLE; break;
+		case 'K': Font_PS2Symbol = BUTTON_L1; break;
+		case 'M': Font_PS2Symbol = BUTTON_L2; break;
+		case 'A': Font_PS2Symbol = BUTTON_L3; break;
+		case 'J': Font_PS2Symbol = BUTTON_R1; break;
+		case 'V': Font_PS2Symbol = BUTTON_R2; break;
+		case 'C': Font_PS2Symbol = BUTTON_R3; break;
+		case 'H': Font_PS2Symbol = BUTTON_RSTICK_UP; break;
+		case 'L': Font_PS2Symbol = BUTTON_RSTICK_DOWN; break;
+		case '(': Font_PS2Symbol = BUTTON_RSTICK_LEFT; break;
+		case ')': Font_PS2Symbol = BUTTON_RSTICK_RIGHT; break;
 #endif
 		}
 	while(*s != '~') s++;
 	if (*(++s) == '~')
-		s = ParseToken(s);
+		s = Font_ParseToken(s);
 	return s;
 }
 #endif
 
 void
-CFont::FilterOutTokensFromString(wchar *str)
+Font_FilterOutTokensFromString(wchar *str)
 {
 	// Delegate to the C implementation
-	Font_FilterOutTokensFromString(str);
+	FontText_FilterOutTokensFromString(str);
 }
 
 void
-CFont::DrawFonts(void)
+Font_DrawFonts(void)
 {
-	RenderFontBuffer();
+	Font_RenderFontBuffer();
 }
 
 void
-CFont::SetScale(float x, float y)
+Font_SetScale(float x, float y)
 {
 #ifdef MORE_LANGUAGES
 	/*if (IsJapanese()) {
@@ -1881,176 +1881,176 @@ CFont::SetScale(float x, float y)
 		y *= 1.25f;
 	}*/
 #endif
-	Details.scaleX = x;
-	Details.scaleY = y;
+	Font_Details.scaleX = x;
+	Font_Details.scaleY = y;
 }
 
 void
-CFont::SetSlantRefPoint(float x, float y)
+Font_SetSlantRefPoint(float x, float y)
 {
-	Details.slantRefX = x;
-	Details.slantRefY = y;
+	Font_Details.slantRefX = x;
+	Font_Details.slantRefY = y;
 }
 
 void
-CFont::SetSlant(float s)
+Font_SetSlant(float s)
 {
-	Details.slant = s;
+	Font_Details.slant = s;
 }
 
 void
-CFont::SetColor(CRGBA col)
+Font_SetColor(CRGBA col)
 {
-	Details.color = col;
-	if (Details.alphaFade < 255.0f)
-		Details.color.a *= Details.alphaFade / 255.0f;
+	Font_Details.color = col;
+	if (Font_Details.alphaFade < 255.0f)
+		Font_Details.color.a *= Font_Details.alphaFade / 255.0f;
 }
 
 void
-CFont::SetJustifyOn(void)
+Font_SetJustifyOn(void)
 {
-	Details.justify = true;
-	Details.centre = false;
-	Details.rightJustify = false;
+	Font_Details.justify = true;
+	Font_Details.centre = false;
+	Font_Details.rightJustify = false;
 }
 
 void
-CFont::SetJustifyOff(void)
+Font_SetJustifyOff(void)
 {
-	Details.justify = false;
-	Details.rightJustify = false;
+	Font_Details.justify = false;
+	Font_Details.rightJustify = false;
 }
 
 void
-CFont::SetCentreOn(void)
+Font_SetCentreOn(void)
 {
-	Details.centre = true;
-	Details.justify = false;
-	Details.rightJustify = false;
+	Font_Details.centre = true;
+	Font_Details.justify = false;
+	Font_Details.rightJustify = false;
 }
 
 void
-CFont::SetCentreOff(void)
+Font_SetCentreOff(void)
 {
-	Details.centre = false;
+	Font_Details.centre = false;
 }
 
 void
-CFont::SetWrapx(float x)
+Font_SetWrapx(float x)
 {
-	Details.wrapX = x;
+	Font_Details.wrapX = x;
 }
 
 void
-CFont::SetCentreSize(float s)
+Font_SetCentreSize(float s)
 {
-	Details.centreSize = s;
+	Font_Details.centreSize = s;
 }
 
 void
-CFont::SetBackgroundOn(void)
+Font_SetBackgroundOn(void)
 {
-	Details.background = true;
+	Font_Details.background = true;
 }
 
 void
-CFont::SetBackgroundOff(void)
+Font_SetBackgroundOff(void)
 {
-	Details.background = false;
+	Font_Details.background = false;
 }
 
 void
-CFont::SetBackgroundColor(CRGBA col)
+Font_SetBackgroundColor(CRGBA col)
 {
-	Details.backgroundColor = col;
+	Font_Details.backgroundColor = col;
 }
 
 void
-CFont::SetBackGroundOnlyTextOn(void)
+Font_SetBackGroundOnlyTextOn(void)
 {
-	Details.backgroundOnlyText = true;
+	Font_Details.backgroundOnlyText = true;
 }
 
 void
-CFont::SetBackGroundOnlyTextOff(void)
+Font_SetBackGroundOnlyTextOff(void)
 {
-	Details.backgroundOnlyText = false;
+	Font_Details.backgroundOnlyText = false;
 }
 
 void
-CFont::SetRightJustifyOn(void)
+Font_SetRightJustifyOn(void)
 {
-	Details.rightJustify = true;
-	Details.justify = false;
-	Details.centre = false;
+	Font_Details.rightJustify = true;
+	Font_Details.justify = false;
+	Font_Details.centre = false;
 }
 
 void
-CFont::SetRightJustifyOff(void)
+Font_SetRightJustifyOff(void)
 {
-	Details.rightJustify = false;
-	Details.justify = false;
-	Details.centre = false;
+	Font_Details.rightJustify = false;
+	Font_Details.justify = false;
+	Font_Details.centre = false;
 }
 
 void
-CFont::SetPropOff(void)
+Font_SetPropOff(void)
 {
-	Details.proportional = false;
+	Font_Details.proportional = false;
 }
 
 void
-CFont::SetPropOn(void)
+Font_SetPropOn(void)
 {
-	Details.proportional = true;
+	Font_Details.proportional = true;
 }
 
 void
-CFont::SetFontStyle(int16 style)
+Font_SetFontStyle(int16 style)
 {
 	if (style == FONT_HEADING) {
-		Details.style = FONT_STANDARD;
-		Details.bFontHalfTexture = true;
+		Font_Details.style = FONT_STANDARD;
+		Font_Details.bFontHalfTexture = true;
 	} else {
-		Details.style = style;
-		Details.bFontHalfTexture = false;
+		Font_Details.style = style;
+		Font_Details.bFontHalfTexture = false;
 	}
 }
 
 void
-CFont::SetRightJustifyWrap(float wrap)
+Font_SetRightJustifyWrap(float wrap)
 {
-	Details.rightJustifyWrap = wrap;
+	Font_Details.rightJustifyWrap = wrap;
 }
 
 void
-CFont::SetAlphaFade(float fade)
+Font_SetAlphaFade(float fade)
 {
-	Details.alphaFade = fade;
+	Font_Details.alphaFade = fade;
 }
 
 void
-CFont::SetDropColor(CRGBA col)
+Font_SetDropColor(CRGBA col)
 {
-	Details.dropColor = col;
-	if (Details.alphaFade < 255.0f)
-		Details.dropColor.a *= Details.alphaFade / 255.0f;
+	Font_Details.dropColor = col;
+	if (Font_Details.alphaFade < 255.0f)
+		Font_Details.dropColor.a *= Font_Details.alphaFade / 255.0f;
 }
 
 void
-CFont::SetDropShadowPosition(int16 pos)
+Font_SetDropShadowPosition(int16 pos)
 {
-	Details.dropShadowPosition = pos;
+	Font_Details.dropShadowPosition = pos;
 }
 
-wchar CFont::FindNewCharacter(wchar c)
+wchar Font_FindNewCharacter(wchar c)
 {
 	// Delegate to the C implementation
-	return Font_FindNewCharacter(c);
+	return FontText_FindNewCharacter(c);
 }
 
 wchar
-CFont::character_code(uint8 c)
+Font_character_code(uint8 c)
 {
 	if(c < 128)
 		return c;

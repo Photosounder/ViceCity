@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include <stdint.h>
 #include "PlaceableData.h"
@@ -192,7 +193,7 @@ float VehicleLogic_AmbulanceFreebieHealth(float health, float maxHealth);
 // Armour of the driver after the freebie of an enforcer: at least the maximum armour
 float VehicleLogic_EnforcerFreebieArmour(float armour, float maxArmour);
 // Radius of a vehicle around its origin from the corners of its bounding box: the larger of the distances of the two corners
-float VehicleLogic_BoundingRadius(const float boxMin[3], const float boxMax[3]);
+float VehicleLogic_BoundingRadius(const CVector *boxMin, const CVector *boxMax);
 // Whether a bike has tipped too far to stay standing: the right vector points up more than 0.35 or the forward vector more than 0.5
 bool VehicleLogic_BikeTippedOver(float rightZ, float forwardZ);
 // Value limited between a low and a high bound, as used for the inputs and speeds of vehicles

@@ -329,7 +329,7 @@ CCoronas::Render(void)
 			}else{
 				if((*Timer_GetTimeInMilliseconds()) > aCoronas[i].lastLOScheck + 2000){
 					aCoronas[i].lastLOScheck = (*Timer_GetTimeInMilliseconds());
-					aCoronas[i].sightClear = CWorld::GetIsLineOfSightClear(
+					aCoronas[i].sightClear = World_GetIsLineOfSightClear(
 						aCoronas[i].coors, TheCamera.Cams[TheCamera.ActiveCam].Source,
 						true, true, false, false, false, true, false);
 				}
@@ -782,10 +782,10 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		CEntity *entity;
 		if(corona->renderReflection){
 			if((((*Timer_GetFrameCounter()) + i) & 0xF) == 0 &&
-			   CWorld::ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
+			   World_ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
 					true, false, false, false, true, false, nil))
 				corona->heightAboveRoad = corona->coors.z - point.point.z;
-		}else if(CWorld::ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
+		}else if(World_ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
 				true, false, false, false, true, false, nil)){
 			corona->heightAboveRoad = corona->coors.z - point.point.z;
 			corona->renderReflection = true;
@@ -887,10 +887,10 @@ CCoronas::RenderReflections(void)
 			// check if we want a reflection on this corona
 			if(aCoronas[i].renderReflection){
 				if((((*Timer_GetFrameCounter()) + i) & 0xF) == 0 &&
-				   CWorld::ProcessVerticalLine(aCoronas[i].coors, -1000.0f, point, entity, true, false, false, false, true, false, nil))
+				   World_ProcessVerticalLine(aCoronas[i].coors, -1000.0f, point, entity, true, false, false, false, true, false, nil))
 					aCoronas[i].heightAboveRoad = aCoronas[i].coors.z - point.point.z;
 			}else{
-				if(CWorld::ProcessVerticalLine(aCoronas[i].coors, -1000.0f, point, entity, true, false, false, false, true, false, nil)){
+				if(World_ProcessVerticalLine(aCoronas[i].coors, -1000.0f, point, entity, true, false, false, false, true, false, nil)){
 					aCoronas[i].heightAboveRoad = aCoronas[i].coors.z - point.point.z;
 					aCoronas[i].renderReflection = true;
 				}
@@ -1105,7 +1105,7 @@ CCoronas::DoSunAndMoon(void)
 			255, sunCoors, size,
 			999999.88f, TYPE_STAR, FLARE_NONE, REFLECTION_OFF, LOSCHECK_OFF, STREAK_OFF, 0.0f);
 
-		if(TimeCycle_GetSunDirection()->z > 0.0f && !CGame::IsInInterior())
+		if(TimeCycle_GetSunDirection()->z > 0.0f && !Game_IsInInterior())
 			RegisterCorona(SUN_CORONA,
 				TimeCycle_GetSunCoronaRed(), TimeCycle_GetSunCoronaGreen(), TimeCycle_GetSunCoronaBlue(),
 				255, sunCoors, 25.0f * TimeCycle_GetSunSize(),
@@ -1133,7 +1133,7 @@ CRegisteredCorona::Update(void)
 	// The line of sight and cloud test, evaluated only when it is needed as before
 	bool blocked = LOScheck &&
 	   (CCoronas::SunBlockedByClouds && id == CCoronas::SUN_CORONA ||
-	    !CWorld::GetIsLineOfSightClear(coors, TheCamera.GetPosition(), true, false, false, false, false, false));
+	    !World_GetIsLineOfSightClear(coors, TheCamera.GetPosition(), true, false, false, false, false, false));
 
 	// The fade itself is done in C
 	bool visible = CoronaLogic_UpdateFade(&alpha, &fadeAlpha, registeredThisFrame, blocked, offScreen, CCoronas::bChangeBrightnessImmediately, (*Timer_GetTimeStep()));

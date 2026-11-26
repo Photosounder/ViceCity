@@ -66,7 +66,7 @@ float Events_BackendPedZ(CPed *ped)
 bool Events_BackendVerticalLine(EventsVector position,float endZ)
 {
     // Access the original typed native primitive only at its original C policy access point
-    CColPoint collision;CEntity *entity;return CWorld::ProcessVerticalLine(CVector(position.x,position.y,position.z),endZ,collision,entity,true,false,false,false,false,false,nil);
+    CColPoint collision;CEntity *entity;return World_ProcessVerticalLine(CVector(position.x,position.y,position.z),endZ,collision,entity,true,false,false,false,false,false,nil);
 }
 
 void Events_BackendSetLastAccident(CPed *ped,CAccident *accident)
@@ -78,7 +78,7 @@ void Events_BackendSetLastAccident(CPed *ped,CAccident *accident)
 CPed * Events_BackendPed(int32_t reference)
 {
     // Access the original typed native primitive only at its original C policy access point
-    return CPools::GetPed(reference);
+    return Pools_GetPed(reference);
 }
 
 float Events_BackendHealth(CPed *ped)

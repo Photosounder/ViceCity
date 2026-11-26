@@ -15,14 +15,14 @@
 #include "RwHelper.h"
 #include "VarConsole.h"
 
-int32 COcclusion::NumOccludersOnMap;
-int16 COcclusion::FarAwayList;
-int16 COcclusion::NearbyList;
-int16 COcclusion::ListWalkThroughFA;
-int16 COcclusion::PreviousListWalkThroughFA;
-int16 COcclusion::NumActiveOccluders;
-COccluder COcclusion::aOccluders[NUMOCCLUSIONVOLUMES];
-CActiveOccluder COcclusion::aActiveOccluders[NUMACTIVEOCCLUDERS];
+int32 Occlusion_NumOccludersOnMap;
+int16 Occlusion_FarAwayList;
+int16 Occlusion_NearbyList;
+int16 Occlusion_ListWalkThroughFA;
+int16 Occlusion_PreviousListWalkThroughFA;
+int16 Occlusion_NumActiveOccluders;
+COccluder Occlusion_aOccluders[NUMOCCLUSIONVOLUMES];
+CActiveOccluder Occlusion_aActiveOccluders[NUMACTIVEOCCLUDERS];
 
 CVector gCenterOnScreen;
 
@@ -40,36 +40,36 @@ bool bDispayOccDebugStuff; // disPAY, yeah
 #endif
 
 void
-COcclusion::Init(void)
+Occlusion_Init(void)
 {
-	NumOccludersOnMap = 0;
+	Occlusion_NumOccludersOnMap = 0;
 #ifndef MASTER
 	VarConsole_AddBool(&VarConsole,"Occlusion debug", &bDispayOccDebugStuff, true); // rouz edit (ChatGPT)
 #endif
-	FarAwayList = -1;
-	NearbyList = -1;
-	ListWalkThroughFA = -1;
-	PreviousListWalkThroughFA = -1;
+	Occlusion_FarAwayList = -1;
+	Occlusion_NearbyList = -1;
+	Occlusion_ListWalkThroughFA = -1;
+	Occlusion_PreviousListWalkThroughFA = -1;
 }
 
 void
-COcclusion::AddOne(float x, float y, float z, float width, float length, float height, float angle)
+Occlusion_AddOne(float x, float y, float z, float width, float length, float height, float angle)
 {
-	if(NumOccludersOnMap >= NUMOCCLUSIONVOLUMES)
+	if(Occlusion_NumOccludersOnMap >= NUMOCCLUSIONVOLUMES)
 		return;
 
-	aOccluders[NumOccludersOnMap].x = x;
-	aOccluders[NumOccludersOnMap].y = y;
-	aOccluders[NumOccludersOnMap].z = z;
-	aOccluders[NumOccludersOnMap].width = width;
-	aOccluders[NumOccludersOnMap].length = length;
-	aOccluders[NumOccludersOnMap].height = height;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].x = x;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].y = y;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].z = z;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].width = width;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].length = length;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].height = height;
 	// Delegate the angle wrapping to the C implementation
 	angle = General_RaiseBelow(angle, 0.0f, 360.0f);
 	angle = General_ReduceAbove(angle, 360.0f, 360.0f);
-	aOccluders[NumOccludersOnMap].angle = angle/360.0f * UINT16_MAX;
-	aOccluders[NumOccludersOnMap].listIndex = FarAwayList;
-	FarAwayList = NumOccludersOnMap++;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].angle = angle/360.0f * UINT16_MAX;
+	Occlusion_aOccluders[Occlusion_NumOccludersOnMap].listIndex = Occlusion_FarAwayList;
+	Occlusion_FarAwayList = Occlusion_NumOccludersOnMap++;
 }
 
 bool 
@@ -247,7 +247,7 @@ COccluder::ProcessOneOccluder(CActiveOccluder *occl) {
 }
 
 bool
-COcclusion::OccluderHidesBehind(CActiveOccluder *occl1, CActiveOccluder *occl2) {
+Occlusion_OccluderHidesBehind(CActiveOccluder *occl1, CActiveOccluder *occl2) {
 	for (int i = 0; i < occl1->linesCount; i++) {
 		for (int j = 0; j < occl2->linesCount; j++) {
 			if (!IsPointInsideLine(occl2->lines[j].origin.x, occl2->lines[j].origin.y, occl2->lines[j].direction.x,
@@ -266,88 +266,88 @@ COcclusion::OccluderHidesBehind(CActiveOccluder *occl1, CActiveOccluder *occl2) 
 }
 
 void
-COcclusion::ProcessBeforeRendering(void)
+Occlusion_ProcessBeforeRendering(void)
 {
-	NumActiveOccluders = 0;
+	Occlusion_NumActiveOccluders = 0;
 
 #ifndef MASTER
 	if (gbModelViewer)
 		return;
 #endif
 
-	if (CGame::currArea != AREA_MAIN_MAP)
+	if (Game_currArea != AREA_MAIN_MAP)
 		return;
 
-	if (ListWalkThroughFA == -1) {
-		PreviousListWalkThroughFA = -1;
-		ListWalkThroughFA = FarAwayList;
+	if (Occlusion_ListWalkThroughFA == -1) {
+		Occlusion_PreviousListWalkThroughFA = -1;
+		Occlusion_ListWalkThroughFA = Occlusion_FarAwayList;
 	}
 
 	int i;
-	for (i = 0; i < 16 && ListWalkThroughFA != -1; i++) {
-		if (aOccluders[ListWalkThroughFA].NearCamera()) {
-			int prevListWalkThroughFA = ListWalkThroughFA;
+	for (i = 0; i < 16 && Occlusion_ListWalkThroughFA != -1; i++) {
+		if (Occlusion_aOccluders[Occlusion_ListWalkThroughFA].NearCamera()) {
+			int prevListWalkThroughFA = Occlusion_ListWalkThroughFA;
 
-			if (PreviousListWalkThroughFA == -1) {
-				FarAwayList = aOccluders[ListWalkThroughFA].listIndex;
+			if (Occlusion_PreviousListWalkThroughFA == -1) {
+				Occlusion_FarAwayList = Occlusion_aOccluders[Occlusion_ListWalkThroughFA].listIndex;
 			}
 			else {
-				aOccluders[PreviousListWalkThroughFA].listIndex = aOccluders[ListWalkThroughFA].listIndex;
+				Occlusion_aOccluders[Occlusion_PreviousListWalkThroughFA].listIndex = Occlusion_aOccluders[Occlusion_ListWalkThroughFA].listIndex;
 			}
 
-			int prevNearbyList = NearbyList;
-			ListWalkThroughFA = aOccluders[ListWalkThroughFA].listIndex;
-			NearbyList = prevListWalkThroughFA;
-			aOccluders[prevListWalkThroughFA].listIndex = prevNearbyList;
+			int prevNearbyList = Occlusion_NearbyList;
+			Occlusion_ListWalkThroughFA = Occlusion_aOccluders[Occlusion_ListWalkThroughFA].listIndex;
+			Occlusion_NearbyList = prevListWalkThroughFA;
+			Occlusion_aOccluders[prevListWalkThroughFA].listIndex = prevNearbyList;
 		}
 		else {
-			PreviousListWalkThroughFA = ListWalkThroughFA;
-			ListWalkThroughFA = aOccluders[ListWalkThroughFA].listIndex;
+			Occlusion_PreviousListWalkThroughFA = Occlusion_ListWalkThroughFA;
+			Occlusion_ListWalkThroughFA = Occlusion_aOccluders[Occlusion_ListWalkThroughFA].listIndex;
 		}
 	}
 
 	int prevNearbyList = -1;
-	int tmpNearbyList = NearbyList;
+	int tmpNearbyList = Occlusion_NearbyList;
 	int indexTmpNearbyList, storeTmpNearbyList, prevFarAwayList;
 	while (tmpNearbyList != -1)
 	{
-		if (NumActiveOccluders < NUMACTIVEOCCLUDERS && aOccluders[tmpNearbyList].ProcessOneOccluder(&aActiveOccluders[NumActiveOccluders]))
-			++NumActiveOccluders;
+		if (Occlusion_NumActiveOccluders < NUMACTIVEOCCLUDERS && Occlusion_aOccluders[tmpNearbyList].ProcessOneOccluder(&Occlusion_aActiveOccluders[Occlusion_NumActiveOccluders]))
+			++Occlusion_NumActiveOccluders;
 
 		indexTmpNearbyList = tmpNearbyList;
-		if (aOccluders[indexTmpNearbyList].NearCamera())
+		if (Occlusion_aOccluders[indexTmpNearbyList].NearCamera())
 		{
 			prevNearbyList = tmpNearbyList;
-			tmpNearbyList = aOccluders[indexTmpNearbyList].listIndex;
+			tmpNearbyList = Occlusion_aOccluders[indexTmpNearbyList].listIndex;
 
 		}
 		else
 		{
 			storeTmpNearbyList = tmpNearbyList;
 			if (prevNearbyList == -1) {
-				NearbyList = aOccluders[indexTmpNearbyList].listIndex;
+				Occlusion_NearbyList = Occlusion_aOccluders[indexTmpNearbyList].listIndex;
 			}
 			else {
-				aOccluders[prevNearbyList].listIndex = aOccluders[indexTmpNearbyList].listIndex;
+				Occlusion_aOccluders[prevNearbyList].listIndex = Occlusion_aOccluders[indexTmpNearbyList].listIndex;
 			}
-			tmpNearbyList = aOccluders[indexTmpNearbyList].listIndex;
-			prevFarAwayList = FarAwayList;
-			FarAwayList = storeTmpNearbyList;
-			aOccluders[storeTmpNearbyList].listIndex = prevFarAwayList;
+			tmpNearbyList = Occlusion_aOccluders[indexTmpNearbyList].listIndex;
+			prevFarAwayList = Occlusion_FarAwayList;
+			Occlusion_FarAwayList = storeTmpNearbyList;
+			Occlusion_aOccluders[storeTmpNearbyList].listIndex = prevFarAwayList;
 		}
 	}
 
-	for (i = 0; i < NumActiveOccluders; i++) {
-		for (int j = 0; j < NumActiveOccluders; j++) {
-			if (i != j && aActiveOccluders[j].radius < aActiveOccluders[i].radius) {
-				if (OccluderHidesBehind(&aActiveOccluders[i], &aActiveOccluders[j])) {
-					for (int k = i; k < NumActiveOccluders - 1; k++) {
-						for (int l = 0; l < aActiveOccluders[k + 1].linesCount; l++)
-							aActiveOccluders[k].lines[l] = aActiveOccluders[k + 1].lines[l];
-						aActiveOccluders[k].linesCount = aActiveOccluders[k + 1].linesCount;
-						aActiveOccluders[k].radius = aActiveOccluders[k + 1].radius;
+	for (i = 0; i < Occlusion_NumActiveOccluders; i++) {
+		for (int j = 0; j < Occlusion_NumActiveOccluders; j++) {
+			if (i != j && Occlusion_aActiveOccluders[j].radius < Occlusion_aActiveOccluders[i].radius) {
+				if (Occlusion_OccluderHidesBehind(&Occlusion_aActiveOccluders[i], &Occlusion_aActiveOccluders[j])) {
+					for (int k = i; k < Occlusion_NumActiveOccluders - 1; k++) {
+						for (int l = 0; l < Occlusion_aActiveOccluders[k + 1].linesCount; l++)
+							Occlusion_aActiveOccluders[k].lines[l] = Occlusion_aActiveOccluders[k + 1].lines[l];
+						Occlusion_aActiveOccluders[k].linesCount = Occlusion_aActiveOccluders[k + 1].linesCount;
+						Occlusion_aActiveOccluders[k].radius = Occlusion_aActiveOccluders[k + 1].radius;
 					}
-					NumActiveOccluders--;
+					Occlusion_NumActiveOccluders--;
 					i--;
 					// Taken from Mobile!
 #ifdef FIX_BUGS
@@ -370,12 +370,12 @@ bool CActiveOccluder::IsPointWithinOcclusionArea(float pX, float pY, float area)
 	return true;
 }
 
-bool COcclusion::IsAABoxOccluded(CVector pos, float width, float length, float height) {
+bool Occlusion_IsAABoxOccluded(CVector pos, float width, float length, float height) {
 
 	CVector coors;
 	float outW, outH;
 
-	if (!NumActiveOccluders || !CalcScreenCoors(pos, &coors, &outW, &outH))
+	if (!Occlusion_NumActiveOccluders || !CalcScreenCoors(pos, &coors, &outW, &outH))
 		return false;
 
 	// Delegate the side and the area to the C implementation
@@ -392,16 +392,16 @@ bool COcclusion::IsAABoxOccluded(CVector pos, float width, float length, float h
 	maxCorner.y = pos.y + length / 2.0f;
 	maxCorner.z = pos.z + height / 2.0f;
 
-	for (int i = 0; i < NumActiveOccluders; i++) {
-		if (Occlusion_OccluderInFront(coors.z, side, aActiveOccluders[i].radius)) {
-			if (aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area))
+	for (int i = 0; i < Occlusion_NumActiveOccluders; i++) {
+		if (Occlusion_OccluderInFront(coors.z, side, Occlusion_aActiveOccluders[i].radius)) {
+			if (Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area))
 				return true;
 
-			if (aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) {
-				if (CalcScreenCoors(minCorner, &coors) && !aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
-				if (CalcScreenCoors(CVector(maxCorner.x, maxCorner.y, minCorner.z), &coors) && !aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
-				if (CalcScreenCoors(CVector(maxCorner.x, minCorner.y, maxCorner.z), &coors) && !aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
-				if (CalcScreenCoors(CVector(minCorner.x, maxCorner.y, maxCorner.z), &coors, &outW, &outH) && !aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+			if (Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) {
+				if (CalcScreenCoors(minCorner, &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(CVector(maxCorner.x, maxCorner.y, minCorner.z), &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(CVector(maxCorner.x, minCorner.y, maxCorner.z), &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(CVector(minCorner.x, maxCorner.y, maxCorner.z), &coors, &outW, &outH) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
 
 				return true;
 			}
@@ -411,19 +411,19 @@ bool COcclusion::IsAABoxOccluded(CVector pos, float width, float length, float h
 	return false;
 }
 
-bool COcclusion::IsPositionOccluded(CVector pos, float side) {
+bool Occlusion_IsPositionOccluded(CVector pos, float side) {
 
 	CVector coors;
 	float width, height;
 
-	if (!NumActiveOccluders || !CalcScreenCoors(pos, &coors, &width, &height))
+	if (!Occlusion_NumActiveOccluders || !CalcScreenCoors(pos, &coors, &width, &height))
 		return false;
 
 	float area = Occlusion_TestArea(width, height, side);
 
-	for (int i = 0; i < NumActiveOccluders; i++) {
-		if (Occlusion_OccluderInFront(coors.z, side, aActiveOccluders[i].radius))
-			if (aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area))
+	for (int i = 0; i < Occlusion_NumActiveOccluders; i++) {
+		if (Occlusion_OccluderInFront(coors.z, side, Occlusion_aActiveOccluders[i].radius))
+			if (Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area))
 				return true;
 	}
 
@@ -435,7 +435,7 @@ bool COcclusion::IsPositionOccluded(CVector pos, float side) {
 
 RwIm2DVertex vertexbufferT[2];
 
-void COcclusion::Render() {
+void Occlusion_Render() {
 	if (!bDispayOccDebugStuff || !((*Timer_GetTimeInMilliseconds()) & 0x200))
 		return;
 
@@ -447,18 +447,18 @@ void COcclusion::Render() {
 	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, FALSE);
 
 	float recipz = 1.0f/RwCameraGetNearClipPlane(Scene.camera);
-	for (int i = 0; i < NumActiveOccluders; i++) {
-		for (int j = 0; j < aActiveOccluders[i].linesCount; j++) {
-			RwIm2DVertexSetScreenX(&vertexbufferT[0], aActiveOccluders[i].lines[j].origin.x);
-			RwIm2DVertexSetScreenY(&vertexbufferT[0], aActiveOccluders[i].lines[j].origin.y);
+	for (int i = 0; i < Occlusion_NumActiveOccluders; i++) {
+		for (int j = 0; j < Occlusion_aActiveOccluders[i].linesCount; j++) {
+			RwIm2DVertexSetScreenX(&vertexbufferT[0], Occlusion_aActiveOccluders[i].lines[j].origin.x);
+			RwIm2DVertexSetScreenY(&vertexbufferT[0], Occlusion_aActiveOccluders[i].lines[j].origin.y);
 			RwIm2DVertexSetScreenZ(&vertexbufferT[0], RwIm2DGetNearScreenZ());
 			RwIm2DVertexSetCameraZ(&vertexbufferT[0], RwCameraGetNearClipPlane(Scene.camera));
 			RwIm2DVertexSetRecipCameraZ(&vertexbufferT[0], recipz);
 
 			RwIm2DVertexSetScreenX(&vertexbufferT[1],
-				aActiveOccluders[i].lines[j].origin.x + aActiveOccluders[i].lines[j].direction.x * aActiveOccluders[i].lines[j].length);
+				Occlusion_aActiveOccluders[i].lines[j].origin.x + Occlusion_aActiveOccluders[i].lines[j].direction.x * Occlusion_aActiveOccluders[i].lines[j].length);
 			RwIm2DVertexSetScreenY(&vertexbufferT[1],
-				aActiveOccluders[i].lines[j].origin.y + aActiveOccluders[i].lines[j].direction.y * aActiveOccluders[i].lines[j].length);
+				Occlusion_aActiveOccluders[i].lines[j].origin.y + Occlusion_aActiveOccluders[i].lines[j].direction.y * Occlusion_aActiveOccluders[i].lines[j].length);
 			RwIm2DVertexSetScreenZ(&vertexbufferT[1], RwIm2DGetNearScreenZ());
 			RwIm2DVertexSetCameraZ(&vertexbufferT[1], RwCameraGetNearClipPlane(Scene.camera));
 			RwIm2DVertexSetRecipCameraZ(&vertexbufferT[1], recipz);
@@ -478,25 +478,25 @@ bool CEntity::IsEntityOccluded(void) {
 	CVector coors;
 	float width, height;
 
-	if (COcclusion::NumActiveOccluders == 0 || !CalcScreenCoors(GetBoundCentre(), &coors, &width, &height))
+	if (Occlusion_NumActiveOccluders == 0 || !CalcScreenCoors(GetBoundCentre(), &coors, &width, &height))
 		return false;
 
 	float area = Occlusion_LargerSide(width, height) * GetBoundRadius() * 0.9f;
 
-	for (int i = 0; i < COcclusion::NumActiveOccluders; i++) {
-		if (coors.z - (GetBoundRadius() * 0.85f) > COcclusion::aActiveOccluders[i].radius) {
-			if (COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area)) {
+	for (int i = 0; i < Occlusion_NumActiveOccluders; i++) {
+		if (coors.z - (GetBoundRadius() * 0.85f) > Occlusion_aActiveOccluders[i].radius) {
+			if (Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area)) {
 				return true;
 			}
 
-			if (COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) {
+			if (Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) {
 				CVector min = m_matrix * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingBox.min); // rouz edit (ChatGPT)
 				CVector max = m_matrix * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingBox.max); // rouz edit (ChatGPT)
 
-				if (CalcScreenCoors(min, &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
-				if (CalcScreenCoors(CVector(max.x, max.y, min.z), &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
-				if (CalcScreenCoors(CVector(max.x, min.y, max.z), &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
-				if (CalcScreenCoors(CVector(min.x, max.y, max.z), &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(min, &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(CVector(max.x, max.y, min.z), &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(CVector(max.x, min.y, max.z), &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
+				if (CalcScreenCoors(CVector(min.x, max.y, max.z), &coors) && !Occlusion_aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
 
 				return true;
 			}

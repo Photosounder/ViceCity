@@ -12,98 +12,94 @@
 struct CDirectory;
 struct CPtrList;
 
-class CStreaming
-{
-public:
-	static bool ms_disableStreaming;
-	static bool ms_bLoadingBigModel;
-	static int32 ms_oldSectorX;
-	static int32 ms_oldSectorY;
-	static int32 ms_streamingBufferSize;
-#ifndef ONE_THREAD_PER_CHANNEL
-	static int8 *ms_pStreamingBuffer[2];
+//+ rouz edit (Claude)
+// Formerly the static class CStreaming, now C globals and functions shared with C
+#ifdef __cplusplus
+class CDirectory;
 #else
-	static int8 *ms_pStreamingBuffer[4];
+typedef struct CDirectory CDirectory;
 #endif
-	static int32 ms_channelError;
-
-
-	static CDirectory *ms_pExtraObjectsDir;
-
-	static int32 ms_lastCullZone;
-
-
-	static int32 ms_currentPedLoading;
-	static size_t ms_memoryAvailable;
-
-	static void Init(void);
-	static void Init2(void);
-	static void ReInit(void);
-	static void Shutdown(void);
-	static void Update(void);
-	static void LoadCdDirectory(void);
-	static void LoadCdDirectory(const char *dirname, int32 n);
-	static bool ConvertBufferToObject(int8 *buf, int32 streamId);
-	static bool FinishLoadingLargeFile(int8 *buf, int32 streamId);
-	static void RequestBigBuildings(eLevelName level);
-	static void RequestBigBuildings(eLevelName level, const CVector &pos);
-	static void InstanceBigBuildings(eLevelName level, const CVector &pos);
-	static void InstanceLoadedModelsInSectorList(CPtrList &list);
-	static void InstanceLoadedModels(const CVector &pos);
-	static void RequestIslands(eLevelName level);
-	static void RequestSpecialModel(int32 modelId, const char *modelName, int32 flags);
-	static void RequestSpecialChar(int32 charId, const char *modelName, int32 flags);
-	static void RemoveUnusedBuildings(eLevelName level);
-	static void RemoveBuildings(eLevelName level);
-	static void RemoveBuildingsNotInArea(int32 area);
-	static void RemoveUnusedBigBuildings(eLevelName level);
-	static void RemoveIslandsNotUsed(eLevelName level);
-	static void RemoveBigBuildings(eLevelName level);
-
-	static void RemoveUnusedModelsInLoadedList(void);
-
-
-
-	static void LoadInitialPeds(void);
-	static void LoadInitialWeapons(void);
-	static void LoadInitialVehicles(void);
-	static void StreamVehiclesAndPeds(void);
-	static void StreamZoneModels(const CVector &pos);
-
-	static void LoadBigBuildingsWhenNeeded(void);
-
-	static void RequestModelStream(int32 ch);
-	static bool ProcessLoadingChannel(int32 ch);
-	static void RetryLoadFile(int32 ch);
-	static void LoadRequestedModels(void);
-	static void LoadAllRequestedModels(bool priority);
-
-	static void MakeSpaceFor(int32 size);
-	static void ImGonnaUseStreamingMemory(void);
-	static void IHaveUsedStreamingMemory(void);
-	static void UpdateMemoryUsed(void);
-
-	static void AddModelsToRequestList(const CVector &pos, int32 flags);
-	static void ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float xmin, float ymin, float xmax, float ymax, int32 flags);
-	static void ProcessEntitiesInSectorList(CPtrList &list, int32 flags);
-	static void DeleteFarAwayRwObjects(const CVector &pos);
-	static void DeleteAllRwObjects(void);
-	static void DeleteRwObjectsAfterDeath(const CVector &pos);
-	static void DeleteRwObjectsBehindCamera(size_t mem); // originally signed
-	static void DeleteRwObjectsInSectorList(CPtrList &list);
-	static void DeleteRwObjectsInOverlapSectorList(CPtrList &list, int32 x, int32 y);
-	static bool DeleteRwObjectsBehindCameraInSectorList(CPtrList &list, size_t mem); // originally signed
-	static bool DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem); // originally signed
-
-	static void LoadScene(const CVector &pos);
-	static void LoadSceneCollision(const CVector &pos);
-
-	static void MemoryCardSave(uint8 *buffer, uint32 *length);
-	static void MemoryCardLoad(uint8 *buffer, uint32 length);
-
-	static void UpdateForAnimViewer(void);
-
-	static void PrintStreamingBufferState();
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern bool Streaming_ms_disableStreaming;
+extern bool Streaming_ms_bLoadingBigModel;
+extern int32 Streaming_ms_oldSectorX;
+extern int32 Streaming_ms_oldSectorY;
+extern int32 Streaming_ms_streamingBufferSize;
+#ifndef ONE_THREAD_PER_CHANNEL
+extern int8 * Streaming_ms_pStreamingBuffer[2];
+#else
+extern int8 * Streaming_ms_pStreamingBuffer[4];
+#endif
+extern int32 Streaming_ms_channelError;
+extern CDirectory * Streaming_ms_pExtraObjectsDir;
+extern int32 Streaming_ms_lastCullZone;
+extern int32 Streaming_ms_currentPedLoading;
+extern size_t Streaming_ms_memoryAvailable;
+void Streaming_Init(void);
+void Streaming_Init2(void);
+void Streaming_ReInit(void);
+void Streaming_Shutdown(void);
+void Streaming_Update(void);
+bool Streaming_ConvertBufferToObject(int8 *buf, int32 streamId);
+bool Streaming_FinishLoadingLargeFile(int8 *buf, int32 streamId);
+void Streaming_RequestIslands(eLevelName level);
+void Streaming_RequestSpecialModel(int32 modelId, const char *modelName, int32 flags);
+void Streaming_RequestSpecialChar(int32 charId, const char *modelName, int32 flags);
+void Streaming_RemoveUnusedBuildings(eLevelName level);
+void Streaming_RemoveBuildings(eLevelName level);
+void Streaming_RemoveBuildingsNotInArea(int32 area);
+void Streaming_RemoveUnusedBigBuildings(eLevelName level);
+void Streaming_RemoveIslandsNotUsed(eLevelName level);
+void Streaming_RemoveBigBuildings(eLevelName level);
+void Streaming_RemoveUnusedModelsInLoadedList(void);
+void Streaming_LoadInitialPeds(void);
+void Streaming_LoadInitialWeapons(void);
+void Streaming_LoadInitialVehicles(void);
+void Streaming_StreamVehiclesAndPeds(void);
+void Streaming_LoadBigBuildingsWhenNeeded(void);
+void Streaming_RequestModelStream(int32 ch);
+bool Streaming_ProcessLoadingChannel(int32 ch);
+void Streaming_RetryLoadFile(int32 ch);
+void Streaming_LoadRequestedModels(void);
+void Streaming_LoadAllRequestedModels(bool priority);
+void Streaming_MakeSpaceFor(int32 size);
+void Streaming_ImGonnaUseStreamingMemory(void);
+void Streaming_IHaveUsedStreamingMemory(void);
+void Streaming_UpdateMemoryUsed(void);
+void Streaming_DeleteAllRwObjects(void);
+void Streaming_DeleteRwObjectsBehindCamera(size_t mem); // originally signed
+void Streaming_MemoryCardSave(uint8 *buffer, uint32 *length);
+void Streaming_MemoryCardLoad(uint8 *buffer, uint32 length);
+void Streaming_UpdateForAnimViewer(void);
+void Streaming_PrintStreamingBufferState();
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+#ifndef ONE_THREAD_PER_CHANNEL
+#else
+#endif
+void Streaming_LoadCdDirectory(void);
+void Streaming_LoadCdDirectory(const char *dirname, int32 n);
+void Streaming_RequestBigBuildings(eLevelName level);
+void Streaming_RequestBigBuildings(eLevelName level, const CVector &pos);
+void Streaming_InstanceBigBuildings(eLevelName level, const CVector &pos);
+void Streaming_InstanceLoadedModelsInSectorList(CPtrList &list);
+void Streaming_InstanceLoadedModels(const CVector &pos);
+void Streaming_StreamZoneModels(const CVector &pos);
+void Streaming_AddModelsToRequestList(const CVector &pos, int32 flags);
+void Streaming_ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float xmin, float ymin, float xmax, float ymax, int32 flags);
+void Streaming_ProcessEntitiesInSectorList(CPtrList &list, int32 flags);
+void Streaming_DeleteFarAwayRwObjects(const CVector &pos);
+void Streaming_DeleteRwObjectsAfterDeath(const CVector &pos);
+void Streaming_DeleteRwObjectsInSectorList(CPtrList &list);
+void Streaming_DeleteRwObjectsInOverlapSectorList(CPtrList &list, int32 x, int32 y);
+bool Streaming_DeleteRwObjectsBehindCameraInSectorList(CPtrList &list, size_t mem); // originally signed
+bool Streaming_DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem); // originally signed
+void Streaming_LoadScene(const CVector &pos);
+void Streaming_LoadSceneCollision(const CVector &pos);
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

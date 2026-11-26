@@ -46,7 +46,7 @@ UnicodeMakeUpperCase(uint16_t *dst, const uint16_t *src) //idk what to do with i
 	*dst = '\0';
 }
 
-uint16_t Font_FindNewCharacter(uint16_t c)
+uint16_t FontText_FindNewCharacter(uint16_t c)
 {
 	// Symbols and letters live at different places in the half size texture
 	if (c >= 16 && c <= 26) return c + 128;
@@ -64,7 +64,7 @@ uint16_t Font_FindNewCharacter(uint16_t c)
 	return c;
 }
 
-void Font_FilterOutTokensFromString(uint16_t *str)
+void FontText_FilterOutTokensFromString(uint16_t *str)
 {
 	int newIdx = 0;
 	uint16_t copy[256], *c;
@@ -82,7 +82,7 @@ void Font_FilterOutTokensFromString(uint16_t *str)
 	str[newIdx] = '\0';
 }
 
-uint16_t *Font_GetNextSpace(uint16_t *s)
+uint16_t *FontText_GetNextSpace(uint16_t *s)
 {
 	// Up to the next space or the end, skipping tokens
 	for (; *s != ' ' && *s != '\0'; s++)

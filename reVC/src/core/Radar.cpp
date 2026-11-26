@@ -27,537 +27,537 @@
 #include "Font.h"
 #include "SaveBuf.h"
 
-float CRadar::m_radarRange;
-sRadarTrace CRadar::ms_RadarTrace[NUMRADARBLIPS];
+float Radar_m_radarRange;
+sRadarTrace Radar_ms_RadarTrace[NUMRADARBLIPS];
 CVector2D vec2DRadarOrigin;
 int32 gRadarTxdIds[64];
 
-Sprite2d CRadar::CentreSprite;
+Sprite2d Radar_CentreSprite;
 static void Sprite2d_Exit_CRadar_CentreSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::CentreSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_CentreSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_CentreSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::CentreSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CentreSprite);return 0;
+    Sprite2d_InitArray(&Radar_CentreSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CentreSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_CentreSprite=Sprite2d_Start_CRadar_CentreSprite();
-Sprite2d CRadar::MapHereSprite;
+Sprite2d Radar_MapHereSprite;
 static void Sprite2d_Exit_CRadar_MapHereSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::MapHereSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_MapHereSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_MapHereSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::MapHereSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_MapHereSprite);return 0;
+    Sprite2d_InitArray(&Radar_MapHereSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_MapHereSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_MapHereSprite=Sprite2d_Start_CRadar_MapHereSprite();
-Sprite2d CRadar::NorthSprite;
+Sprite2d Radar_NorthSprite;
 static void Sprite2d_Exit_CRadar_NorthSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::NorthSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_NorthSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_NorthSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::NorthSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_NorthSprite);return 0;
+    Sprite2d_InitArray(&Radar_NorthSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_NorthSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_NorthSprite=Sprite2d_Start_CRadar_NorthSprite();
-Sprite2d CRadar::AverySprite;
+Sprite2d Radar_AverySprite;
 static void Sprite2d_Exit_CRadar_AverySprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::AverySprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_AverySprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_AverySprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::AverySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_AverySprite);return 0;
+    Sprite2d_InitArray(&Radar_AverySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_AverySprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_AverySprite=Sprite2d_Start_CRadar_AverySprite();
-Sprite2d CRadar::BikerSprite;
+Sprite2d Radar_BikerSprite;
 static void Sprite2d_Exit_CRadar_BikerSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::BikerSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_BikerSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_BikerSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::BikerSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BikerSprite);return 0;
+    Sprite2d_InitArray(&Radar_BikerSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BikerSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_BikerSprite=Sprite2d_Start_CRadar_BikerSprite();
-Sprite2d CRadar::CortezSprite;
+Sprite2d Radar_CortezSprite;
 static void Sprite2d_Exit_CRadar_CortezSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::CortezSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_CortezSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_CortezSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::CortezSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CortezSprite);return 0;
+    Sprite2d_InitArray(&Radar_CortezSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CortezSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_CortezSprite=Sprite2d_Start_CRadar_CortezSprite();
-Sprite2d CRadar::DiazSprite;
+Sprite2d Radar_DiazSprite;
 static void Sprite2d_Exit_CRadar_DiazSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::DiazSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_DiazSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_DiazSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::DiazSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_DiazSprite);return 0;
+    Sprite2d_InitArray(&Radar_DiazSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_DiazSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_DiazSprite=Sprite2d_Start_CRadar_DiazSprite();
-Sprite2d CRadar::KentSprite;
+Sprite2d Radar_KentSprite;
 static void Sprite2d_Exit_CRadar_KentSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::KentSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_KentSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_KentSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::KentSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_KentSprite);return 0;
+    Sprite2d_InitArray(&Radar_KentSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_KentSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_KentSprite=Sprite2d_Start_CRadar_KentSprite();
-Sprite2d CRadar::LawyerSprite;
+Sprite2d Radar_LawyerSprite;
 static void Sprite2d_Exit_CRadar_LawyerSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::LawyerSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_LawyerSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_LawyerSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::LawyerSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_LawyerSprite);return 0;
+    Sprite2d_InitArray(&Radar_LawyerSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_LawyerSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_LawyerSprite=Sprite2d_Start_CRadar_LawyerSprite();
-Sprite2d CRadar::PhilSprite;
+Sprite2d Radar_PhilSprite;
 static void Sprite2d_Exit_CRadar_PhilSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::PhilSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_PhilSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_PhilSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::PhilSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PhilSprite);return 0;
+    Sprite2d_InitArray(&Radar_PhilSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PhilSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_PhilSprite=Sprite2d_Start_CRadar_PhilSprite();
-Sprite2d CRadar::BikersSprite;
+Sprite2d Radar_BikersSprite;
 static void Sprite2d_Exit_CRadar_BikersSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::BikersSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_BikersSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_BikersSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::BikersSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BikersSprite);return 0;
+    Sprite2d_InitArray(&Radar_BikersSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BikersSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_BikersSprite=Sprite2d_Start_CRadar_BikersSprite();
-Sprite2d CRadar::BoatyardSprite;
+Sprite2d Radar_BoatyardSprite;
 static void Sprite2d_Exit_CRadar_BoatyardSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::BoatyardSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_BoatyardSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_BoatyardSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::BoatyardSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BoatyardSprite);return 0;
+    Sprite2d_InitArray(&Radar_BoatyardSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BoatyardSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_BoatyardSprite=Sprite2d_Start_CRadar_BoatyardSprite();
-Sprite2d CRadar::MalibuClubSprite;
+Sprite2d Radar_MalibuClubSprite;
 static void Sprite2d_Exit_CRadar_MalibuClubSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::MalibuClubSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_MalibuClubSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_MalibuClubSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::MalibuClubSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_MalibuClubSprite);return 0;
+    Sprite2d_InitArray(&Radar_MalibuClubSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_MalibuClubSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_MalibuClubSprite=Sprite2d_Start_CRadar_MalibuClubSprite();
-Sprite2d CRadar::CubansSprite;
+Sprite2d Radar_CubansSprite;
 static void Sprite2d_Exit_CRadar_CubansSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::CubansSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_CubansSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_CubansSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::CubansSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CubansSprite);return 0;
+    Sprite2d_InitArray(&Radar_CubansSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CubansSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_CubansSprite=Sprite2d_Start_CRadar_CubansSprite();
-Sprite2d CRadar::FilmSprite;
+Sprite2d Radar_FilmSprite;
 static void Sprite2d_Exit_CRadar_FilmSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::FilmSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_FilmSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_FilmSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::FilmSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_FilmSprite);return 0;
+    Sprite2d_InitArray(&Radar_FilmSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_FilmSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_FilmSprite=Sprite2d_Start_CRadar_FilmSprite();
-Sprite2d CRadar::GunSprite;
+Sprite2d Radar_GunSprite;
 static void Sprite2d_Exit_CRadar_GunSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::GunSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_GunSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_GunSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::GunSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_GunSprite);return 0;
+    Sprite2d_InitArray(&Radar_GunSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_GunSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_GunSprite=Sprite2d_Start_CRadar_GunSprite();
-Sprite2d CRadar::HaitiansSprite;
+Sprite2d Radar_HaitiansSprite;
 static void Sprite2d_Exit_CRadar_HaitiansSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::HaitiansSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_HaitiansSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_HaitiansSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::HaitiansSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_HaitiansSprite);return 0;
+    Sprite2d_InitArray(&Radar_HaitiansSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_HaitiansSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_HaitiansSprite=Sprite2d_Start_CRadar_HaitiansSprite();
-Sprite2d CRadar::HardwareSprite;
+Sprite2d Radar_HardwareSprite;
 static void Sprite2d_Exit_CRadar_HardwareSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::HardwareSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_HardwareSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_HardwareSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::HardwareSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_HardwareSprite);return 0;
+    Sprite2d_InitArray(&Radar_HardwareSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_HardwareSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_HardwareSprite=Sprite2d_Start_CRadar_HardwareSprite();
-Sprite2d CRadar::SaveHouseSprite;
+Sprite2d Radar_SaveHouseSprite;
 static void Sprite2d_Exit_CRadar_SaveHouseSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::SaveHouseSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_SaveHouseSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_SaveHouseSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::SaveHouseSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SaveHouseSprite);return 0;
+    Sprite2d_InitArray(&Radar_SaveHouseSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SaveHouseSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_SaveHouseSprite=Sprite2d_Start_CRadar_SaveHouseSprite();
-Sprite2d CRadar::StripSprite;
+Sprite2d Radar_StripSprite;
 static void Sprite2d_Exit_CRadar_StripSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::StripSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_StripSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_StripSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::StripSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_StripSprite);return 0;
+    Sprite2d_InitArray(&Radar_StripSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_StripSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_StripSprite=Sprite2d_Start_CRadar_StripSprite();
-Sprite2d CRadar::IceSprite;
+Sprite2d Radar_IceSprite;
 static void Sprite2d_Exit_CRadar_IceSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::IceSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_IceSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_IceSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::IceSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_IceSprite);return 0;
+    Sprite2d_InitArray(&Radar_IceSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_IceSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_IceSprite=Sprite2d_Start_CRadar_IceSprite();
-Sprite2d CRadar::KCabsSprite;
+Sprite2d Radar_KCabsSprite;
 static void Sprite2d_Exit_CRadar_KCabsSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::KCabsSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_KCabsSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_KCabsSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::KCabsSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_KCabsSprite);return 0;
+    Sprite2d_InitArray(&Radar_KCabsSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_KCabsSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_KCabsSprite=Sprite2d_Start_CRadar_KCabsSprite();
-Sprite2d CRadar::LovefistSprite;
+Sprite2d Radar_LovefistSprite;
 static void Sprite2d_Exit_CRadar_LovefistSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::LovefistSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_LovefistSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_LovefistSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::LovefistSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_LovefistSprite);return 0;
+    Sprite2d_InitArray(&Radar_LovefistSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_LovefistSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_LovefistSprite=Sprite2d_Start_CRadar_LovefistSprite();
-Sprite2d CRadar::PrintworksSprite;
+Sprite2d Radar_PrintworksSprite;
 static void Sprite2d_Exit_CRadar_PrintworksSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::PrintworksSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_PrintworksSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_PrintworksSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::PrintworksSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PrintworksSprite);return 0;
+    Sprite2d_InitArray(&Radar_PrintworksSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PrintworksSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_PrintworksSprite=Sprite2d_Start_CRadar_PrintworksSprite();
-Sprite2d CRadar::PropertySprite;
+Sprite2d Radar_PropertySprite;
 static void Sprite2d_Exit_CRadar_PropertySprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::PropertySprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_PropertySprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_PropertySprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::PropertySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PropertySprite);return 0;
+    Sprite2d_InitArray(&Radar_PropertySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PropertySprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_PropertySprite=Sprite2d_Start_CRadar_PropertySprite();
-Sprite2d CRadar::SunYardSprite;
+Sprite2d Radar_SunYardSprite;
 static void Sprite2d_Exit_CRadar_SunYardSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::SunYardSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_SunYardSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_SunYardSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::SunYardSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SunYardSprite);return 0;
+    Sprite2d_InitArray(&Radar_SunYardSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SunYardSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_SunYardSprite=Sprite2d_Start_CRadar_SunYardSprite();
-Sprite2d CRadar::SpraySprite;
+Sprite2d Radar_SpraySprite;
 static void Sprite2d_Exit_CRadar_SpraySprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::SpraySprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_SpraySprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_SpraySprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::SpraySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SpraySprite);return 0;
+    Sprite2d_InitArray(&Radar_SpraySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SpraySprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_SpraySprite=Sprite2d_Start_CRadar_SpraySprite();
-Sprite2d CRadar::TShirtSprite;
+Sprite2d Radar_TShirtSprite;
 static void Sprite2d_Exit_CRadar_TShirtSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::TShirtSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_TShirtSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_TShirtSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::TShirtSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_TShirtSprite);return 0;
+    Sprite2d_InitArray(&Radar_TShirtSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_TShirtSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_TShirtSprite=Sprite2d_Start_CRadar_TShirtSprite();
-Sprite2d CRadar::TommySprite;
+Sprite2d Radar_TommySprite;
 static void Sprite2d_Exit_CRadar_TommySprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::TommySprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_TommySprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_TommySprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::TommySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_TommySprite);return 0;
+    Sprite2d_InitArray(&Radar_TommySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_TommySprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_TommySprite=Sprite2d_Start_CRadar_TommySprite();
-Sprite2d CRadar::PhoneSprite;
+Sprite2d Radar_PhoneSprite;
 static void Sprite2d_Exit_CRadar_PhoneSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::PhoneSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_PhoneSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_PhoneSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::PhoneSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PhoneSprite);return 0;
+    Sprite2d_InitArray(&Radar_PhoneSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PhoneSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_PhoneSprite=Sprite2d_Start_CRadar_PhoneSprite();
-Sprite2d CRadar::RadioWildstyleSprite;
+Sprite2d Radar_RadioWildstyleSprite;
 static void Sprite2d_Exit_CRadar_RadioWildstyleSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioWildstyleSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioWildstyleSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioWildstyleSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioWildstyleSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioWildstyleSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioWildstyleSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioWildstyleSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioWildstyleSprite=Sprite2d_Start_CRadar_RadioWildstyleSprite();
-Sprite2d CRadar::RadioFlashSprite;
+Sprite2d Radar_RadioFlashSprite;
 static void Sprite2d_Exit_CRadar_RadioFlashSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioFlashSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioFlashSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioFlashSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioFlashSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioFlashSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioFlashSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioFlashSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioFlashSprite=Sprite2d_Start_CRadar_RadioFlashSprite();
-Sprite2d CRadar::RadioKChatSprite;
+Sprite2d Radar_RadioKChatSprite;
 static void Sprite2d_Exit_CRadar_RadioKChatSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioKChatSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioKChatSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioKChatSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioKChatSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioKChatSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioKChatSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioKChatSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioKChatSprite=Sprite2d_Start_CRadar_RadioKChatSprite();
-Sprite2d CRadar::RadioFeverSprite;
+Sprite2d Radar_RadioFeverSprite;
 static void Sprite2d_Exit_CRadar_RadioFeverSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioFeverSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioFeverSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioFeverSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioFeverSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioFeverSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioFeverSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioFeverSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioFeverSprite=Sprite2d_Start_CRadar_RadioFeverSprite();
-Sprite2d CRadar::RadioVRockSprite;
+Sprite2d Radar_RadioVRockSprite;
 static void Sprite2d_Exit_CRadar_RadioVRockSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioVRockSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioVRockSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioVRockSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioVRockSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioVRockSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioVRockSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioVRockSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioVRockSprite=Sprite2d_Start_CRadar_RadioVRockSprite();
-Sprite2d CRadar::RadioVCPRSprite;
+Sprite2d Radar_RadioVCPRSprite;
 static void Sprite2d_Exit_CRadar_RadioVCPRSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioVCPRSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioVCPRSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioVCPRSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioVCPRSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioVCPRSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioVCPRSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioVCPRSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioVCPRSprite=Sprite2d_Start_CRadar_RadioVCPRSprite();
-Sprite2d CRadar::RadioEspantosoSprite;
+Sprite2d Radar_RadioEspantosoSprite;
 static void Sprite2d_Exit_CRadar_RadioEspantosoSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioEspantosoSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioEspantosoSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioEspantosoSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioEspantosoSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioEspantosoSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioEspantosoSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioEspantosoSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioEspantosoSprite=Sprite2d_Start_CRadar_RadioEspantosoSprite();
-Sprite2d CRadar::RadioEmotionSprite;
+Sprite2d Radar_RadioEmotionSprite;
 static void Sprite2d_Exit_CRadar_RadioEmotionSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioEmotionSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioEmotionSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioEmotionSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioEmotionSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioEmotionSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioEmotionSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioEmotionSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioEmotionSprite=Sprite2d_Start_CRadar_RadioEmotionSprite();
-Sprite2d CRadar::RadioWaveSprite;
+Sprite2d Radar_RadioWaveSprite;
 static void Sprite2d_Exit_CRadar_RadioWaveSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::RadioWaveSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_RadioWaveSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_RadioWaveSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::RadioWaveSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioWaveSprite);return 0;
+    Sprite2d_InitArray(&Radar_RadioWaveSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioWaveSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_RadioWaveSprite=Sprite2d_Start_CRadar_RadioWaveSprite();
 #ifdef MAP_ENHANCEMENTS
-Sprite2d CRadar::WaypointSprite;
+Sprite2d Radar_WaypointSprite;
 static void Sprite2d_Exit_CRadar_WaypointSprite(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(&CRadar::WaypointSprite,(size_t)(1));
+    Sprite2d_DeinitArray(&Radar_WaypointSprite,(size_t)(1));
 }
 static int Sprite2d_Start_CRadar_WaypointSprite(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(&CRadar::WaypointSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_WaypointSprite);return 0;
+    Sprite2d_InitArray(&Radar_WaypointSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_WaypointSprite);return 0;
 }
 static const int Sprite2d_Started_CRadar_WaypointSprite=Sprite2d_Start_CRadar_WaypointSprite();
 #endif
 
-Sprite2d *CRadar::RadarSprites[RADAR_SPRITE_COUNT] = { 
+Sprite2d *Radar_RadarSprites[RADAR_SPRITE_COUNT] = { 
 	nil,
-	&CentreSprite,
-	&MapHereSprite,
-	&NorthSprite,
-	&AverySprite,
-	&BikerSprite,
-	&CortezSprite,
-	&DiazSprite,
-	&KentSprite,
-	&LawyerSprite,
-	&PhilSprite,
-	&BikersSprite,
-	&BoatyardSprite,
-	&MalibuClubSprite,
-	&CubansSprite,
-	&FilmSprite,
-	&GunSprite,
-	&HaitiansSprite,
-	&HardwareSprite,
-	&SaveHouseSprite,
-	&StripSprite,
-	&IceSprite,
-	&KCabsSprite,
-	&LovefistSprite,
-	&PrintworksSprite,
-	&PropertySprite,
-	&SunYardSprite,
-	&SpraySprite,
-	&TShirtSprite,
-	&TommySprite,
-	&PhoneSprite,
-	&RadioWildstyleSprite,
-	&RadioFlashSprite,
-	&RadioKChatSprite,
-	&RadioFeverSprite,
-	&RadioVRockSprite,
-	&RadioVCPRSprite,
-	&RadioEspantosoSprite,
-	&RadioEmotionSprite,
-	&RadioWaveSprite,
+	&Radar_CentreSprite,
+	&Radar_MapHereSprite,
+	&Radar_NorthSprite,
+	&Radar_AverySprite,
+	&Radar_BikerSprite,
+	&Radar_CortezSprite,
+	&Radar_DiazSprite,
+	&Radar_KentSprite,
+	&Radar_LawyerSprite,
+	&Radar_PhilSprite,
+	&Radar_BikersSprite,
+	&Radar_BoatyardSprite,
+	&Radar_MalibuClubSprite,
+	&Radar_CubansSprite,
+	&Radar_FilmSprite,
+	&Radar_GunSprite,
+	&Radar_HaitiansSprite,
+	&Radar_HardwareSprite,
+	&Radar_SaveHouseSprite,
+	&Radar_StripSprite,
+	&Radar_IceSprite,
+	&Radar_KCabsSprite,
+	&Radar_LovefistSprite,
+	&Radar_PrintworksSprite,
+	&Radar_PropertySprite,
+	&Radar_SunYardSprite,
+	&Radar_SpraySprite,
+	&Radar_TShirtSprite,
+	&Radar_TommySprite,
+	&Radar_PhoneSprite,
+	&Radar_RadioWildstyleSprite,
+	&Radar_RadioFlashSprite,
+	&Radar_RadioKChatSprite,
+	&Radar_RadioFeverSprite,
+	&Radar_RadioVRockSprite,
+	&Radar_RadioVCPRSprite,
+	&Radar_RadioEspantosoSprite,
+	&Radar_RadioEmotionSprite,
+	&Radar_RadioWaveSprite,
 #ifdef MAP_ENHANCEMENTS
-	&WaypointSprite,
+	&Radar_WaypointSprite,
 #endif
 };
 
@@ -578,17 +578,17 @@ static_assert(RADAR_TILE_SIZE == (RADAR_SIZE_Y / RADAR_NUM_TILES), "CRadar: not 
 #define RADAR_MIN_SPEED (0.3f)
 #define RADAR_MAX_SPEED (0.9f)
 
-CRGBA CRadar::ArrowBlipColour1;
-CRGBA CRadar::ArrowBlipColour2;
-int16 CRadar::MapLegendCounter;
-int16 CRadar::MapLegendList[NUM_MAP_LEGENDS];
+CRGBA Radar_ArrowBlipColour1;
+CRGBA Radar_ArrowBlipColour2;
+int16 Radar_MapLegendCounter;
+int16 Radar_MapLegendList[NUM_MAP_LEGENDS];
 #ifdef MAP_ENHANCEMENTS
-int CRadar::TargetMarkerId = -1;
-CVector CRadar::TargetMarkerPos;
+int Radar_TargetMarkerId = -1;
+CVector Radar_TargetMarkerPos;
 #endif
 
-float CRadar::cachedCos;
-float CRadar::cachedSin;
+float Radar_cachedCos;
+float Radar_cachedSin;
 
 void ClipRadarTileCoords(int32 &x, int32 &y)
 {
@@ -637,61 +637,61 @@ void GetTextureCorners(int32 x, int32 y, CVector2D *out)
 	out[3].y = RADAR_TILE_SIZE * (y);
 }
 
-uint8 CRadar::CalculateBlipAlpha(float dist)
+uint8 Radar_CalculateBlipAlpha(float dist)
 {
 	// Delegate to the C implementation
-	return Radar_CalculateBlipAlpha(FrontEndMenuManager.m_bMenuMapActive, dist);
+	return RadarMath_CalculateBlipAlpha(FrontEndMenuManager.m_bMenuMapActive, dist);
 }
 
-void CRadar::ChangeBlipBrightness(int32 i, int32 bright)
+void Radar_ChangeBlipBrightness(int32 i, int32 bright)
 {
-	int index = GetActualBlipArrayIndex(i);
+	int index = Radar_GetActualBlipArrayIndex(i);
 	if (index != -1)
-		ms_RadarTrace[index].m_bDim = bright != 1;
+		Radar_ms_RadarTrace[index].m_bDim = bright != 1;
 }
 
-void CRadar::ChangeBlipColour(int32 i, int32 color)
+void Radar_ChangeBlipColour(int32 i, int32 color)
 {
-	int index = GetActualBlipArrayIndex(i);
+	int index = Radar_GetActualBlipArrayIndex(i);
 	if (index != -1)
-		ms_RadarTrace[index].m_nColor = color;
+		Radar_ms_RadarTrace[index].m_nColor = color;
 }
 
-void CRadar::ChangeBlipDisplay(int32 i, eBlipDisplay display)
+void Radar_ChangeBlipDisplay(int32 i, eBlipDisplay display)
 {
-	int index = GetActualBlipArrayIndex(i);
+	int index = Radar_GetActualBlipArrayIndex(i);
 	if (index != -1)
-		ms_RadarTrace[index].m_eBlipDisplay = display;
+		Radar_ms_RadarTrace[index].m_eBlipDisplay = display;
 }
 
-void CRadar::ChangeBlipScale(int32 i, int32 scale)
+void Radar_ChangeBlipScale(int32 i, int32 scale)
 {
-	int index = GetActualBlipArrayIndex(i);
+	int index = Radar_GetActualBlipArrayIndex(i);
 	if (index != -1)
-		ms_RadarTrace[index].m_wScale = scale;
+		Radar_ms_RadarTrace[index].m_wScale = scale;
 }
 
-void CRadar::ClearBlip(int32 i)
+void Radar_ClearBlip(int32 i)
 {
-	int index = GetActualBlipArrayIndex(i);
+	int index = Radar_GetActualBlipArrayIndex(i);
 	if (index != -1) {
-		SetRadarMarkerState(index, false);
-		ms_RadarTrace[index].m_bInUse = false;
-		ms_RadarTrace[index].m_eBlipType = BLIP_NONE;
-		ms_RadarTrace[index].m_eBlipDisplay = BLIP_DISPLAY_NEITHER;
-		ms_RadarTrace[index].m_eRadarSprite = RADAR_SPRITE_NONE;
+		Radar_SetRadarMarkerState(index, false);
+		Radar_ms_RadarTrace[index].m_bInUse = false;
+		Radar_ms_RadarTrace[index].m_eBlipType = BLIP_NONE;
+		Radar_ms_RadarTrace[index].m_eBlipDisplay = BLIP_DISPLAY_NEITHER;
+		Radar_ms_RadarTrace[index].m_eRadarSprite = RADAR_SPRITE_NONE;
 	}
 }
 
-void CRadar::ClearBlipForEntity(eBlipType type, int32 id)
+void Radar_ClearBlipForEntity(eBlipType type, int32 id)
 {
 	for (int i = 0; i < NUMRADARBLIPS; i++) {
-		if (type == ms_RadarTrace[i].m_eBlipType && id == ms_RadarTrace[i].m_nEntityHandle) {
-			SetRadarMarkerState(i, false);
-			ms_RadarTrace[i].m_bInUse = false;
-			ms_RadarTrace[i].m_eBlipType = BLIP_NONE;
-			ms_RadarTrace[i].m_eBlipDisplay = BLIP_DISPLAY_NEITHER;
-			ms_RadarTrace[i].m_eRadarSprite = RADAR_SPRITE_NONE;
+		if (type == Radar_ms_RadarTrace[i].m_eBlipType && id == Radar_ms_RadarTrace[i].m_nEntityHandle) {
+			Radar_SetRadarMarkerState(i, false);
+			Radar_ms_RadarTrace[i].m_bInUse = false;
+			Radar_ms_RadarTrace[i].m_eBlipType = BLIP_NONE;
+			Radar_ms_RadarTrace[i].m_eBlipDisplay = BLIP_DISPLAY_NEITHER;
+			Radar_ms_RadarTrace[i].m_eRadarSprite = RADAR_SPRITE_NONE;
 		}
 	};
 }
@@ -778,7 +778,7 @@ int LineRadarBoxCollision(CVector2D &out, const CVector2D &p1, const CVector2D &
 	return edge;
 }
 
-int CRadar::ClipRadarPoly(CVector2D *poly, const CVector2D *rect)
+int Radar_ClipRadarPoly(CVector2D *poly, const CVector2D *rect)
 {
 	CVector2D corners[4] = {
 		CVector2D(  1.0f, -1.0f ),	// top right
@@ -883,16 +883,16 @@ ClipPolyPlane(const CVector2D *in, int nin, CVector2D *out, CVector *plane)
 	return nout;
 }
 
-int CRadar::ClipRadarPoly(CVector2D *poly, const CVector2D *rect)
+int Radar_ClipRadarPoly(CVector2D *poly, const CVector2D *rect)
 {
 	// Delegate to the C implementation
-	return Radar_ClipRadarPoly(&poly[0].x, &rect[0].x);
+	return RadarMath_ClipRadarPoly(&poly[0].x, &rect[0].x);
 }
 #endif
 
-bool CRadar::DisplayThisBlip(int32 counter)
+bool Radar_DisplayThisBlip(int32 counter)
 {
-	switch (ms_RadarTrace[counter].m_eRadarSprite) {
+	switch (Radar_ms_RadarTrace[counter].m_eRadarSprite) {
 	case RADAR_SPRITE_SPRAY:
 	case RADAR_SPRITE_GUN:
 		return true;
@@ -901,22 +901,22 @@ bool CRadar::DisplayThisBlip(int32 counter)
 	}
 }
 
-void CRadar::Draw3dMarkers()
+void Radar_Draw3dMarkers()
 {
 	for (int i = 0; i < NUMRADARBLIPS; i++) {
-		if (ms_RadarTrace[i].m_bInUse) {
-			switch (ms_RadarTrace[i].m_eBlipType) {
+		if (Radar_ms_RadarTrace[i].m_bInUse) {
+			switch (Radar_ms_RadarTrace[i].m_eBlipType) {
 			case BLIP_CAR:
 			{
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				CEntity *entity = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ms_RadarTrace[i].m_nEntityHandle));
+				CEntity *entity = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), Radar_ms_RadarTrace[i].m_nEntityHandle));
 				//- rouz edit (ChatGPT)
-				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
+				if (Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += 1.2f * ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(entity->GetModelIndex())))->boundingBox.max.z + 2.5f; // rouz edit (ChatGPT)
 					// Enter the C 3D-marker controller with the original arguments
-					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 2.5f, CARBLIP_MARKER_COLOR_R, CARBLIP_MARKER_COLOR_G, CARBLIP_MARKER_COLOR_B, CARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
+					Markers3D_PlaceMarkerLegacy(i | (Radar_ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 2.5f, CARBLIP_MARKER_COLOR_R, CARBLIP_MARKER_COLOR_G, CARBLIP_MARKER_COLOR_B, CARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
 				break;
 			}
@@ -924,17 +924,17 @@ void CRadar::Draw3dMarkers()
 			{
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				CEntity *entity = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ms_RadarTrace[i].m_nEntityHandle));
+				CEntity *entity = ((CPed*)CPool_GetAt(Pools_GetPedPool(), Radar_ms_RadarTrace[i].m_nEntityHandle));
 				//- rouz edit (ChatGPT)
 				if (entity != nil) {
 					if (((CPed*)entity)->InVehicle())
 						entity = ((CPed * )entity)->m_pMyVehicle;
 				}
-				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
+				if (Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += 3.0f;
 					// Enter the C 3D-marker controller with the original arguments
-					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.5f, CHARBLIP_MARKER_COLOR_R, CHARBLIP_MARKER_COLOR_G, CHARBLIP_MARKER_COLOR_B, CHARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
+					Markers3D_PlaceMarkerLegacy(i | (Radar_ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.5f, CHARBLIP_MARKER_COLOR_R, CHARBLIP_MARKER_COLOR_G, CHARBLIP_MARKER_COLOR_B, CHARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
 				break;
 			}
@@ -942,23 +942,23 @@ void CRadar::Draw3dMarkers()
 			{
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				CEntity *entity = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ms_RadarTrace[i].m_nEntityHandle));
+				CEntity *entity = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), Radar_ms_RadarTrace[i].m_nEntityHandle));
 				//- rouz edit (ChatGPT)
-				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
+				if (Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(entity->GetModelIndex())))->boundingBox.max.z + 1.0f + 1.0f; // rouz edit (ChatGPT)
 					// Enter the C 3D-marker controller with the original arguments
-					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.0f, OBJECTBLIP_MARKER_COLOR_R, OBJECTBLIP_MARKER_COLOR_G, OBJECTBLIP_MARKER_COLOR_B, OBJECTBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
+					Markers3D_PlaceMarkerLegacy(i | (Radar_ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.0f, OBJECTBLIP_MARKER_COLOR_R, OBJECTBLIP_MARKER_COLOR_G, OBJECTBLIP_MARKER_COLOR_B, OBJECTBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
 				break;
 			}
 			case BLIP_COORD:
 				break;
 			case BLIP_CONTACT_POINT:
-				if (!CTheScripts::IsPlayerOnAMission()) {
-					if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY)
+				if (!TheScripts_IsPlayerOnAMission()) {
+					if (Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY)
 						// Enter the C 3D-marker controller with the original arguments
-						Markers3D_PlaceMarkerSetLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_CYLINDER, ms_RadarTrace[i].m_vecPos, 2.0f, COORDBLIP_MARKER_COLOR_R, COORDBLIP_MARKER_COLOR_G, COORDBLIP_MARKER_COLOR_B, COORDBLIP_MARKER_COLOR_A, 2048, 0.2f, 0);
+						Markers3D_PlaceMarkerSetLegacy(i | (Radar_ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_CYLINDER, Radar_ms_RadarTrace[i].m_vecPos, 2.0f, COORDBLIP_MARKER_COLOR_R, COORDBLIP_MARKER_COLOR_G, COORDBLIP_MARKER_COLOR_B, COORDBLIP_MARKER_COLOR_A, 2048, 0.2f, 0);
 				}
 				break;
 			}
@@ -966,9 +966,9 @@ void CRadar::Draw3dMarkers()
 	}
 }
 
-void CRadar::DrawBlips()
+void Radar_DrawBlips()
 {
-	if (!TheCamera.m_WideScreenOn && CHud::m_Wants_To_Draw_Hud) {
+	if (!TheCamera.m_WideScreenOn && Hud_m_Wants_To_Draw_Hud) {
 #ifdef SECUROM
 		extern uint8 roadBlocksPirateCheck;
 		if (roadBlocksPirateCheck == 2) return;
@@ -982,7 +982,7 @@ void CRadar::DrawBlips()
 
 		CVector2D out;
 		CVector2D in = CVector2D(0.0f, 0.0f);
-		TransformRadarPointToScreenSpace(out, in);
+		Radar_TransformRadarPointToScreenSpace(out, in);
 
 		if (!FrontEndMenuManager.m_bMenuMapActive) {
 			float angle;
@@ -995,35 +995,35 @@ void CRadar::DrawBlips()
 			else
 				angle = FindPlayerHeading() - (PI + TheCamera.GetForward().Heading());
 
-			DrawRotatingRadarSprite(&CentreSprite, out.x, out.y, angle, 255);
+			Radar_DrawRotatingRadarSprite(&Radar_CentreSprite, out.x, out.y, angle, 255);
 
 			CVector2D vec2d;
 			vec2d.x = vec2DRadarOrigin.x;
-			vec2d.y = M_SQRT2 * m_radarRange + vec2DRadarOrigin.y;
-			TransformRealWorldPointToRadarSpace(in, vec2d);
-			LimitRadarPoint(in);
-			TransformRadarPointToScreenSpace(out, in);
-			DrawRadarSprite(RADAR_SPRITE_NORTH, out.x, out.y, 255);
+			vec2d.y = M_SQRT2 * Radar_m_radarRange + vec2DRadarOrigin.y;
+			Radar_TransformRealWorldPointToRadarSpace(in, vec2d);
+			Radar_LimitRadarPoint(in);
+			Radar_TransformRadarPointToScreenSpace(out, in);
+			Radar_DrawRadarSprite(RADAR_SPRITE_NORTH, out.x, out.y, 255);
 		}
 
 		for(int blipId = 0; blipId < NUMRADARBLIPS; blipId++) {
-			if (!ms_RadarTrace[blipId].m_bInUse)
+			if (!Radar_ms_RadarTrace[blipId].m_bInUse)
 				continue;
 
-			switch (ms_RadarTrace[blipId].m_eBlipType) {
+			switch (Radar_ms_RadarTrace[blipId].m_eBlipType) {
 				case BLIP_CAR:
 				case BLIP_CHAR:
 				case BLIP_OBJECT:
-					if (ms_RadarTrace[blipId].m_eRadarSprite == RADAR_SPRITE_PROPERTY
-						&& (!CTheScripts::bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
-						DrawEntityBlip(blipId);
+					if (Radar_ms_RadarTrace[blipId].m_eRadarSprite == RADAR_SPRITE_PROPERTY
+						&& (!TheScripts_bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
+						Radar_DrawEntityBlip(blipId);
 
 					break;
 				case BLIP_COORD:
 				case BLIP_CONTACT_POINT:
-					if (ms_RadarTrace[blipId].m_eRadarSprite == RADAR_SPRITE_PHONE
-						&& (!CTheScripts::bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
-						DrawCoordBlip(blipId);
+					if (Radar_ms_RadarTrace[blipId].m_eRadarSprite == RADAR_SPRITE_PHONE
+						&& (!TheScripts_bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
+						Radar_DrawCoordBlip(blipId);
 					
 					break;
 				default:
@@ -1033,25 +1033,25 @@ void CRadar::DrawBlips()
 
 		// New in VC: Always draw Hardware/gun/pay'n spray/save blips
 		for(int blipId = 0; blipId < NUMRADARBLIPS; blipId++) {
-			if (!ms_RadarTrace[blipId].m_bInUse)
+			if (!Radar_ms_RadarTrace[blipId].m_bInUse)
 				continue;
 
-			if (ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SAVE && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_HARDWARE
-					&& ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SPRAY && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_GUN)
+			if (Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SAVE && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_HARDWARE
+					&& Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SPRAY && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_GUN)
 				continue;
 
-			switch (ms_RadarTrace[blipId].m_eBlipType) {
+			switch (Radar_ms_RadarTrace[blipId].m_eBlipType) {
 				case BLIP_CAR:
 				case BLIP_CHAR:
 				case BLIP_OBJECT:
-					if (!CTheScripts::bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive)
-						DrawEntityBlip(blipId);
+					if (!TheScripts_bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive)
+						Radar_DrawEntityBlip(blipId);
 
 					break;
 				case BLIP_COORD:
 				case BLIP_CONTACT_POINT:
-					if (!CTheScripts::bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive)
-						DrawCoordBlip(blipId);
+					if (!TheScripts_bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive)
+						Radar_DrawCoordBlip(blipId);
 					
 					break;
 				default:
@@ -1060,37 +1060,37 @@ void CRadar::DrawBlips()
 		}
 
 		for(int blipId = 0; blipId < NUMRADARBLIPS; blipId++) {
-			if (!ms_RadarTrace[blipId].m_bInUse)
+			if (!Radar_ms_RadarTrace[blipId].m_bInUse)
 				continue;
 
-			switch (ms_RadarTrace[blipId].m_eBlipType) {
+			switch (Radar_ms_RadarTrace[blipId].m_eBlipType) {
 				case BLIP_CAR:
 				case BLIP_CHAR:
 				case BLIP_OBJECT:
-					if (ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SAVE && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_HARDWARE
-						&& ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SPRAY && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_PROPERTY
-						&& ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_GUN
-						&& (!CTheScripts::bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
+					if (Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SAVE && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_HARDWARE
+						&& Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SPRAY && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_PROPERTY
+						&& Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_GUN
+						&& (!TheScripts_bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
 
-						DrawEntityBlip(blipId);
+						Radar_DrawEntityBlip(blipId);
 					break;
 				default:
 					break;
 			}
 		}
 		for (int blipId = 0; blipId < NUMRADARBLIPS; blipId++) {
-			if (!ms_RadarTrace[blipId].m_bInUse)
+			if (!Radar_ms_RadarTrace[blipId].m_bInUse)
 				continue;
 
-			switch (ms_RadarTrace[blipId].m_eBlipType) {
+			switch (Radar_ms_RadarTrace[blipId].m_eBlipType) {
 				case BLIP_COORD:
 				case BLIP_CONTACT_POINT:
-					if (ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SAVE && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_HARDWARE
-						&& ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SPRAY && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_PROPERTY
-						&& ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_GUN && ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_PHONE
-						&& (!CTheScripts::bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
+					if (Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SAVE && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_HARDWARE
+						&& Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_SPRAY && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_PROPERTY
+						&& Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_GUN && Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_PHONE
+						&& (!TheScripts_bPlayerIsInTheStatium || !FrontEndMenuManager.m_bMenuMapActive))
 
-						DrawCoordBlip(blipId);
+						Radar_DrawCoordBlip(blipId);
 					break;
 				default:
 					break;
@@ -1098,48 +1098,48 @@ void CRadar::DrawBlips()
 		}
 		if (FrontEndMenuManager.m_bMenuMapActive) {
 			CVector2D in, out;
-			if (!CTheScripts::bPlayerIsInTheStatium)
-				TransformRealWorldPointToRadarSpace(in, FindPlayerCentreOfWorld_NoSniperShift());
+			if (!TheScripts_bPlayerIsInTheStatium)
+				Radar_TransformRealWorldPointToRadarSpace(in, FindPlayerCentreOfWorld_NoSniperShift());
 			else
-				TransformRealWorldPointToRadarSpace(in, CVector2D(-1302.5f, 1332.8f));
+				Radar_TransformRealWorldPointToRadarSpace(in, CVector2D(-1302.5f, 1332.8f));
 
-			LimitRadarPoint(in);
-			TransformRadarPointToScreenSpace(out, in);
-			DrawYouAreHereSprite(out.x, out.y);
+			Radar_LimitRadarPoint(in);
+			Radar_TransformRadarPointToScreenSpace(out, in);
+			Radar_DrawYouAreHereSprite(out.x, out.y);
 		}
 	}
 }
 
-void CRadar::DrawMap()
+void Radar_DrawMap()
 {
-	if (!TheCamera.m_WideScreenOn && CHud::m_Wants_To_Draw_Hud) {
-		CalculateCachedSinCos();
+	if (!TheCamera.m_WideScreenOn && Hud_m_Wants_To_Draw_Hud) {
+		Radar_CalculateCachedSinCos();
 		if (FindPlayerVehicle()) {
 			float speed = FindPlayerSpeed().Magnitude();
 			if (speed < RADAR_MIN_SPEED)
-				m_radarRange = RADAR_MIN_RANGE;
+				Radar_m_radarRange = RADAR_MIN_RANGE;
 			else if (speed < RADAR_MAX_SPEED)
-				m_radarRange = (speed - RADAR_MIN_SPEED)/(RADAR_MAX_SPEED-RADAR_MIN_SPEED) * (RADAR_MAX_RANGE-RADAR_MIN_RANGE) + RADAR_MIN_RANGE;
+				Radar_m_radarRange = (speed - RADAR_MIN_SPEED)/(RADAR_MAX_SPEED-RADAR_MIN_SPEED) * (RADAR_MAX_RANGE-RADAR_MIN_RANGE) + RADAR_MIN_RANGE;
 			else
-				m_radarRange = RADAR_MAX_RANGE;
+				Radar_m_radarRange = RADAR_MAX_RANGE;
 		}
 		else
-			m_radarRange = RADAR_MIN_RANGE;
+			Radar_m_radarRange = RADAR_MIN_RANGE;
 
 		vec2DRadarOrigin = CVector2D(FindPlayerCentreOfWorld_NoSniperShift());
 		if (FrontEndMenuManager.m_PrefsRadarMode != 1)
-			DrawRadarMap();
+			Radar_DrawRadarMap();
 	}
 }
 
-void CRadar::DrawRadarMap()
+void Radar_DrawRadarMap()
 {
-	DrawRadarMask();
+	Radar_DrawRadarMask();
 
 	// top left ist (0, 0)
 	int x = Floor((vec2DRadarOrigin.x - RADAR_MIN_X) / RADAR_TILE_SIZE);
 	int y = Ceil((RADAR_NUM_TILES - 1) - (vec2DRadarOrigin.y - RADAR_MIN_Y) / RADAR_TILE_SIZE);
-	StreamRadarSections(x, y);
+	Radar_StreamRadarSections(x, y);
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
@@ -1152,18 +1152,18 @@ void CRadar::DrawRadarMap()
 	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
 	RwRenderStateSet(rwRENDERSTATETEXTUREPERSPECTIVE, (void*)FALSE);
 
-	DrawRadarSection(x - 1, y - 1);
-	DrawRadarSection(x, y - 1);
-	DrawRadarSection(x + 1, y - 1);
-	DrawRadarSection(x - 1, y);
-	DrawRadarSection(x, y);
-	DrawRadarSection(x + 1, y);
-	DrawRadarSection(x - 1, y + 1);
-	DrawRadarSection(x, y + 1);
-	DrawRadarSection(x + 1, y + 1);
+	Radar_DrawRadarSection(x - 1, y - 1);
+	Radar_DrawRadarSection(x, y - 1);
+	Radar_DrawRadarSection(x + 1, y - 1);
+	Radar_DrawRadarSection(x - 1, y);
+	Radar_DrawRadarSection(x, y);
+	Radar_DrawRadarSection(x + 1, y);
+	Radar_DrawRadarSection(x - 1, y + 1);
+	Radar_DrawRadarSection(x, y + 1);
+	Radar_DrawRadarSection(x + 1, y + 1);
 }
 
-void CRadar::DrawRadarMask() 
+void Radar_DrawRadarMask() 
 { 
 	CVector2D corners[4] = {
 		CVector2D(1.0f, -1.0f),
@@ -1196,13 +1196,13 @@ void CRadar::DrawRadarMask()
 		// First point is always the corner itself
 		in.x = corners[i].x;
 		in.y = corners[i].y;
-		TransformRadarPointToScreenSpace(out[0], in);
+		Radar_TransformRadarPointToScreenSpace(out[0], in);
 
 		// Then generate a quarter of the circle
 		for (int j = 0; j < 7; j++) {
 			// Delegate the point of the quarter circle to the C implementation
 			Radar_QuarterCirclePoint(corners[i].x, corners[i].y, j, &in.x, &in.y);
-			TransformRadarPointToScreenSpace(out[j + 1], in);
+			Radar_TransformRadarPointToScreenSpace(out[j + 1], in);
 		};
 
 		// Preserve the original operation through the C sprite interface
@@ -1216,7 +1216,7 @@ void CRadar::DrawRadarMask()
 
 }
 
-void CRadar::DrawRadarSection(int32 x, int32 y)
+void Radar_DrawRadarSection(int32 x, int32 y)
 {
 	int i;
 	RwTexDictionary *txd;
@@ -1231,16 +1231,16 @@ void CRadar::DrawRadarSection(int32 x, int32 y)
 	GetTextureCorners(x, y, worldPoly);
 	ClipRadarTileCoords(x, y);
 
-	if (!CTheScripts::bPlayerIsInTheStatium &&
+	if (!TheScripts_bPlayerIsInTheStatium &&
 		// Use the complete C texture dictionary owner with the original live arguments
 		// Use the C helper and retain the original typed SDK result
 		(!(txd = ((RwTexDictionary*)TxdStore_GetSlot(gRadarTxdIds[x + RADAR_NUM_TILES * y])->texDict)) || !(texture = ((RwTexture*)GetFirstTexture(txd)))))
 		return;
 
 	for (i = 0; i < 4; i++)
-		TransformRealWorldPointToRadarSpace(radarCorners[i], worldPoly[i]);
+		Radar_TransformRealWorldPointToRadarSpace(radarCorners[i], worldPoly[i]);
 
-	numVertices = ClipRadarPoly(radarPoly, radarCorners);
+	numVertices = Radar_ClipRadarPoly(radarPoly, radarCorners);
 
 	// FIX: can return earlier here
 //	if(numVertices == 0)
@@ -1248,12 +1248,12 @@ void CRadar::DrawRadarSection(int32 x, int32 y)
 		return;
 
 	for (i = 0; i < numVertices; i++) {
-		TransformRadarPointToRealWorldSpace(worldPoly[i], radarPoly[i]);
-		TransformRealWorldToTexCoordSpace(texCoords[i], worldPoly[i], x, y);
-		TransformRadarPointToScreenSpace(screenPoly[i], radarPoly[i]);
+		Radar_TransformRadarPointToRealWorldSpace(worldPoly[i], radarPoly[i]);
+		Radar_TransformRealWorldToTexCoordSpace(texCoords[i], worldPoly[i], x, y);
+		Radar_TransformRadarPointToScreenSpace(screenPoly[i], radarPoly[i]);
 	}
 
-	if (CTheScripts::bPlayerIsInTheStatium) {
+	if (TheScripts_bPlayerIsInTheStatium) {
 		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
 		([](int n,float *positions,float *uvs,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
@@ -1272,7 +1272,7 @@ void CRadar::DrawRadarSection(int32 x, int32 y)
 	RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, ((RwIm2DVertex*)Sprite2d_GetVertices()), numVertices);
 }
 
-void CRadar::DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha)
+void Radar_DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha)
 {
 #ifdef MAP_ENHANCEMENTS
 	if(sprite == RADAR_SPRITE_WAYPOINT) alpha = 255;
@@ -1280,22 +1280,22 @@ void CRadar::DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha)
 	([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(RadarSprites[sprite],Rect_Make(x - SCREEN_SCALE_X(8.0f), y - SCREEN_SCALE_Y(8.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(8.0f)), CRGBA(255, 255, 255, alpha));
+})(Radar_RadarSprites[sprite],Rect_Make(x - SCREEN_SCALE_X(8.0f), y - SCREEN_SCALE_Y(8.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(8.0f)), CRGBA(255, 255, 255, alpha));
 
 	if (FrontEndMenuManager.m_bMenuMapActive) {
 		bool alreadyThere = false;
 		for (int i = 0; i < NUM_MAP_LEGENDS; i++) {
-			if (MapLegendList[i] == sprite)
+			if (Radar_MapLegendList[i] == sprite)
 				alreadyThere = true;
 		}
 		if (!alreadyThere) {
-			MapLegendList[MapLegendCounter] = sprite;
-			MapLegendCounter++;
+			Radar_MapLegendList[Radar_MapLegendCounter] = sprite;
+			Radar_MapLegendCounter++;
 		}
 	}
 }
 
-void CRadar::DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float angle, int32 alpha)
+void Radar_DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float angle, int32 alpha)
 {
 	CVector curPosn[4];
 	const float sizeX = SCREEN_SCALE_X(8.0f);
@@ -1317,22 +1317,22 @@ void CRadar::DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float a
 })(sprite,curPosn[3].x, curPosn[3].y, curPosn[2].x, curPosn[2].y, curPosn[0].x, curPosn[0].y, curPosn[1].x, curPosn[1].y, CRGBA(255, 255, 255, alpha));
 }
 
-int32 CRadar::GetActualBlipArrayIndex(int32 i)
+int32 Radar_GetActualBlipArrayIndex(int32 i)
 {
 	// Delegate to the C implementation
-	return Radar_GetActualBlipArrayIndex(ms_RadarTrace, i);
+	return RadarMath_GetActualBlipArrayIndex(Radar_ms_RadarTrace, i);
 }
 
-int32 CRadar::GetNewUniqueBlipIndex(int32 i)
+int32 Radar_GetNewUniqueBlipIndex(int32 i)
 {
 	// Delegate to the C implementation
-	return Radar_GetNewUniqueBlipIndex(ms_RadarTrace, i);
+	return RadarMath_GetNewUniqueBlipIndex(Radar_ms_RadarTrace, i);
 }
 
-uint32 CRadar::GetRadarTraceColour(uint32 color, bool bright)
+uint32 Radar_GetRadarTraceColour(uint32 color, bool bright)
 {
 	// Delegate to the C implementation
-	return Radar_GetRadarTraceColour(color, bright);
+	return RadarMath_GetRadarTraceColour(color, bright);
 }
 
 const char* gRadarTexNames[] = {
@@ -1347,36 +1347,36 @@ const char* gRadarTexNames[] = {
 };
 
 void
-CRadar::Initialise()
+Radar_Initialise()
 {
 #ifdef MAP_ENHANCEMENTS
-	TargetMarkerId = -1;
+	Radar_TargetMarkerId = -1;
 #endif
 	for (int i = 0; i < NUMRADARBLIPS; i++) {
-		ms_RadarTrace[i].m_BlipIndex = 1;
-		SetRadarMarkerState(i, false);
-		ms_RadarTrace[i].m_bInUse = false;
-		ms_RadarTrace[i].m_bShortRange = false;
-		ms_RadarTrace[i].m_eBlipType = BLIP_NONE;
-		ms_RadarTrace[i].m_eBlipDisplay = BLIP_DISPLAY_NEITHER;
-		ms_RadarTrace[i].m_eRadarSprite = RADAR_SPRITE_NONE;
+		Radar_ms_RadarTrace[i].m_BlipIndex = 1;
+		Radar_SetRadarMarkerState(i, false);
+		Radar_ms_RadarTrace[i].m_bInUse = false;
+		Radar_ms_RadarTrace[i].m_bShortRange = false;
+		Radar_ms_RadarTrace[i].m_eBlipType = BLIP_NONE;
+		Radar_ms_RadarTrace[i].m_eBlipDisplay = BLIP_DISPLAY_NEITHER;
+		Radar_ms_RadarTrace[i].m_eRadarSprite = RADAR_SPRITE_NONE;
 	}
 
-	m_radarRange = 350.0f;
+	Radar_m_radarRange = 350.0f;
 	for (int i = 0; i < 64; i++) 
 		// Use the complete C texture dictionary owner with the original live arguments
 		gRadarTxdIds[i] = TxdStore_FindTxdSlot(gRadarTexNames[i]);
 }
 
-float CRadar::LimitRadarPoint(CVector2D &point)
+float Radar_LimitRadarPoint(CVector2D &point)
 {
 	// Delegate to the C implementation
-	return Radar_LimitRadarPoint(&point.x, FrontEndMenuManager.m_bMenuMapActive);
+	return RadarMath_LimitRadarPoint(&point.x, FrontEndMenuManager.m_bMenuMapActive);
 }
 
-void CRadar::LoadAllRadarBlips(uint8 *buf, uint32 size)
+void Radar_LoadAllRadarBlips(uint8 *buf, uint32 size)
 {
-	Initialise();
+	Radar_Initialise();
 INITSAVEBUF
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
@@ -1386,28 +1386,28 @@ INITSAVEBUF
 	for (int i = 0; i < NUMRADARBLIPS; i++) {
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
-		ReadSaveBuf(&ms_RadarTrace[i].m_nColor, &buf, sizeof(ms_RadarTrace[i].m_nColor));
-		ReadSaveBuf(&ms_RadarTrace[i].m_Radius, &buf, sizeof(ms_RadarTrace[i].m_Radius));
-		ReadSaveBuf(&ms_RadarTrace[i].m_eBlipType, &buf, sizeof(ms_RadarTrace[i].m_eBlipType));
-		ReadSaveBuf(&ms_RadarTrace[i].m_nEntityHandle, &buf, sizeof(ms_RadarTrace[i].m_nEntityHandle));
-		ReadSaveBuf(&ms_RadarTrace[i].m_vec2DPos.x, &buf, sizeof(ms_RadarTrace[i].m_vec2DPos.x));
-		ReadSaveBuf(&ms_RadarTrace[i].m_vec2DPos.y, &buf, sizeof(ms_RadarTrace[i].m_vec2DPos.y));
-		ReadSaveBuf(&ms_RadarTrace[i].m_vecPos, &buf, sizeof(ms_RadarTrace[i].m_vecPos));
-		ReadSaveBuf(&ms_RadarTrace[i].m_BlipIndex, &buf, sizeof(ms_RadarTrace[i].m_BlipIndex));
-		ReadSaveBuf(&ms_RadarTrace[i].m_bDim, &buf, sizeof(ms_RadarTrace[i].m_bDim));
-		ReadSaveBuf(&ms_RadarTrace[i].m_bInUse, &buf, sizeof(ms_RadarTrace[i].m_bInUse));
-		ReadSaveBuf(&ms_RadarTrace[i].m_bShortRange, &buf, sizeof(ms_RadarTrace[i].m_bShortRange));
-		ReadSaveBuf(&ms_RadarTrace[i].m_unused, &buf, sizeof(ms_RadarTrace[i].m_unused));
-		ReadSaveBuf(&ms_RadarTrace[i].m_wScale, &buf, sizeof(ms_RadarTrace[i].m_wScale));
-		ReadSaveBuf(&ms_RadarTrace[i].m_eBlipDisplay, &buf, sizeof(ms_RadarTrace[i].m_eBlipDisplay));
-		ReadSaveBuf(&ms_RadarTrace[i].m_eRadarSprite, &buf, sizeof(ms_RadarTrace[i].m_eRadarSprite));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_nColor, &buf, sizeof(Radar_ms_RadarTrace[i].m_nColor));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_Radius, &buf, sizeof(Radar_ms_RadarTrace[i].m_Radius));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_eBlipType, &buf, sizeof(Radar_ms_RadarTrace[i].m_eBlipType));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_nEntityHandle, &buf, sizeof(Radar_ms_RadarTrace[i].m_nEntityHandle));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_vec2DPos.x, &buf, sizeof(Radar_ms_RadarTrace[i].m_vec2DPos.x));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_vec2DPos.y, &buf, sizeof(Radar_ms_RadarTrace[i].m_vec2DPos.y));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_vecPos, &buf, sizeof(Radar_ms_RadarTrace[i].m_vecPos));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_BlipIndex, &buf, sizeof(Radar_ms_RadarTrace[i].m_BlipIndex));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_bDim, &buf, sizeof(Radar_ms_RadarTrace[i].m_bDim));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_bInUse, &buf, sizeof(Radar_ms_RadarTrace[i].m_bInUse));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_bShortRange, &buf, sizeof(Radar_ms_RadarTrace[i].m_bShortRange));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_unused, &buf, sizeof(Radar_ms_RadarTrace[i].m_unused));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_wScale, &buf, sizeof(Radar_ms_RadarTrace[i].m_wScale));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_eBlipDisplay, &buf, sizeof(Radar_ms_RadarTrace[i].m_eBlipDisplay));
+		ReadSaveBuf(&Radar_ms_RadarTrace[i].m_eRadarSprite, &buf, sizeof(Radar_ms_RadarTrace[i].m_eRadarSprite));
 		//- rouz edit (ChatGPT)
 	}
 
 VALIDATESAVEBUF(size);
 }
 
-void CRadar::SaveAllRadarBlips(uint8 *buf, uint32 *size)
+void Radar_SaveAllRadarBlips(uint8 *buf, uint32 *size)
 {
 	*size = SAVE_HEADER_SIZE + NUMRADARBLIPS * sizeof(sRadarTraceSave);
 
@@ -1419,9 +1419,9 @@ INITSAVEBUF
 
 #ifdef MAP_ENHANCEMENTS
 	bool bWaypointDeleted = false;
-	if (TargetMarkerId != -1) {
-		ClearBlip(TargetMarkerId);
-		TargetMarkerId = -1;
+	if (Radar_TargetMarkerId != -1) {
+		Radar_ClearBlip(Radar_TargetMarkerId);
+		Radar_TargetMarkerId = -1;
 		bWaypointDeleted = true;
 	}
 #endif
@@ -1429,20 +1429,20 @@ INITSAVEBUF
 	for (int i = 0; i < NUMRADARBLIPS; i++) {
 		sRadarTraceSave *saveStruct = (sRadarTraceSave*) buf;
 
-		saveStruct->m_nColor = ms_RadarTrace[i].m_nColor;
-		saveStruct->m_Radius = ms_RadarTrace[i].m_Radius;
-		saveStruct->m_eBlipType = ms_RadarTrace[i].m_eBlipType;
-		saveStruct->m_nEntityHandle = ms_RadarTrace[i].m_nEntityHandle;
-		saveStruct->m_vec2DPos = ms_RadarTrace[i].m_vec2DPos;
-		saveStruct->m_vecPos = ms_RadarTrace[i].m_vecPos;
-		saveStruct->m_BlipIndex = ms_RadarTrace[i].m_BlipIndex;
-		saveStruct->m_bDim = ms_RadarTrace[i].m_bDim;
-		saveStruct->m_bInUse = ms_RadarTrace[i].m_bInUse;
-		saveStruct->m_bShortRange = ms_RadarTrace[i].m_bShortRange;
-		saveStruct->m_unused = ms_RadarTrace[i].m_unused;
-		saveStruct->m_wScale = ms_RadarTrace[i].m_wScale;
-		saveStruct->m_eBlipDisplay = ms_RadarTrace[i].m_eBlipDisplay;
-		saveStruct->m_eRadarSprite = ms_RadarTrace[i].m_eRadarSprite;
+		saveStruct->m_nColor = Radar_ms_RadarTrace[i].m_nColor;
+		saveStruct->m_Radius = Radar_ms_RadarTrace[i].m_Radius;
+		saveStruct->m_eBlipType = Radar_ms_RadarTrace[i].m_eBlipType;
+		saveStruct->m_nEntityHandle = Radar_ms_RadarTrace[i].m_nEntityHandle;
+		saveStruct->m_vec2DPos = Radar_ms_RadarTrace[i].m_vec2DPos;
+		saveStruct->m_vecPos = Radar_ms_RadarTrace[i].m_vecPos;
+		saveStruct->m_BlipIndex = Radar_ms_RadarTrace[i].m_BlipIndex;
+		saveStruct->m_bDim = Radar_ms_RadarTrace[i].m_bDim;
+		saveStruct->m_bInUse = Radar_ms_RadarTrace[i].m_bInUse;
+		saveStruct->m_bShortRange = Radar_ms_RadarTrace[i].m_bShortRange;
+		saveStruct->m_unused = Radar_ms_RadarTrace[i].m_unused;
+		saveStruct->m_wScale = Radar_ms_RadarTrace[i].m_wScale;
+		saveStruct->m_eBlipDisplay = Radar_ms_RadarTrace[i].m_eBlipDisplay;
+		saveStruct->m_eRadarSprite = Radar_ms_RadarTrace[i].m_eRadarSprite;
 
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
@@ -1452,14 +1452,14 @@ INITSAVEBUF
 
 #ifdef MAP_ENHANCEMENTS
 	if(bWaypointDeleted)
-		ToggleTargetMarker(TargetMarkerPos.x, TargetMarkerPos.y);
+		Radar_ToggleTargetMarker(Radar_TargetMarkerPos.x, Radar_TargetMarkerPos.y);
 #endif
 
 VALIDATESAVEBUF(*size);
 }
 
 void
-CRadar::LoadTextures()
+Radar_LoadTextures()
 {
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_PushCurrentTxd();
@@ -1468,165 +1468,165 @@ CRadar::LoadTextures()
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(CentreSprite),"radar_centre");
+})(&(Radar_CentreSprite),"radar_centre");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(MapHereSprite),"arrow");
+})(&(Radar_MapHereSprite),"arrow");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(NorthSprite),"radar_north");
+})(&(Radar_NorthSprite),"radar_north");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(AverySprite),"radar_avery");
+})(&(Radar_AverySprite),"radar_avery");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(BikerSprite),"radar_biker");
+})(&(Radar_BikerSprite),"radar_biker");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(CortezSprite),"radar_cortez");
+})(&(Radar_CortezSprite),"radar_cortez");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(DiazSprite),"radar_diaz");
+})(&(Radar_DiazSprite),"radar_diaz");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(KentSprite),"radar_kent");
+})(&(Radar_KentSprite),"radar_kent");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(LawyerSprite),"radar_lawyer");
+})(&(Radar_LawyerSprite),"radar_lawyer");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(PhilSprite),"radar_phil");
+})(&(Radar_PhilSprite),"radar_phil");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(BikersSprite),"bikers");
+})(&(Radar_BikersSprite),"bikers");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(BoatyardSprite),"boatyard");
+})(&(Radar_BoatyardSprite),"boatyard");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(MalibuClubSprite),"club");
+})(&(Radar_MalibuClubSprite),"club");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(CubansSprite),"cubans");
+})(&(Radar_CubansSprite),"cubans");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(FilmSprite),"filmstudio");
+})(&(Radar_FilmSprite),"filmstudio");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(GunSprite),"gun");
+})(&(Radar_GunSprite),"gun");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(HaitiansSprite),"haitians");
+})(&(Radar_HaitiansSprite),"haitians");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(HardwareSprite),"hardware");
+})(&(Radar_HardwareSprite),"hardware");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(SaveHouseSprite),"radar_save");
+})(&(Radar_SaveHouseSprite),"radar_save");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(StripSprite),"radar_strip");
+})(&(Radar_StripSprite),"radar_strip");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(IceSprite),"icecream");
+})(&(Radar_IceSprite),"icecream");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(KCabsSprite),"kcabs");
+})(&(Radar_KCabsSprite),"kcabs");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(LovefistSprite),"lovefist");
+})(&(Radar_LovefistSprite),"lovefist");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(PrintworksSprite),"printworks");
+})(&(Radar_PrintworksSprite),"printworks");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(PropertySprite),"property");
+})(&(Radar_PropertySprite),"property");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(SunYardSprite),"SunYard");
+})(&(Radar_SunYardSprite),"SunYard");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(SpraySprite),"spray");
+})(&(Radar_SpraySprite),"spray");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(TShirtSprite),"tshirt");
+})(&(Radar_TShirtSprite),"tshirt");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(TommySprite),"tommy");
+})(&(Radar_TommySprite),"tommy");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(PhoneSprite),"phone");
+})(&(Radar_PhoneSprite),"phone");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioWildstyleSprite),"RWildstyle");
+})(&(Radar_RadioWildstyleSprite),"RWildstyle");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioFlashSprite),"RFlash");
+})(&(Radar_RadioFlashSprite),"RFlash");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioKChatSprite),"RKchat");
+})(&(Radar_RadioKChatSprite),"RKchat");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioFeverSprite),"RFever");
+})(&(Radar_RadioFeverSprite),"RFever");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioVRockSprite),"RVRock");
+})(&(Radar_RadioVRockSprite),"RVRock");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioVCPRSprite),"RVCPR");
+})(&(Radar_RadioVCPRSprite),"RVCPR");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioEspantosoSprite),"REspantoso");
+})(&(Radar_RadioEspantosoSprite),"REspantoso");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioEmotionSprite),"REmotion");
+})(&(Radar_RadioEmotionSprite),"REmotion");
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(RadioWaveSprite),"RWave");
+})(&(Radar_RadioWaveSprite),"RWave");
 #ifdef MAP_ENHANCEMENTS
 	([](Sprite2d *spriteSelf,const char *name){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTexture(spriteSelf,name);
-})(&(WaypointSprite),"radar_waypoint");
-	if(!WaypointSprite.m_pTexture) {
+})(&(Radar_WaypointSprite),"radar_waypoint");
+	if(!Radar_WaypointSprite.m_pTexture) {
 		// create the texture if it's missing in TXD
 #define WAYPOINT_R (255)
 #define WAYPOINT_G (72)
@@ -1654,9 +1654,9 @@ CRadar::LoadTextures()
 					pixels[x + y * 16] = 0xFF000000; // black
 			}
 		RwRasterUnlock(raster);
-		WaypointSprite.m_pTexture = RwTextureCreate(raster);
+		Radar_WaypointSprite.m_pTexture = RwTextureCreate(raster);
 		// Preserve the original operation through the C sprite interface
-		RwTextureSetFilterMode((RwTexture*)WaypointSprite.m_pTexture, rwFILTERLINEAR);
+		RwTextureSetFilterMode((RwTexture*)Radar_WaypointSprite.m_pTexture, rwFILTERLINEAR);
 #undef WAYPOINT_R
 #undef WAYPOINT_G
 #undef WAYPOINT_B
@@ -1666,100 +1666,100 @@ CRadar::LoadTextures()
 	TxdStore_PopCurrentTxd();
 }
 
-void CRadar::RemoveRadarSections()
+void Radar_RemoveRadarSections()
 {
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++)
 			RemoveMapSection(i, j);
 }
 
-void CRadar::SetBlipSprite(int32 i, int32 icon)
+void Radar_SetBlipSprite(int32 i, int32 icon)
 {
-	int index = CRadar::GetActualBlipArrayIndex(i);
+	int index = Radar_GetActualBlipArrayIndex(i);
 	if (index != -1) {
-		ms_RadarTrace[index].m_eRadarSprite = icon;
+		Radar_ms_RadarTrace[index].m_eRadarSprite = icon;
 	}
 }
 
-int CRadar::SetCoordBlip(eBlipType type, CVector pos, uint32 color, eBlipDisplay display)
+int Radar_SetCoordBlip(eBlipType type, CVector pos, uint32 color, eBlipDisplay display)
 {
 	int nextBlip;
 	for (nextBlip = 0; nextBlip < NUMRADARBLIPS; nextBlip++) {
-		if (!ms_RadarTrace[nextBlip].m_bInUse)
+		if (!Radar_ms_RadarTrace[nextBlip].m_bInUse)
 			break;
 	}
 #ifdef FIX_BUGS
 	if (nextBlip == NUMRADARBLIPS)
 		return -1;
 #endif
-	ms_RadarTrace[nextBlip].m_eBlipType = type;
-	ms_RadarTrace[nextBlip].m_nColor = RADAR_TRACE_MAGENTA;
-	ms_RadarTrace[nextBlip].m_bDim = true;
-	ms_RadarTrace[nextBlip].m_bInUse = true;
-	ms_RadarTrace[nextBlip].m_bShortRange = false;
-	ms_RadarTrace[nextBlip].m_Radius = 1.0f;
-	ms_RadarTrace[nextBlip].m_vec2DPos = pos;
-	ms_RadarTrace[nextBlip].m_vecPos = pos;
-	ms_RadarTrace[nextBlip].m_nEntityHandle = 0;
-	ms_RadarTrace[nextBlip].m_wScale = 1;
-	ms_RadarTrace[nextBlip].m_eBlipDisplay = display;
-	ms_RadarTrace[nextBlip].m_eRadarSprite = RADAR_SPRITE_NONE;
-	return CRadar::GetNewUniqueBlipIndex(nextBlip);
+	Radar_ms_RadarTrace[nextBlip].m_eBlipType = type;
+	Radar_ms_RadarTrace[nextBlip].m_nColor = RADAR_TRACE_MAGENTA;
+	Radar_ms_RadarTrace[nextBlip].m_bDim = true;
+	Radar_ms_RadarTrace[nextBlip].m_bInUse = true;
+	Radar_ms_RadarTrace[nextBlip].m_bShortRange = false;
+	Radar_ms_RadarTrace[nextBlip].m_Radius = 1.0f;
+	Radar_ms_RadarTrace[nextBlip].m_vec2DPos = pos;
+	Radar_ms_RadarTrace[nextBlip].m_vecPos = pos;
+	Radar_ms_RadarTrace[nextBlip].m_nEntityHandle = 0;
+	Radar_ms_RadarTrace[nextBlip].m_wScale = 1;
+	Radar_ms_RadarTrace[nextBlip].m_eBlipDisplay = display;
+	Radar_ms_RadarTrace[nextBlip].m_eRadarSprite = RADAR_SPRITE_NONE;
+	return Radar_GetNewUniqueBlipIndex(nextBlip);
 }
 
-int CRadar::SetShortRangeCoordBlip(eBlipType type, CVector pos, uint32 color, eBlipDisplay display)
+int Radar_SetShortRangeCoordBlip(eBlipType type, CVector pos, uint32 color, eBlipDisplay display)
 {
-	int index = SetCoordBlip(type, pos, color, display);
+	int index = Radar_SetCoordBlip(type, pos, color, display);
 	if (index == -1)
 		return -1;
-	ms_RadarTrace[GetActualBlipArrayIndex(index)].m_bShortRange = true;
+	Radar_ms_RadarTrace[Radar_GetActualBlipArrayIndex(index)].m_bShortRange = true;
 	return index;
 }
 
-int CRadar::SetEntityBlip(eBlipType type, int32 handle, uint32 color, eBlipDisplay display)
+int Radar_SetEntityBlip(eBlipType type, int32 handle, uint32 color, eBlipDisplay display)
 {
 	int nextBlip;
 	for (nextBlip = 0; nextBlip < NUMRADARBLIPS; nextBlip++) {
-		if (!ms_RadarTrace[nextBlip].m_bInUse)
+		if (!Radar_ms_RadarTrace[nextBlip].m_bInUse)
 			break;
 	}
 #ifdef FIX_BUGS
 	if (nextBlip == NUMRADARBLIPS)
 		return -1;
 #endif
-	ms_RadarTrace[nextBlip].m_eBlipType = type;
-	ms_RadarTrace[nextBlip].m_nColor = RADAR_TRACE_YELLOW;
-	ms_RadarTrace[nextBlip].m_bDim = true;
-	ms_RadarTrace[nextBlip].m_bInUse = true;
-	ms_RadarTrace[nextBlip].m_bShortRange = false;
-	ms_RadarTrace[nextBlip].m_Radius = 1.0f;
-	ms_RadarTrace[nextBlip].m_nEntityHandle = handle;
-	ms_RadarTrace[nextBlip].m_wScale = 1;
-	ms_RadarTrace[nextBlip].m_eBlipDisplay = display;
-	ms_RadarTrace[nextBlip].m_eRadarSprite = RADAR_SPRITE_NONE;
-	return GetNewUniqueBlipIndex(nextBlip);
+	Radar_ms_RadarTrace[nextBlip].m_eBlipType = type;
+	Radar_ms_RadarTrace[nextBlip].m_nColor = RADAR_TRACE_YELLOW;
+	Radar_ms_RadarTrace[nextBlip].m_bDim = true;
+	Radar_ms_RadarTrace[nextBlip].m_bInUse = true;
+	Radar_ms_RadarTrace[nextBlip].m_bShortRange = false;
+	Radar_ms_RadarTrace[nextBlip].m_Radius = 1.0f;
+	Radar_ms_RadarTrace[nextBlip].m_nEntityHandle = handle;
+	Radar_ms_RadarTrace[nextBlip].m_wScale = 1;
+	Radar_ms_RadarTrace[nextBlip].m_eBlipDisplay = display;
+	Radar_ms_RadarTrace[nextBlip].m_eRadarSprite = RADAR_SPRITE_NONE;
+	return Radar_GetNewUniqueBlipIndex(nextBlip);
 }
 
-void CRadar::SetRadarMarkerState(int32 counter, bool flag)
+void Radar_SetRadarMarkerState(int32 counter, bool flag)
 {
 	CEntity *e;
-	switch (ms_RadarTrace[counter].m_eBlipType) {
+	switch (Radar_ms_RadarTrace[counter].m_eBlipType) {
 	case BLIP_CAR:
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		e = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ms_RadarTrace[counter].m_nEntityHandle));
+		e = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), Radar_ms_RadarTrace[counter].m_nEntityHandle));
 		//- rouz edit (ChatGPT)
 		break;
 	case BLIP_CHAR:
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		e = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ms_RadarTrace[counter].m_nEntityHandle));
+		e = ((CPed*)CPool_GetAt(Pools_GetPedPool(), Radar_ms_RadarTrace[counter].m_nEntityHandle));
 		//- rouz edit (ChatGPT)
 		break;
 	case BLIP_OBJECT:
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		e = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ms_RadarTrace[counter].m_nEntityHandle));
+		e = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), Radar_ms_RadarTrace[counter].m_nEntityHandle));
 		//- rouz edit (ChatGPT)
 		break;
 	default:
@@ -1770,31 +1770,31 @@ void CRadar::SetRadarMarkerState(int32 counter, bool flag)
 		e->bHasBlip = flag;
 }
 
-void CRadar::ShowRadarMarker(CVector pos, uint32 color, float radius) {
+void Radar_ShowRadarMarker(CVector pos, uint32 color, float radius) {
 	float f1 = radius * 1.4f;
 	float f2 = radius * 0.5f;
 	CVector p1, p2;
 
 	p1 = pos + TheCamera.GetUp()*f1;
 	p2 = pos + TheCamera.GetUp()*f2;
-	CTheScripts::ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
+	TheScripts_ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
 
 	p1 = pos - TheCamera.GetUp()*f1;
 	p2 = pos - TheCamera.GetUp()*f2;
-	CTheScripts::ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
+	TheScripts_ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
 
 	p1 = pos + TheCamera.GetRight()*f1;
 	p2 = pos + TheCamera.GetRight()*f2;
-	CTheScripts::ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
+	TheScripts_ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
 
 	p1 = pos - TheCamera.GetRight()*f1;
 	p2 = pos - TheCamera.GetRight()*f2;
-	CTheScripts::ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
+	TheScripts_ScriptDebugLine3D(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, color, color);
 }
 
-void CRadar::ShowRadarTrace(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha)
+void Radar_ShowRadarTrace(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha)
 {
-	if (!CHud::m_Wants_To_Draw_Hud || TheCamera.m_WideScreenOn)
+	if (!Hud_m_Wants_To_Draw_Hud || TheCamera.m_WideScreenOn)
 		return;
 
 	([](const CRect &r,const CRGBA &col){
@@ -1807,9 +1807,9 @@ void CRadar::ShowRadarTrace(float x, float y, uint32 size, uint8 red, uint8 gree
 })(Rect_Make(x - SCREEN_SCALE_X(size), y - SCREEN_SCALE_Y(size), SCREEN_SCALE_X(size) + x, SCREEN_SCALE_Y(size) + y), CRGBA(red, green, blue, alpha));
 }
 
-void CRadar::ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha, uint8 mode)
+void Radar_ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha, uint8 mode)
 {
-	if (!CHud::m_Wants_To_Draw_Hud || TheCamera.m_WideScreenOn)
+	if (!Hud_m_Wants_To_Draw_Hud || TheCamera.m_WideScreenOn)
 		return;
 
 	switch (mode)
@@ -1849,180 +1849,180 @@ void CRadar::ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, 
 	}
 }
 
-void CRadar::Shutdown()
+void Radar_Shutdown()
 {
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(CentreSprite));
+})(&(Radar_CentreSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(MapHereSprite));
+})(&(Radar_MapHereSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(NorthSprite));
+})(&(Radar_NorthSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(AverySprite));
+})(&(Radar_AverySprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(BikerSprite));
+})(&(Radar_BikerSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(CortezSprite));
+})(&(Radar_CortezSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(DiazSprite));
+})(&(Radar_DiazSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(KentSprite));
+})(&(Radar_KentSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(LawyerSprite));
+})(&(Radar_LawyerSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(PhilSprite));
+})(&(Radar_PhilSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(BikersSprite));
+})(&(Radar_BikersSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(BoatyardSprite));
+})(&(Radar_BoatyardSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(MalibuClubSprite));
+})(&(Radar_MalibuClubSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(CubansSprite));
+})(&(Radar_CubansSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(FilmSprite));
+})(&(Radar_FilmSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(GunSprite));
+})(&(Radar_GunSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(HaitiansSprite));
+})(&(Radar_HaitiansSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(HardwareSprite));
+})(&(Radar_HardwareSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(SaveHouseSprite));
+})(&(Radar_SaveHouseSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(StripSprite));
+})(&(Radar_StripSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(IceSprite));
+})(&(Radar_IceSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(KCabsSprite));
+})(&(Radar_KCabsSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(LovefistSprite));
+})(&(Radar_LovefistSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(PrintworksSprite));
+})(&(Radar_PrintworksSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(PropertySprite));
+})(&(Radar_PropertySprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(SunYardSprite));
+})(&(Radar_SunYardSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(SpraySprite));
+})(&(Radar_SpraySprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(TShirtSprite));
+})(&(Radar_TShirtSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(TommySprite));
+})(&(Radar_TommySprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(PhoneSprite));
+})(&(Radar_PhoneSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioWildstyleSprite));
+})(&(Radar_RadioWildstyleSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioFlashSprite));
+})(&(Radar_RadioFlashSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioKChatSprite));
+})(&(Radar_RadioKChatSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioFeverSprite));
+})(&(Radar_RadioFeverSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioVRockSprite));
+})(&(Radar_RadioVRockSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioVCPRSprite));
+})(&(Radar_RadioVCPRSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioEspantosoSprite));
+})(&(Radar_RadioEspantosoSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioEmotionSprite));
+})(&(Radar_RadioEmotionSprite));
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(RadioWaveSprite));
+})(&(Radar_RadioWaveSprite));
 #ifdef MAP_ENHANCEMENTS
 	([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(WaypointSprite));
+})(&(Radar_WaypointSprite));
 #endif
-	RemoveRadarSections();
+	Radar_RemoveRadarSections();
 }
 
-void CRadar::StreamRadarSections(const CVector &posn)
+void Radar_StreamRadarSections(const CVector &posn)
 {
-	if (!CStreaming::ms_disableStreaming)
-		StreamRadarSections(Floor((RADAR_MAX_X + posn.x) / RADAR_TILE_SIZE), Ceil((RADAR_NUM_TILES - 1) - (RADAR_MAX_Y + posn.y) / RADAR_TILE_SIZE));
+	if (!Streaming_ms_disableStreaming)
+		Radar_StreamRadarSections(Floor((RADAR_MAX_X + posn.x) / RADAR_TILE_SIZE), Ceil((RADAR_NUM_TILES - 1) - (RADAR_MAX_Y + posn.y) / RADAR_TILE_SIZE));
 }
 
-void CRadar::StreamRadarSections(int32 x, int32 y)
+void Radar_StreamRadarSections(int32 x, int32 y)
 {
 	for (int i = 0; i < RADAR_NUM_TILES; ++i) {
 		for (int j = 0; j < RADAR_NUM_TILES; ++j) {
@@ -2034,7 +2034,7 @@ void CRadar::StreamRadarSections(int32 x, int32 y)
 	};
 }
 
-void CRadar::TransformRealWorldToTexCoordSpace(CVector2D &out, const CVector2D &in, int32 x, int32 y)
+void Radar_TransformRealWorldToTexCoordSpace(CVector2D &out, const CVector2D &in, int32 x, int32 y)
 {
 	out.x = in.x - (x * RADAR_TILE_SIZE + RADAR_MIN_X);
 	out.y = -(in.y - ((RADAR_NUM_TILES - y) * RADAR_TILE_SIZE + RADAR_MIN_Y));
@@ -2042,14 +2042,14 @@ void CRadar::TransformRealWorldToTexCoordSpace(CVector2D &out, const CVector2D &
 	out.y /= RADAR_TILE_SIZE;
 }
 
-void CRadar::TransformRadarPointToRealWorldSpace(CVector2D &out, const CVector2D &in)
+void Radar_TransformRadarPointToRealWorldSpace(CVector2D &out, const CVector2D &in)
 {
 	// Delegate to the C implementation
-	Radar_TransformRadarPointToRealWorldSpace(&out.x, &in.x, cachedSin, cachedCos, &vec2DRadarOrigin.x, m_radarRange);
+	RadarMath_TransformRadarPointToRealWorldSpace(&out.x, &in.x, Radar_cachedSin, Radar_cachedCos, &vec2DRadarOrigin.x, Radar_m_radarRange);
 }
 
 // Radar space goes from -1.0 to 1.0 in x and y, top right is (1.0, 1.0)
-void CRadar::TransformRadarPointToScreenSpace(CVector2D &out, const CVector2D &in)
+void Radar_TransformRadarPointToScreenSpace(CVector2D &out, const CVector2D &in)
 {
 	if (FrontEndMenuManager.m_bMenuMapActive) {
 		out.x = (FrontEndMenuManager.m_fMapCenterX - FrontEndMenuManager.m_fMapSize) + (MENU_MAP_LENGTH / 2 + MENU_MAP_LEFT_OFFSET + in.x) * FrontEndMenuManager.m_fMapSize * MENU_MAP_WIDTH_SCALE * 2.0f / MENU_MAP_LENGTH;
@@ -2064,22 +2064,22 @@ void CRadar::TransformRadarPointToScreenSpace(CVector2D &out, const CVector2D &i
 	}
 }
 
-void CRadar::TransformRealWorldPointToRadarSpace(CVector2D &out, const CVector2D &in)
+void Radar_TransformRealWorldPointToRadarSpace(CVector2D &out, const CVector2D &in)
 {
 	// Delegate to the C implementation
-	Radar_TransformRealWorldPointToRadarSpace(&out.x, &in.x, cachedSin, cachedCos, &vec2DRadarOrigin.x, m_radarRange);
+	RadarMath_TransformRealWorldPointToRadarSpace(&out.x, &in.x, Radar_cachedSin, Radar_cachedCos, &vec2DRadarOrigin.x, Radar_m_radarRange);
 }
 
 void
-CRadar::CalculateCachedSinCos()
+Radar_CalculateCachedSinCos()
 {
 	if (/*TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOPDOWN || TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED || */
 		FrontEndMenuManager.m_bMenuMapActive ) {
-		cachedSin = 0.0f;
-		cachedCos = 1.0f;
+		Radar_cachedSin = 0.0f;
+		Radar_cachedCos = 1.0f;
 	} else if (TheCamera.GetLookDirection() == LOOKING_FORWARD) {
-		cachedSin = Sin(TheCamera.GetForward().Heading());
-		cachedCos = Cos(TheCamera.GetForward().Heading());
+		Radar_cachedSin = Sin(TheCamera.GetForward().Heading());
+		Radar_cachedCos = Cos(TheCamera.GetForward().Heading());
 	} else {
 		CVector forward;
 
@@ -2090,28 +2090,28 @@ CRadar::CalculateCachedSinCos()
 		else
 			forward = TheCamera.Cams[TheCamera.ActiveCam].CamTargetEntity->GetPosition() - TheCamera.Cams[TheCamera.ActiveCam].SourceBeforeLookBehind;
 
-		cachedSin = Sin(forward.Heading());
-		cachedCos = Cos(forward.Heading());
+		Radar_cachedSin = Sin(forward.Heading());
+		Radar_cachedCos = Cos(forward.Heading());
 	}
 }
 
 void
-CRadar::InitFrontEndMap()
+Radar_InitFrontEndMap()
 {
-	CalculateCachedSinCos();
+	Radar_CalculateCachedSinCos();
 	vec2DRadarOrigin.x = 0.0f;
 	vec2DRadarOrigin.y = 0.0f;
-	m_radarRange = MENU_MAP_LENGTH_UNIT; // just affects the multiplier in TransformRadarPointToScreenSpace
+	Radar_m_radarRange = MENU_MAP_LENGTH_UNIT; // just affects the multiplier in TransformRadarPointToScreenSpace
 	for (int i = 0; i < NUM_MAP_LEGENDS; i++) {
-		MapLegendList[i] = RADAR_SPRITE_NONE;
+		Radar_MapLegendList[i] = RADAR_SPRITE_NONE;
 	}
-	MapLegendCounter = 0;
-	ArrowBlipColour1 = CRGBA(0, 0, 0, 0);
-	ArrowBlipColour2 = CRGBA(0, 0, 0, 0);
+	Radar_MapLegendCounter = 0;
+	Radar_ArrowBlipColour1 = CRGBA(0, 0, 0, 0);
+	Radar_ArrowBlipColour2 = CRGBA(0, 0, 0, 0);
 }
 
 void
-CRadar::DrawYouAreHereSprite(float x, float y)
+Radar_DrawYouAreHereSprite(float x, float y)
 {
 	static uint32 lastChange = 0;
 	static bool show = true;
@@ -2136,62 +2136,62 @@ CRadar::DrawYouAreHereSprite(float x, float y)
 		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(MapHereSprite),Rect_Make(left + SCREEN_SCALE_X(2.f), top + SCREEN_SCALE_Y(2.f), right + SCREEN_SCALE_X(2.f), bottom + SCREEN_SCALE_Y(2.f)),
+})(&(Radar_MapHereSprite),Rect_Make(left + SCREEN_SCALE_X(2.f), top + SCREEN_SCALE_Y(2.f), right + SCREEN_SCALE_X(2.f), bottom + SCREEN_SCALE_Y(2.f)),
 			CRGBA(0, 0, 0, 255));
 
 		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(MapHereSprite),Rect_Make(left, top, right, bottom), CRGBA(255, 255, 255, 255));
+})(&(Radar_MapHereSprite),Rect_Make(left, top, right, bottom), CRGBA(255, 255, 255, 255));
 
-		CFont::SetWrapx(right + SCREEN_SCALE_X(28.0f));
-		CFont::SetRightJustifyWrap(right);
-		CFont::SetBackGroundOnlyTextOff();
-		CFont::SetColor(CRGBA(255, 150, 225, 255));
-		CFont::SetDropShadowPosition(2);
-		CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-		CFont::SetCentreOff();
-		CFont::SetRightJustifyOff();
-		CFont::SetFontStyle(FONT_LOCALE(FONT_HEADING));
-		CFont::SetScale(SCREEN_SCALE_X(0.65f), SCREEN_SCALE_Y(0.95f));
-		CFont::PrintString(right, top, Text_Get(&TheText,"MAP_YAH"));
-		CFont::SetDropShadowPosition(0);
-		CFont::DrawFonts();
+		Font_SetWrapx(right + SCREEN_SCALE_X(28.0f));
+		Font_SetRightJustifyWrap(right);
+		Font_SetBackGroundOnlyTextOff();
+		Font_SetColor(CRGBA(255, 150, 225, 255));
+		Font_SetDropShadowPosition(2);
+		Font_SetDropColor(CRGBA(0, 0, 0, 255));
+		Font_SetCentreOff();
+		Font_SetRightJustifyOff();
+		Font_SetFontStyle(FONT_LOCALE(FONT_HEADING));
+		Font_SetScale(SCREEN_SCALE_X(0.65f), SCREEN_SCALE_Y(0.95f));
+		Font_PrintString(right, top, Text_Get(&TheText,"MAP_YAH"));
+		Font_SetDropShadowPosition(0);
+		Font_DrawFonts();
 	}
-	MapLegendList[MapLegendCounter++] = RADAR_SPRITE_MAP_HERE;
+	Radar_MapLegendList[Radar_MapLegendCounter++] = RADAR_SPRITE_MAP_HERE;
 }
 
 #ifdef MAP_ENHANCEMENTS
 void
-CRadar::ToggleTargetMarker(float x, float y)
+Radar_ToggleTargetMarker(float x, float y)
 {
-	if (TargetMarkerId == -1) {
+	if (Radar_TargetMarkerId == -1) {
 		int nextBlip;
 		for (nextBlip = NUMRADARBLIPS-1; nextBlip >= 0; nextBlip--) {
-			if (!ms_RadarTrace[nextBlip].m_bInUse)
+			if (!Radar_ms_RadarTrace[nextBlip].m_bInUse)
 				break;
 		}
 		
 		if (nextBlip == 0)
 			return;
 			
-		ms_RadarTrace[nextBlip].m_eBlipType = BLIP_COORD;
-		ms_RadarTrace[nextBlip].m_nColor = RADAR_TRACE_GRAY;
-		ms_RadarTrace[nextBlip].m_bDim = 0;
-		ms_RadarTrace[nextBlip].m_bInUse = 1;
-		ms_RadarTrace[nextBlip].m_Radius = 1.0f;
+		Radar_ms_RadarTrace[nextBlip].m_eBlipType = BLIP_COORD;
+		Radar_ms_RadarTrace[nextBlip].m_nColor = RADAR_TRACE_GRAY;
+		Radar_ms_RadarTrace[nextBlip].m_bDim = 0;
+		Radar_ms_RadarTrace[nextBlip].m_bInUse = 1;
+		Radar_ms_RadarTrace[nextBlip].m_Radius = 1.0f;
 		CVector pos(x, y, 0.0f);
-		TargetMarkerPos = pos;
-		ms_RadarTrace[nextBlip].m_vec2DPos = pos;
-		ms_RadarTrace[nextBlip].m_vecPos = pos;
-		ms_RadarTrace[nextBlip].m_nEntityHandle = 0;
-		ms_RadarTrace[nextBlip].m_wScale = 5;
-		ms_RadarTrace[nextBlip].m_eBlipDisplay = BLIP_DISPLAY_BLIP_ONLY;
-		ms_RadarTrace[nextBlip].m_eRadarSprite = RADAR_SPRITE_WAYPOINT;
-		TargetMarkerId = CRadar::GetNewUniqueBlipIndex(nextBlip);
+		Radar_TargetMarkerPos = pos;
+		Radar_ms_RadarTrace[nextBlip].m_vec2DPos = pos;
+		Radar_ms_RadarTrace[nextBlip].m_vecPos = pos;
+		Radar_ms_RadarTrace[nextBlip].m_nEntityHandle = 0;
+		Radar_ms_RadarTrace[nextBlip].m_wScale = 5;
+		Radar_ms_RadarTrace[nextBlip].m_eBlipDisplay = BLIP_DISPLAY_BLIP_ONLY;
+		Radar_ms_RadarTrace[nextBlip].m_eRadarSprite = RADAR_SPRITE_WAYPOINT;
+		Radar_TargetMarkerId = Radar_GetNewUniqueBlipIndex(nextBlip);
 	} else {
-		ClearBlip(TargetMarkerId);
-		TargetMarkerId = -1;
+		Radar_ClearBlip(Radar_TargetMarkerId);
+		Radar_TargetMarkerId = -1;
 	}
 }
 #endif
@@ -2199,22 +2199,22 @@ CRadar::ToggleTargetMarker(float x, float y)
 static_assert(BLIP_MODE_TRIANGULAR_UP == 0 && BLIP_MODE_TRIANGULAR_DOWN == 1 && BLIP_MODE_SQUARE == 2, "Blip modes are mirrored in RadarMath.c");
 
 void
-CRadar::DrawEntityBlip(int32 blipId)
+Radar_DrawEntityBlip(int32 blipId)
 {
 	CVector2D out;
 	CVector2D in;
 	CEntity *blipEntity;
-	switch (ms_RadarTrace[blipId].m_eBlipType) {
+	switch (Radar_ms_RadarTrace[blipId].m_eBlipType) {
 		case BLIP_CAR:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			blipEntity = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ms_RadarTrace[blipId].m_nEntityHandle));
+			blipEntity = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), Radar_ms_RadarTrace[blipId].m_nEntityHandle));
 			//- rouz edit (ChatGPT)
 			break;
 		case BLIP_CHAR:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			blipEntity = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ms_RadarTrace[blipId].m_nEntityHandle));
+			blipEntity = ((CPed*)CPool_GetAt(Pools_GetPedPool(), Radar_ms_RadarTrace[blipId].m_nEntityHandle));
 			//- rouz edit (ChatGPT)
 			if (blipEntity != nil) {
 				if (((CPed*)blipEntity)->InVehicle())
@@ -2224,45 +2224,45 @@ CRadar::DrawEntityBlip(int32 blipId)
 		case BLIP_OBJECT:
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			blipEntity = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ms_RadarTrace[blipId].m_nEntityHandle));
+			blipEntity = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), Radar_ms_RadarTrace[blipId].m_nEntityHandle));
 			//- rouz edit (ChatGPT)
 			break;
 		default:
 			break;
 	}
 	if (blipEntity) {
-		uint32 color = GetRadarTraceColour(ms_RadarTrace[blipId].m_nColor, ms_RadarTrace[blipId].m_bDim);
-		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
-			if (CTheScripts::IsDebugOn()) {
-				ShowRadarMarker(blipEntity->GetPosition(), color, ms_RadarTrace[blipId].m_Radius);
+		uint32 color = Radar_GetRadarTraceColour(Radar_ms_RadarTrace[blipId].m_nColor, Radar_ms_RadarTrace[blipId].m_bDim);
+		if (Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
+			if (TheScripts_IsDebugOn()) {
+				Radar_ShowRadarMarker(blipEntity->GetPosition(), color, Radar_ms_RadarTrace[blipId].m_Radius);
 				// Delegate the step of the debug marker to the C implementation
-				ms_RadarTrace[blipId].m_Radius = Radar_DebugRadiusStep(ms_RadarTrace[blipId].m_Radius);
+				Radar_ms_RadarTrace[blipId].m_Radius = Radar_DebugRadiusStep(Radar_ms_RadarTrace[blipId].m_Radius);
 			}
 		}
-		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BLIP_ONLY) {
-			TransformRealWorldPointToRadarSpace(in, blipEntity->GetPosition());
-			float dist = LimitRadarPoint(in);
-			TransformRadarPointToScreenSpace(out, in);
-			if (!ms_RadarTrace[blipId].m_bShortRange || dist <= 1.0f || FrontEndMenuManager.m_bMenuMapActive) {
-				if (ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_NONE) {
-					DrawRadarSprite(ms_RadarTrace[blipId].m_eRadarSprite, out.x, out.y, CalculateBlipAlpha(dist));
+		if (Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BLIP_ONLY) {
+			Radar_TransformRealWorldPointToRadarSpace(in, blipEntity->GetPosition());
+			float dist = Radar_LimitRadarPoint(in);
+			Radar_TransformRadarPointToScreenSpace(out, in);
+			if (!Radar_ms_RadarTrace[blipId].m_bShortRange || dist <= 1.0f || FrontEndMenuManager.m_bMenuMapActive) {
+				if (Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_NONE) {
+					Radar_DrawRadarSprite(Radar_ms_RadarTrace[blipId].m_eRadarSprite, out.x, out.y, Radar_CalculateBlipAlpha(dist));
 				} else {
 					const CVector& pos = FindPlayerCentreOfWorld_NoSniperShift();
 					const CVector& blipPos = blipEntity->GetPosition();
 					// Delegate the choice of the shape to the C implementation
 					uint8 mode = Radar_BlipHeightMode(blipPos.z, pos.z);
-					ShowRadarTraceWithHeight(out.x, out.y, ms_RadarTrace[blipId].m_wScale, (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255, mode);
+					Radar_ShowRadarTraceWithHeight(out.x, out.y, Radar_ms_RadarTrace[blipId].m_wScale, (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255, mode);
 
 					if (FrontEndMenuManager.m_bMenuMapActive) {
 						bool alreadyThere = false;
 						for (int i = 0; i < NUM_MAP_LEGENDS; i++) {
-							if (MapLegendList[i] == -2)
+							if (Radar_MapLegendList[i] == -2)
 								alreadyThere = true;
 						}
 						if (!alreadyThere) {
-							MapLegendList[MapLegendCounter] = -2;
-							MapLegendCounter++;
-							ArrowBlipColour2 = CRGBA((uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255);
+							Radar_MapLegendList[Radar_MapLegendCounter] = -2;
+							Radar_MapLegendCounter++;
+							Radar_ArrowBlipColour2 = CRGBA((uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255);
 						}
 					}
 				}
@@ -2272,44 +2272,44 @@ CRadar::DrawEntityBlip(int32 blipId)
 }
 
 void
-CRadar::DrawCoordBlip(int32 blipId)
+Radar_DrawCoordBlip(int32 blipId)
 {
 	CVector2D out;
 	CVector2D in;
-	if (ms_RadarTrace[blipId].m_eBlipType != BLIP_CONTACT_POINT || !CTheScripts::IsPlayerOnAMission()) {
+	if (Radar_ms_RadarTrace[blipId].m_eBlipType != BLIP_CONTACT_POINT || !TheScripts_IsPlayerOnAMission()) {
 
-		uint32 color = GetRadarTraceColour(ms_RadarTrace[blipId].m_nColor, ms_RadarTrace[blipId].m_bDim);
-		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
-			if (CTheScripts::IsDebugOn()) {
-				ShowRadarMarker(ms_RadarTrace[blipId].m_vecPos, color, ms_RadarTrace[blipId].m_Radius);
+		uint32 color = Radar_GetRadarTraceColour(Radar_ms_RadarTrace[blipId].m_nColor, Radar_ms_RadarTrace[blipId].m_bDim);
+		if (Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
+			if (TheScripts_IsDebugOn()) {
+				Radar_ShowRadarMarker(Radar_ms_RadarTrace[blipId].m_vecPos, color, Radar_ms_RadarTrace[blipId].m_Radius);
 				// Delegate the step of the debug marker to the C implementation
-				ms_RadarTrace[blipId].m_Radius = Radar_DebugRadiusStep(ms_RadarTrace[blipId].m_Radius);
+				Radar_ms_RadarTrace[blipId].m_Radius = Radar_DebugRadiusStep(Radar_ms_RadarTrace[blipId].m_Radius);
 			}
 		}
-		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BLIP_ONLY) {
-			TransformRealWorldPointToRadarSpace(in, ms_RadarTrace[blipId].m_vec2DPos);
-			float dist = LimitRadarPoint(in);
-			TransformRadarPointToScreenSpace(out, in);
-			if (!ms_RadarTrace[blipId].m_bShortRange || dist <= 1.0f || FrontEndMenuManager.m_bMenuMapActive) {
-				if (ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_NONE) {
-					DrawRadarSprite(ms_RadarTrace[blipId].m_eRadarSprite, out.x, out.y, CalculateBlipAlpha(dist));
+		if (Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || Radar_ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BLIP_ONLY) {
+			Radar_TransformRealWorldPointToRadarSpace(in, Radar_ms_RadarTrace[blipId].m_vec2DPos);
+			float dist = Radar_LimitRadarPoint(in);
+			Radar_TransformRadarPointToScreenSpace(out, in);
+			if (!Radar_ms_RadarTrace[blipId].m_bShortRange || dist <= 1.0f || FrontEndMenuManager.m_bMenuMapActive) {
+				if (Radar_ms_RadarTrace[blipId].m_eRadarSprite != RADAR_SPRITE_NONE) {
+					Radar_DrawRadarSprite(Radar_ms_RadarTrace[blipId].m_eRadarSprite, out.x, out.y, Radar_CalculateBlipAlpha(dist));
 				} else {
 					const CVector& pos = FindPlayerCentreOfWorld_NoSniperShift();
-					const CVector& blipPos = ms_RadarTrace[blipId].m_vecPos;
+					const CVector& blipPos = Radar_ms_RadarTrace[blipId].m_vecPos;
 					// Delegate the choice of the shape to the C implementation
 					uint8 mode = Radar_BlipHeightMode(blipPos.z, pos.z);
-					ShowRadarTraceWithHeight(out.x, out.y, ms_RadarTrace[blipId].m_wScale, (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255, mode);
+					Radar_ShowRadarTraceWithHeight(out.x, out.y, Radar_ms_RadarTrace[blipId].m_wScale, (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255, mode);
 
 					if (FrontEndMenuManager.m_bMenuMapActive) {
 						bool alreadyThere = false;
 						for (int i = 0; i < NUM_MAP_LEGENDS; i++) {
-							if (MapLegendList[i] == -1)
+							if (Radar_MapLegendList[i] == -1)
 								alreadyThere = true;
 						}
 						if (!alreadyThere) {
-							MapLegendList[MapLegendCounter] = -1;
-							MapLegendCounter++;
-							ArrowBlipColour1 = CRGBA((uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255);
+							Radar_MapLegendList[Radar_MapLegendCounter] = -1;
+							Radar_MapLegendCounter++;
+							Radar_ArrowBlipColour1 = CRGBA((uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255);
 						}
 					}
 				}
@@ -2319,7 +2319,7 @@ CRadar::DrawCoordBlip(int32 blipId)
 }
 
 void
-CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
+Radar_DrawLegend(int32 x, int32 y, int32 sprite)
 {
 	if (sprite < 0) {
 		static uint32 lastChange = 0;
@@ -2327,9 +2327,9 @@ CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
 
 		CRGBA color;
 		if (sprite == -1) {
-			color = ArrowBlipColour1;
+			color = Radar_ArrowBlipColour1;
 		} else {
-			color = ArrowBlipColour2;
+			color = Radar_ArrowBlipColour2;
 		}
 
 		if (Timer_GetTimeInMillisecondsPauseMode() - lastChange > 600) {
@@ -2377,7 +2377,7 @@ CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
 		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(RadarSprites[sprite],Rect_Make(x, y, x + SCREEN_SCALE_X(16.f), y + SCREEN_SCALE_X(16.f)), CRGBA(255, 255, 255, 255));
+})(Radar_RadarSprites[sprite],Rect_Make(x, y, x + SCREEN_SCALE_X(16.f), y + SCREEN_SCALE_X(16.f)), CRGBA(255, 255, 255, 255));
 	}
 
 	wchar *text;
@@ -2507,7 +2507,7 @@ CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
 		default:
 		break;
 	}
-	CFont::PrintString(SCREEN_SCALE_X(20.f) + x, SCREEN_SCALE_Y(3.0f) + y, text);
+	Font_PrintString(SCREEN_SCALE_X(20.f) + x, SCREEN_SCALE_Y(3.0f) + y, text);
 }
 
 //- rouz edit (ChatGPT)

@@ -96,7 +96,7 @@ static bool PointInTriangle(int dir, V3 va, V3 vb, V3 vc, V3 p)
 	return true;
 }
 
-bool Collision_TestLineTriangle(const CColLine *line, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane)
+bool CollisionTriangle_TestLineTriangle(const CColLine *line, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane)
 {
 	float t, p0dist;
 	V3 normal, p, va, vb, vc, p0, p1;
@@ -133,7 +133,7 @@ bool Collision_TestLineTriangle(const CColLine *line, const CompressedVector *ve
 	return PointInTriangle(plane->dir, va, vb, vc, p);
 }
 
-bool Collision_ProcessLineTriangle(const CColLine *line, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane, CColPoint *point, float *mindist, float *outVerts)
+bool CollisionTriangle_ProcessLineTriangle(const CColLine *line, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane, CColPoint *point, float *mindist, float *outVerts)
 {
 	float t, p0dist;
 	V3 normal, p, va, vb, vc, p0, p1;
@@ -275,7 +275,7 @@ static int SphereTriangleClosest(const CColSphere *sphere, V3 va, V3 vb, V3 vc, 
 	return testcase;
 }
 
-bool Collision_TestSphereTriangle(const CColSphere *sphere, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane)
+bool CollisionTriangle_TestSphereTriangle(const CColSphere *sphere, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane)
 {
 	float planedist = ColTrianglePlane_CalcPoint(plane, COLLISION_POINT_REF(sphere->bounds.center));
 	V3 va, vb, vc, normal, p;
@@ -296,7 +296,7 @@ bool Collision_TestSphereTriangle(const CColSphere *sphere, const CompressedVect
 	return dist < sphere->bounds.radius;
 }
 
-bool Collision_ProcessSphereTriangle(const CColSphere *sphere, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane, CColPoint *point, float *mindistsq)
+bool CollisionTriangle_ProcessSphereTriangle(const CColSphere *sphere, const CompressedVector *verts, const CColTriangle *tri, const CColTrianglePlane *plane, CColPoint *point, float *mindistsq)
 {
 	float planedist = ColTrianglePlane_CalcPoint(plane, COLLISION_POINT_REF(sphere->bounds.center));
 	float distsq = planedist*planedist;

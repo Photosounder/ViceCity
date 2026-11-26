@@ -45,24 +45,29 @@ public:
 
 VALIDATE_SIZE(CCrane, 128);
 
-class CCranes
-{
-public:
-	static void InitCranes(void);
-	static void AddThisOneCrane(CEntity* pCraneEntity);
-	static void ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, float fDropOffX, float fDropOffY, float fDropOffZ, float fHeading, bool bIsCrusher, bool bIsMilitary, float fPosX, float fPosY);
-	static void DeActivateCrane(float fX, float fY);
-	static bool IsThisCarPickedUp(float fX, float fY, CVehicle* pVehicle);
-	static void UpdateCranes(void);
-	static bool DoesMilitaryCraneHaveThisOneAlready(uint32 mi);
-	static void RegisterCarForMilitaryCrane(uint32 mi);
-	static bool HaveAllCarsBeenCollectedByMilitaryCrane(void);
-	static bool IsThisCarBeingCarriedByAnyCrane(CVehicle* pVehicle);
-	static bool IsThisCarBeingTargettedByAnyCrane(CVehicle* pVehicle);
-	static void Save(uint8* buf, uint32* size);
-	static void Load(uint8* buf, uint32 size); // out of class in III PC and later because of SecuROM
-
-	static uint32 CarsCollectedMilitaryCrane;
-	static int32 NumCranes;
-	static CCrane aCranes[NUM_CRANES];
-};
+//+ rouz edit (Claude)
+// Formerly the static class CCranes, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
+void Cranes_InitCranes(void);
+void Cranes_AddThisOneCrane(CEntity* pCraneEntity);
+void Cranes_ActivateCrane(float fInfX, float fSupX, float fInfY, float fSupY, float fDropOffX, float fDropOffY, float fDropOffZ, float fHeading, bool bIsCrusher, bool bIsMilitary, float fPosX, float fPosY);
+void Cranes_DeActivateCrane(float fX, float fY);
+bool Cranes_IsThisCarPickedUp(float fX, float fY, CVehicle* pVehicle);
+void Cranes_UpdateCranes(void);
+bool Cranes_DoesMilitaryCraneHaveThisOneAlready(uint32 mi);
+void Cranes_RegisterCarForMilitaryCrane(uint32 mi);
+bool Cranes_HaveAllCarsBeenCollectedByMilitaryCrane(void);
+bool Cranes_IsThisCarBeingCarriedByAnyCrane(CVehicle* pVehicle);
+bool Cranes_IsThisCarBeingTargettedByAnyCrane(CVehicle* pVehicle);
+void Cranes_Save(uint8* buf, uint32* size);
+void Cranes_Load(uint8* buf, uint32 size); // out of class in III PC and later because of SecuROM
+extern uint32 Cranes_CarsCollectedMilitaryCrane;
+extern int32 Cranes_NumCranes;
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CCrane Cranes_aCranes[NUM_CRANES];
+#endif
+//- rouz edit (Claude)

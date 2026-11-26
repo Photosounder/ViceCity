@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #include "WeaponLogic.h"
+#include "Vector.h" // rouz edit (Claude)
 #include <math.h>
 #include "EntityStatus.h"
 #include "WeaponType.h"
@@ -254,21 +255,22 @@ uint8_t Weapon_ShakeFrequency(int firingRate)
 
 	return (uint8_t)(80.0 * raisedNotFiringRate + 130.0);
 }
-void Weapon_ShotBox(const float source[3], const float target[3], float boxMin[3], float boxMax[3])
+void Weapon_ShotBox(const CVector *source, const CVector *target, CVector *boxMin, CVector *boxMax)
 {
-	int k;
-
-	for (k = 0; k < 3; k++) {
-		boxMin[k] = (source[k] < target[k] ? source[k] : target[k]) - 2.0f;
-		boxMax[k] = (source[k] > target[k] ? source[k] : target[k]) + 2.0f;
-	}
+	// Box around the shot on each axis, two units larger than the line between the source and the target
+	boxMin->x = (source->x < target->x ? source->x : target->x) - 2.0f;
+	boxMax->x = (source->x > target->x ? source->x : target->x) + 2.0f;
+	boxMin->y = (source->y < target->y ? source->y : target->y) - 2.0f;
+	boxMax->y = (source->y > target->y ? source->y : target->y) + 2.0f;
+	boxMin->z = (source->z < target->z ? source->z : target->z) - 2.0f;
+	boxMax->z = (source->z > target->z ? source->z : target->z) + 2.0f;
 }
 
-bool Weapon_PositionInBox(const float pos[3], const float boxMin[3], const float boxMax[3])
+bool Weapon_PositionInBox(const CVector *pos, const CVector *boxMin, const CVector *boxMax)
 {
-	return pos[0] > boxMin[0] && pos[0] < boxMax[0]
-		&& pos[1] > boxMin[1] && pos[1] < boxMax[1]
-		&& pos[2] > boxMin[2] && pos[2] < boxMax[2];
+	return pos->x > boxMin->x && pos->x < boxMax->x
+		&& pos->y > boxMin->y && pos->y < boxMax->y
+		&& pos->z > boxMin->z && pos->z < boxMax->z;
 }
 void Weapon_AngleOffset(float angle, float scale, float offset[2])
 {

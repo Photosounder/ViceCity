@@ -220,12 +220,12 @@ int32_t MBlur_HostScreenHeight(void)
 int32_t MBlur_HostVehicleHud(void)
 {
     // Preserve the original external primitive or live owner metadata access
-    return CHud::m_VehicleState;
+    return Hud_m_VehicleState;
 }
 int32_t MBlur_HostZoneHud(void)
 {
     // Preserve the original external primitive or live owner metadata access
-    return CHud::m_ZoneState;
+    return Hud_m_ZoneState;
 }
 int32_t MBlur_HostFade(void)
 {

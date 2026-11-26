@@ -48,7 +48,7 @@ extern "C" void Explosion_HostFlashCorona(uint32_t index,uint32_t offset,uint8_t
 extern "C" void Explosion_HostTriggerWorld(const CVector *position,float radius,float power,CEntity *creator,bool processBombTimer)
 {
     // Pass the actual original native vector object without creating a snapshot
-    CWorld::TriggerExplosion(*position,radius,power,creator,processBombTimer);
+    World_TriggerExplosion(*position,radius,power,creator,processBombTimer);
 }
 extern "C" void Explosion_HostCameraShake(float strength,float x,float y,float z)
 {
@@ -161,12 +161,12 @@ extern "C" void Explosion_HostBarrelParticle(CollisionVector3 position,const Exp
 extern "C" float Explosion_HostGroundZ(float x,float y,float z,bool *found)
 {
     // Query the original native ground collision routine
-    return CWorld::FindGroundZFor3DCoord(x,y,z,found);
+    return World_FindGroundZFor3DCoord(x,y,z,found);
 }
 extern "C" bool Explosion_HostWaterLevel(float x,float y,float z,float *level)
 {
     // Query the original native water level without waves
-    return CWaterLevel::GetWaterLevelNoWaves(x,y,z,level);
+    return WaterLevel_GetWaterLevelNoWaves(x,y,z,level);
 }
 extern "C" void Explosion_HostCreationShadow(CollisionVector3 shadowPosition)
 {
@@ -204,12 +204,12 @@ extern "C" void Explosion_AddAtPosition(CEntity *source,enum eExplosionType type
 extern "C" void Explosion_HostSetPedsOnFire(float x,float y,float z,CEntity *creator)
 {
     // Apply the pedestrian fire effect at the selected live position
-    CWorld::SetPedsOnFire(x,y,z,6.0f,creator);
+    World_SetPedsOnFire(x,y,z,6.0f,creator);
 }
 extern "C" void Explosion_HostSetCarsOnFire(float x,float y,float z,CEntity *creator)
 {
     // Apply the vehicle fire effect at the selected live position
-    CWorld::SetCarsOnFire(x,y,z,6.0f,creator);
+    World_SetCarsOnFire(x,y,z,6.0f,creator);
 }
 extern "C" bool Explosion_HostMolotovGround(CollisionVector3 start,float *groundZ)
 {
@@ -217,7 +217,7 @@ extern "C" bool Explosion_HostMolotovGround(CollisionVector3 start,float *ground
     CVector point(start.x,start.y,start.z);
     CColPoint colPoint;
     CEntity *entity;
-    if (!CWorld::ProcessVerticalLine(point,-1000.0f,colPoint,entity,true,false,false,false,true,false,nil))
+    if (!World_ProcessVerticalLine(point,-1000.0f,colPoint,entity,true,false,false,false,true,false,nil))
         return false;
     *groundZ=colPoint.point.z;
     return true;

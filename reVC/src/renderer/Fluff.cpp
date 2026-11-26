@@ -548,12 +548,12 @@ int32_t MovingThings_BackendSectorsY(void)
 void * MovingThings_BackendSectorFirst(int32_t x,int32_t y)
 {
     // Preserve the original typed owner operation and live native field access
-    return CWorld::GetSector(x,y)->m_lists[ENTITYLIST_BUILDINGS].first;
+    return World_GetSector(x,y)->m_lists[ENTITYLIST_BUILDINGS].first;
 }
 void * MovingThings_BackendBigFirst(int32_t level)
 {
     // Preserve the original typed owner operation and live native field access
-    return CWorld::GetBigBuildingList((eLevelName)level).first;
+    return World_GetBigBuildingList((eLevelName)level).first;
 }
 void * MovingThings_BackendNodeNext(void *node)
 {
@@ -836,7 +836,7 @@ bool Escalator_BackendSphereVisible(EscalatorVector center,float radius)
 CPool * Escalator_BackendObjectPool(void)
 {
     // Preserve the actual typed object or matrix operation at its original call point
-    return CPools::GetObjectPool();
+    return Pools_GetObjectPool();
 }
 int8_t Escalator_BackendCreatedBy(CObject *object)
 {
@@ -856,12 +856,12 @@ void Escalator_BackendDestroy(CObject *object)
 void Escalator_BackendWorldAdd(CObject *object)
 {
     // Preserve the actual typed object or matrix operation at its original call point
-    CWorld::Add(object);
+    World_Add(object);
 }
 void Escalator_BackendWorldRemove(CObject *object)
 {
     // Preserve the actual typed object or matrix operation at its original call point
-    CWorld::Remove(object);
+    World_Remove(object);
 }
 EscalatorVector Escalator_BackendPosition(CObject *object)
 {
@@ -961,7 +961,7 @@ void ScriptPaths_BackendWriteNode(void *buffer,CPlaneNode *nodes,int32_t index)
 CPool * ScriptPaths_BackendObjectPool(void)
 {
     // Preserve the actual typed native operation and original borrowed field access
-    return CPools::GetObjectPool();
+    return Pools_GetObjectPool();
 }
 void ScriptPaths_BackendClearPhysics(CObject *object)
 {

@@ -113,12 +113,12 @@ void Fire_BackendScorched(CEntity *entity)
 CEntity * Fire_BackendShortcutTaxi(void)
 {
     // Enter the original typed native operation or canonical field at the C decision point
-    return CGameLogic::pShortCutTaxi;
+    return GameLogic_pShortCutTaxi;
 }
 bool Fire_BackendShortcutTransition(void)
 {
     // Enter the original typed native operation or canonical field at the C decision point
-    return CGameLogic::ShortCutState==CGameLogic::SHORTCUT_TRANSITION;
+    return GameLogic_ShortCutState==SHORTCUT_TRANSITION;
 }
 bool Fire_BackendFireProof(CEntity *entity)
 {
@@ -283,6 +283,6 @@ void Fire_BackendVehicleEvent(CEntity *entity,CEntity *source)
 void Fire_BackendFleeOccupants(CEntity *entity)
 {
     // Enter the original typed native operation or canonical field at the C decision point
-    CCarAI::TellOccupantsToFleeCar((CVehicle *)entity);
+    CarAI_TellOccupantsToFleeCar((CVehicle *)entity);
 }
 //- rouz edit (ChatGPT)

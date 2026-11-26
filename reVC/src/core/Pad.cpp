@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 #define WITHDINPUT
 #include "common.h"
+#include "main.h" // rouz edit (Claude)
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "crossplatform.h"
 #include "platform.h"
@@ -131,7 +132,7 @@ void SpecialCarCheats()
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fCollisionDamageMultiplier *= 0.25f;
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fMass *= 2.5f;
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fTurnMass *= 4.0f;
-		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+		Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 		CVehicle::bCheat9 = true;
 		Input_playerHasCheated = true; // rouz edit (ChatGPT)
 	}
@@ -147,10 +148,10 @@ void PickUpChicksCheat()
 			if ( vehicle->pPassengers[0] )
 				vehicle->pPassengers[0]->SetObjective(OBJECTIVE_LEAVE_CAR, vehicle);
 		}
-		CPed* someoneElse = (CPed*)CWorld::TestSphereAgainstWorld(vehicle->GetPosition(), 6.0f, FindPlayerPed(), false, false, true, false, false, false);
+		CPed* someoneElse = (CPed*)World_TestSphereAgainstWorld(vehicle->GetPosition(), 6.0f, FindPlayerPed(), false, false, true, false, false, false);
 		if ( someoneElse && someoneElse->m_nPedState != PED_DRIVING )
 		{
-			CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+			Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 			someoneElse->SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, vehicle);
 		}
 	}
@@ -158,7 +159,7 @@ void PickUpChicksCheat()
 
 void WeaponCheat1()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
 	Streaming_RequestModel(MI_BRASS_KNUCKLES, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_BASEBALL_BAT, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
@@ -169,7 +170,7 @@ void WeaponCheat1()
 	Streaming_RequestModel(MI_RUGER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_SNIPERRIFLE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_FLAMETHROWER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_BRASSKNUCKLE, 1);
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_BASEBALLBAT, 1);
@@ -199,7 +200,7 @@ void WeaponCheat1()
 
 void WeaponCheat2()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
 	Streaming_RequestModel(MI_KATANA, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
@@ -210,7 +211,7 @@ void WeaponCheat2()
 	Streaming_RequestModel(MI_M4, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_LASERSCOPE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_ROCKETLAUNCHER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 
 #ifdef FIX_BUGS
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_KATANA, 1);
@@ -243,7 +244,7 @@ void WeaponCheat2()
 
 void WeaponCheat3()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
 	Streaming_RequestModel(MI_CHAINSAW, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
@@ -254,7 +255,7 @@ void WeaponCheat3()
 	Streaming_RequestModel(MI_LASERSCOPE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_MINIGUN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_MINIGUN2, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 
 #ifdef FIX_BUGS
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_CHAINSAW, 1);
@@ -292,8 +293,8 @@ void HealthCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT3"), true);
-	FindPlayerPed()->m_fHealth = CWorld::Players[0].m_nMaxHealth;
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT3"), true);
+	FindPlayerPed()->m_fHealth = World_Players[0].m_nMaxHealth;
 	if (FindPlayerVehicle()) {
 		FindPlayerVehicle()->m_fHealth = 1000.0f;
 		if (FindPlayerVehicle()->m_vehType == VEHICLE_TYPE_CAR) {
@@ -307,11 +308,11 @@ void HealthCheat()
 // TODO(Miami): this is HELLA different on mobile, although it mostly has debug oriented things like player exiting it's current car and enters spawned one etc.
 void VehicleCheat(int model)
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	Streaming_RequestModel(model, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 	if (Streaming_modelInfo[model].m_loadState == STREAMSTATE_LOADED) { // rouz edit (ChatGPT)
-		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+		Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 
 		if (!(Streaming_modelInfo[model].m_loadState & STREAMFLAGS_DONT_REMOVE)) { // rouz edit (ChatGPT)
 			Streaming_SetModelIsDeletable(model); // rouz edit (ChatGPT)
@@ -326,7 +327,7 @@ void VehicleCheat(int model)
 		// Allocate the cheat vehicle without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CAutomobile* vehicle = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		CAutomobile* vehicle = (CAutomobile*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 		//- rouz edit (ChatGPT)
 		if (vehicle)
 			std::allocator<CAutomobile>().construct(vehicle, model, RANDOM_VEHICLE);
@@ -336,7 +337,7 @@ void VehicleCheat(int model)
 		// Allocate the cheat vehicle without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CAutomobile* vehicle = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		CAutomobile* vehicle = (CAutomobile*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 		//- rouz edit (ChatGPT)
 		if (vehicle)
 			std::allocator<CAutomobile>().construct(vehicle, model, MISSION_VEHICLE);
@@ -350,7 +351,7 @@ void VehicleCheat(int model)
 
 			vehicle->SetStatus(STATUS_ABANDONED);
 			vehicle->m_nDoorLock = CARLOCK_UNLOCKED;
-			CWorld::Add(vehicle);
+			World_Add(vehicle);
 		}
 	}
 	Stats_CheatedCount += 1000;
@@ -360,16 +361,16 @@ void VehicleCheat(int model)
 
 void BlowUpCarsCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	int i = CPool_GetSize(CPools::GetVehiclePool());
+	int i = CPool_GetSize(Pools_GetVehiclePool());
 	//- rouz edit (ChatGPT)
 	while (i-- > 0) {
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		if (CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)))
+		if (CVehicle *veh = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i)))
 		//- rouz edit (ChatGPT)
 			veh->BlowUpCar(nil);
 	}
@@ -381,7 +382,7 @@ void ChangePlayerCheat()
 	int modelId, anotherModelId;
 
 	if (FindPlayerPed()->IsPedInControl() && (CBaseModelInfo*)ModelRegistry_Find("player", 0, MODELINFOSIZE-1, nil)) { // rouz edit (ChatGPT)
-		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+		Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 		CPlayerPed *ped = FindPlayerPed();
 		AssocGroupId AnimGrp = ped->m_animGroup;
 		do
@@ -395,7 +396,7 @@ void ChangePlayerCheat()
 		uint8 flags = Streaming_modelInfo[anotherModelId].m_flags; // rouz edit (ChatGPT)
 		ped->DeleteRwObject();
 		Streaming_RequestModel(anotherModelId, STREAMFLAGS_DEPENDENCY| STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
-		CStreaming::LoadAllRequestedModels(false);
+		Streaming_LoadAllRequestedModels(false);
 		ped->m_modelIndex = -1;
 		ped->SetModelIndex(anotherModelId);
 		ped->m_animGroup = AnimGrp;
@@ -409,14 +410,14 @@ void ChangePlayerCheat()
 void ChangePlayerModel(const char* name) {
 	if (!FindPlayerVehicle()) {
 		FindPlayerPed()->Undress(name);
-		CStreaming::LoadAllRequestedModels(0);
+		Streaming_LoadAllRequestedModels(0);
 		FindPlayerPed()->Dress();
 	}
 }
 
 void MayhemCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
 		PedType_SetThreats(i, PED_FLAG_PLAYER1 | PED_FLAG_PLAYER2 | PED_FLAG_PLAYER3 | PED_FLAG_PLAYER4 |
 			PED_FLAG_CIVMALE | PED_FLAG_CIVFEMALE | PED_FLAG_COP | PED_FLAG_GANG1 |
@@ -429,7 +430,7 @@ void MayhemCheat()
 
 void EverybodyAttacksPlayerCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
 		PedType_AddThreat(i, PED_FLAG_PLAYER1);
 
@@ -439,7 +440,7 @@ void EverybodyAttacksPlayerCheat()
 
 void WeaponsForAllCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	Population_givePedsWeapons = !Population_givePedsWeapons; // rouz edit (ChatGPT)
 	Stats_CheatedCount += 1000;
 	Input_playerHasCheated = true; // rouz edit (ChatGPT)
@@ -447,22 +448,22 @@ void WeaponsForAllCheat()
 
 void FastTimeCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	if ((*Timer_GetTimeScale()) < 4.0f)
 		Timer_SetTimeScale((*Timer_GetTimeScale()) * 2.0f);
 }
 
 void SlowTimeCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	if ((*Timer_GetTimeScale()) > 0.25f)
 		Timer_SetTimeScale((*Timer_GetTimeScale()) * 0.5f);
 }
 
 void MoneyCheat()
 {
-	CWorld::Players[CWorld::PlayerInFocus].m_nMoney += 250000;
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT6"), true);
+	World_Players[World_PlayerInFocus].m_nMoney += 250000;
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT6"), true);
 }
 
 void ArmourCheat()
@@ -471,8 +472,8 @@ void ArmourCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT4"), true);
-	FindPlayerPed()->m_fArmour = CWorld::Players[0].m_nMaxArmour;
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT4"), true);
+	FindPlayerPed()->m_fArmour = World_Players[0].m_nMaxArmour;
 }
 
 void WantedLevelUpCheat()
@@ -481,7 +482,7 @@ void WantedLevelUpCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
 	// Delegate the cheat wanted level to the C implementation
 	Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,Pad_CheatWantedLevel(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted)));
 }
@@ -492,49 +493,49 @@ void WantedLevelDownCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
 	Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,0);
 }
 
 void SunnyWeatherCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
 	Weather_ForceWeatherNow(WEATHER_SUNNY);
 }
 
 void ExtraSunnyWeatherCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
 	Weather_ForceWeatherNow(WEATHER_EXTRA_SUNNY);
 }
 
 void CloudyWeatherCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
 	Weather_ForceWeatherNow(WEATHER_CLOUDY);
 }
 
 void RainyWeatherCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
 	Weather_ForceWeatherNow(WEATHER_RAINY);
 }
 
 void FoggyWeatherCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
 	Weather_ForceWeatherNow(WEATHER_FOGGY);
 }
 
 void FastWeatherCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	gbFastTime = !gbFastTime;
 }
 
 void OnlyRenderWheelsCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bWheelsOnlyCheat = !CVehicle::bWheelsOnlyCheat;
 	Stats_CheatedCount += 1000;
 	Input_playerHasCheated = true; // rouz edit (ChatGPT)
@@ -543,9 +544,9 @@ void OnlyRenderWheelsCheat()
 void ChittyChittyBangBangCheat()
 {
 #ifdef BETTER_ALLCARSAREDODO_CHEAT
-	CHud::SetHelpMessage(Text_Get(&TheText,!CVehicle::bAllDodosCheat ? "CHEAT1" : "CHEATOF"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,!CVehicle::bAllDodosCheat ? "CHEAT1" : "CHEATOF"), true);
 #else
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 #endif
 	CVehicle::bAllDodosCheat = !CVehicle::bAllDodosCheat;
 	Stats_CheatedCount += 1000;
@@ -554,7 +555,7 @@ void ChittyChittyBangBangCheat()
 
 void StrongGripCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bCheat3 = !CVehicle::bCheat3;
 	Stats_CheatedCount += 1000;
 	Input_playerHasCheated = true; // rouz edit (ChatGPT)
@@ -562,64 +563,64 @@ void StrongGripCheat()
 
 void FannyMagnetCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CPed::bFannyMagnetCheat = !CPed::bFannyMagnetCheat;
 	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void BlackCarsCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	gbBlackCars = true;
 	gbPinkCars = false;
 }
 
 void PinkCarsCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	gbBlackCars = false;
 	gbPinkCars = true;
 }
 
 void TrafficLightsCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	TrafficLights_bGreenLightsCheat = true;
 }
 
 void MadCarsCheat()
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
-	CCarCtrl::bMadDriversCheat = true;
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	CarCtrl_bMadDriversCheat = true;
 }
 
 void NoSeaBedCheat(void)
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
-	CWaterLevel::m_bRenderSeaBed = !CWaterLevel::m_bRenderSeaBed;
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	WaterLevel_m_bRenderSeaBed = !WaterLevel_m_bRenderSeaBed;
 }
 
 void RenderWaterLayersCheat(void)
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
-	if ( ++CWaterLevel::m_nRenderWaterLayers > 5 )
-			CWaterLevel::m_nRenderWaterLayers = 0;
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	if ( ++WaterLevel_m_nRenderWaterLayers > 5 )
+			WaterLevel_m_nRenderWaterLayers = 0;
 }
 
 void BackToTheFuture(void)
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bHoverCheat = !CVehicle::bHoverCheat;
 	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void SuicideCheat(void) {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	FindPlayerPed()->InflictDamage(nil, WEAPONTYPE_UNARMED, 1000.0f, PEDPIECE_TORSO, 0);
 }
 
 void DoChicksWithGunsCheat(void) {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	Streaming_SetModelIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER)); // rouz edit (ChatGPT)
 	Streaming_SetModelIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER)); // rouz edit (ChatGPT)
 	Streaming_SetModelTxdIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER)); // rouz edit (ChatGPT)
@@ -647,7 +648,7 @@ void KangarooCheat()
 		string = Text_Get(&TheText,"CHEAT1");
 		m_fMass = 15.0f;
 	}
-	CHud::SetHelpMessage(string, true);
+	Hud_SetHelpMessage(string, true);
 	playerPed->m_ped_flagI80 = !playerPed->m_ped_flagI80;
 
 	playerPed->m_fMass = m_fMass;
@@ -667,7 +668,7 @@ void AllCarsHeliCheat(void)
 		string = Text_Get(&TheText,"CHEAT1");
 		bAllCarCheat = true;
 	}
-	CHud::SetHelpMessage(string, true);
+	Hud_SetHelpMessage(string, true);
 }
 #endif
 
@@ -683,19 +684,19 @@ void WallClimbingCheat(void)
 		string = Text_Get(&TheText,"CHEAT1");
 		gGravityCheat = true;
 	}
-	CHud::SetHelpMessage(string, true);
+	Hud_SetHelpMessage(string, true);
 }
 #endif
 
 void FlyingFishCheat(void)
 {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bCheat8 = !CVehicle::bCheat8;
 	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void DoShowChaseStatCheat(void) {
-	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Hud_SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	Stats_ShowChaseStatOnScreen = 1;
 }
 
@@ -816,7 +817,7 @@ void CPad::StartShake(int16 nDur, uint8 nFreq)
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
 
-	if ( Cutscene_IsRunning() || CGame::playingIntro ) // rouz edit (ChatGPT)
+	if ( Cutscene_IsRunning() || Game_playingIntro ) // rouz edit (ChatGPT)
 		return;
 
 	Input_StartShake(&ShakeDur, &ShakeFreq, nDur, nFreq); // rouz edit (ChatGPT)
@@ -827,7 +828,7 @@ void CPad::StartShake_Distance(int16 nDur, uint8 nFreq, float fX, float fY, floa
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
 
-	if ( Cutscene_IsRunning() || CGame::playingIntro ) // rouz edit (ChatGPT)
+	if ( Cutscene_IsRunning() || Game_playingIntro ) // rouz edit (ChatGPT)
 		return;
 
 	float fDist = ( TheCamera.GetPosition() - CVector(fX, fY, fZ) ).Magnitude();
@@ -841,7 +842,7 @@ void CPad::StartShake_Train(float fX, float fY)
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
 
-	if ( Cutscene_IsRunning() || CGame::playingIntro ) // rouz edit (ChatGPT)
+	if ( Cutscene_IsRunning() || Game_playingIntro ) // rouz edit (ChatGPT)
 		return;
 
 	if (FindPlayerVehicle() != nil && FindPlayerVehicle()->IsTrain() )
@@ -1348,7 +1349,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		CVehicle::bHoverCheat = !CVehicle::bHoverCheat;
 		swprintf(msg, L"Seaways %s", CVehicle::bHoverCheat ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz KANGAROO
@@ -1360,7 +1361,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		KangarooCheat();
 		swprintf(msg, L"Kangaroo");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 #endif
 //- rouz edit (ChatGPT)
@@ -1377,7 +1378,7 @@ void CPad::AddToPCCheatString(char c)
 		MadCarsCheat();
 		TrafficLightsCheat();
 		swprintf(msg, L"???");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz GREENLIGHT
@@ -1389,7 +1390,7 @@ void CPad::AddToPCCheatString(char c)
 			swprintf(msg, L"Traffic lights are always green");
 		else
 			swprintf(msg, L"Traffic lights back to normal");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz 
@@ -1401,7 +1402,7 @@ void CPad::AddToPCCheatString(char c)
 			swprintf(msg, L"Peds attack cops and paramedics");
 		else
 			swprintf(msg, L"Peds don't attack cops anymore");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 
 		for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
 			if (rouz.peds_attack_cops)
@@ -1430,7 +1431,7 @@ void CPad::AddToPCCheatString(char c)
 		if (rouz.bomb_veh)
 		{
 			rouz.remote_bomb = 2;
-			CHud::SetHelpMessage((wchar *) L"Remote bomb armed", true);
+			Hud_SetHelpMessage((wchar *) L"Remote bomb armed", true);
 		}
 	}
 
@@ -1447,7 +1448,7 @@ void CPad::AddToPCCheatString(char c)
 		if (rouz.rc_veh)
 		{
 			rouz.remote_control = 2;
-			CHud::SetHelpMessage((wchar *) L"Remote control enabled", true);
+			Hud_SetHelpMessage((wchar *) L"Remote control enabled", true);
 		}
 	}
 
@@ -1464,7 +1465,7 @@ void CPad::AddToPCCheatString(char c)
 		if (veh)
 		{
 			if (veh->m_fHealth > 250.f)
-				CHud::SetHelpMessage((wchar *) L"Vehicle set on fire", true);
+				Hud_SetHelpMessage((wchar *) L"Vehicle set on fire", true);
 
 			// Restore health and fix
 			float prev_health = veh->m_fHealth;
@@ -1493,7 +1494,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.status_physics ^= 1;
 		swprintf(msg, L"Physics for all %s", rouz.status_physics & 1 ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz screwy gravity cheat
@@ -1502,7 +1503,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.screwy_gravity ^= 1;
 		swprintf(msg, L"Screwy gravity %s", rouz.screwy_gravity & 1 ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz antigravity repelling
@@ -1511,7 +1512,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.screwy_gravity ^= 2;
 		swprintf(msg, L"%s", rouz.screwy_gravity & 2 ? L"OUTTA MY WAY VICE FUCKING SHITS" : L"Antigravity repelling off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz flight
@@ -1520,7 +1521,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.flight ^= 1;
 		swprintf(msg, L"Flight %s", rouz.flight ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz Earth antigravity
@@ -1529,7 +1530,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.screwy_gravity ^= 4;
 		swprintf(msg, L"%s", rouz.screwy_gravity & 4 ? L"Falling upwards" : L"Earth antigravity off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz Tony Hawk mode
@@ -1538,7 +1539,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.tonyhawk ^= 1;
 		swprintf(msg, L"Tony Hawk mode %s", rouz.tonyhawk ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz slippery mode
@@ -1547,7 +1548,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.slippery ^= 1;
 		swprintf(msg, L"Slippery tires %s", rouz.slippery ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz flip car
@@ -1562,7 +1563,7 @@ void CPad::AddToPCCheatString(char c)
 		{
 			veh->SetHeading(veh->GetForward().Heading());
 			veh->m_vecTurnSpeed *= 0.f;
-			CHud::SetHelpMessage((wchar *) L"Flip vehicle", true);
+			Hud_SetHelpMessage((wchar *) L"Flip vehicle", true);
 		}
 	}
 
@@ -1582,7 +1583,7 @@ void CPad::AddToPCCheatString(char c)
 		{
 			//veh->AddPassenger(FindPlayerPed(), 0);
 			FindPlayerPed()->SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, veh);
-			CHud::SetHelpMessage((wchar *) L"Become passenger", true);
+			Hud_SetHelpMessage((wchar *) L"Become passenger", true);
 		}
 	}
 
@@ -1598,18 +1599,18 @@ void CPad::AddToPCCheatString(char c)
 			if (rouz.glue_veh == FindPlayerPed()->m_pCurrentPhysSurface)
 			{
 				rouz.glue_veh = NULL;
-				CHud::SetHelpMessage((wchar *) L"Unglued to veh", true);
+				Hud_SetHelpMessage((wchar *) L"Unglued to veh", true);
 			}
 			else if (FindPlayerPed()->m_pCurrentPhysSurface->IsVehicle())
 			{
 				rouz.glue_veh = (CVehicle *) FindPlayerPed()->m_pCurrentPhysSurface;
-				CHud::SetHelpMessage((wchar *) L"Glued to veh", true);
+				Hud_SetHelpMessage((wchar *) L"Glued to veh", true);
 			}
 		}
 		else
 		{
 			rouz.glue_veh = NULL;
-			CHud::SetHelpMessage((wchar *) L"Unglued to veh", true);
+			Hud_SetHelpMessage((wchar *) L"Unglued to veh", true);
 		}
 	}
 
@@ -1618,8 +1619,8 @@ void CPad::AddToPCCheatString(char c)
 	if (!_CHEATCMP("44G"))
 	{
 		rouz.health_regen = 0;	// health_regen defeats resurrection
-		rouz.prev_player_health = CWorld::Players[0].m_nMaxHealth;
-		rouz.base_player_health = CWorld::Players[0].m_nMaxHealth;
+		rouz.prev_player_health = World_Players[0].m_nMaxHealth;
+		rouz.base_player_health = World_Players[0].m_nMaxHealth;
 
 		// Resurrect player (doesn't work if we die while driving)
 		CPlayerPed *pPlayerPed = FindPlayerPed();
@@ -1649,7 +1650,7 @@ void CPad::AddToPCCheatString(char c)
 			pPlayerPed->bRemoveFromWorld = false;
 			pPlayerPed->ClearWeaponTarget();
 			pPlayerPed->SetInitialState();
-			CCarCtrl::ClearInterestingVehicleList();
+			CarCtrl_ClearInterestingVehicleList();
 			//pPlayerPed->Teleport(pos + CVector(0.0f, 0.0f, 1.0f));
 			pPlayerPed->SetMoveSpeed(0.0f, 0.0f, 0.0f);
 			//pPlayerPed->m_fRotationCur = DEGTORAD(angle);
@@ -1658,21 +1659,21 @@ void CPad::AddToPCCheatString(char c)
 			//CTheScripts::ClearSpaceForMissionEntity(pos, pPlayerPed);
 			//CWorld::ClearExcitingStuffFromArea(pos, 4000.0f, true);
 			pPlayerPed->RestoreHeadingRate();
-			CGame::currArea = AREA_MAIN_MAP;
-			CStreaming::RemoveBuildingsNotInArea(AREA_MAIN_MAP);
+			Game_currArea = AREA_MAIN_MAP;
+			Streaming_RemoveBuildingsNotInArea(AREA_MAIN_MAP);
 			TheCamera.SetCameraDirectlyInFrontForFollowPed_CamOnAString();
 			TheCamera.Restore();
 			//References_RemoveReferencesToPlayer();
 			//CGarages::PlayerArrestedOrDied();
 			Stats_CheckPointReachedUnsuccessfully();
-			CWorld::Remove(pPlayerPed);
-			CWorld::Add(pPlayerPed);
+			World_Remove(pPlayerPed);
+			World_Add(pPlayerPed);
 			//CHud::ResetWastedText();
 			//CStreaming::StreamZoneModels(pos);
 
 			pPlayerPed->ResolveReferences();	// seems necessary to stop getting busted
 			Messages_ClearMessages();
-			CHud::GetRidOfAllHudMessages();
+			Hud_GetRidOfAllHudMessages();
 
 			//CGameLogic::RestorePlayerStuffDuringResurrection(FindPlayerPed(), FindPlayerPed()->GetPosition(), 0.f);
 			if (pPlayerPed->GetPlayerInfoForThisPlayerPed())
@@ -1712,7 +1713,7 @@ void CPad::AddToPCCheatString(char c)
 			veh->bRenderScorched = false;
 		}
 
-		CHud::SetHelpMessage((wchar *) L"Fix everything", true);
+		Hud_SetHelpMessage((wchar *) L"Fix everything", true);
 	}
 
 	// rouz teleport player on rc veh
@@ -1727,7 +1728,7 @@ void CPad::AddToPCCheatString(char c)
 		{
 			veh->m_nDoorLock = CARLOCK_UNLOCKED;
 			command_warp_player_from_car_to_coord(FindPlayerPed(), veh->GetPosition() + CVector(0.0f, 0.0f, 2.0f), veh->m_vecMoveSpeed + CVector(0.0f, 0.0f, -0.1f));
-			CHud::SetHelpMessage((wchar *) L"Teleport on vehicle", true);
+			Hud_SetHelpMessage((wchar *) L"Teleport on vehicle", true);
 		}
 	}
 
@@ -1755,7 +1756,7 @@ void CPad::AddToPCCheatString(char c)
 
 		if(veh || ped) {
 			swprintf(msg, L"Teleport %s %g metres", teleport_height > 0.f ? L"up" : L"down", fabs(teleport_height));
-			CHud::SetHelpMessage((wchar *) msg, true);
+			Hud_SetHelpMessage((wchar *) msg, true);
 		}
 	}
 
@@ -1765,7 +1766,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.health_regen ^= 1;
 		swprintf(msg, L"Health regen %s", rouz.health_regen ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz set wanted level
@@ -1780,7 +1781,7 @@ void CPad::AddToPCCheatString(char c)
 		((void)(FindPlayerPed()->m_pWanted),Wanted_SetMaximumWantedLevel(Input_keyboardCheatString[0]-'0')); // rouz edit (ChatGPT)
 		Wanted_UpdateWantedLevel(FindPlayerPed()->m_pWanted);
 		swprintf(msg, L"Max wanted level %d", Input_keyboardCheatString[0]-'0'); // rouz edit (ChatGPT)
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz no ambulance
@@ -1789,7 +1790,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.no_ambulance ^= 1;
 		swprintf(msg, L"Ambulances %s spawn", rouz.no_ambulance ? L"cannot" : L"may");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz remove weapons
@@ -1797,7 +1798,7 @@ void CPad::AddToPCCheatString(char c)
 	if (!_CHEATCMP("116G"))
 	{
 		FindPlayerPed()->ClearWeapons();
-		CHud::SetHelpMessage((wchar *) L"Weapons removed", true);
+		Hud_SetHelpMessage((wchar *) L"Weapons removed", true);
 	}
 
 	// rouz remove armour
@@ -1805,7 +1806,7 @@ void CPad::AddToPCCheatString(char c)
 	if (!_CHEATCMP("216G"))
 	{
 		FindPlayerPed()->m_fArmour = 0.f;
-		CHud::SetHelpMessage((wchar *) L"Armour removed", true);
+		Hud_SetHelpMessage((wchar *) L"Armour removed", true);
 	}
 
 	// rouz traffic volume toggle
@@ -1814,7 +1815,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.unlock_traffic_gen ^= 1;
 		swprintf(msg, L"Traffic generation is now %s", rouz.unlock_traffic_gen & 1 ? L"unlimited" : L"limited");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz clean bike backflips
@@ -1823,7 +1824,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.clean_bike_backflips ^= 1;
 		swprintf(msg, L"Clean bike backflips %s", rouz.clean_bike_backflips & 1 ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz can't fall of bike
@@ -1832,7 +1833,7 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.cant_fall_off_bike ^= 1;
 		swprintf(msg, L"Can't fall off bike %s", rouz.cant_fall_off_bike & 1 ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// rouz lock doors
@@ -1856,7 +1857,7 @@ void CPad::AddToPCCheatString(char c)
 				veh->m_nDoorLock = CARLOCK_UNLOCKED;
 				swprintf(msg, L"Doors unlocked");
 			}
-			CHud::SetHelpMessage((wchar *) msg, true);
+			Hud_SetHelpMessage((wchar *) msg, true);
 		}
 	}
 
@@ -1873,7 +1874,7 @@ void CPad::AddToPCCheatString(char c)
 			veh->bIsLocked ^= 1;
 			rouz.veh_locked_count += (int) veh->bIsLocked * 2 - 1;
 			swprintf(msg, veh->bIsLocked ? L"Veh won't despawn" : L"Veh can despawn");
-			CHud::SetHelpMessage((wchar *) msg, true);
+			Hud_SetHelpMessage((wchar *) msg, true);
 		}
 	}
 
@@ -1883,15 +1884,15 @@ void CPad::AddToPCCheatString(char c)
 	{
 		rouz.ghost_town ^= 1;
 		swprintf(msg, L"Ghost town mode is now %s", rouz.ghost_town & 1 ? L"on" : L"off");
-		CHud::SetHelpMessage((wchar *) msg, true);
+		Hud_SetHelpMessage((wchar *) msg, true);
 	}
 
 	// Set weather
 	// "G07X"
-	if (!_CHEATCMP("070G")) { Weather_ReleaseWeather();				CHud::SetHelpMessage((wchar *)L"Normal weather", true); }
-	if (!_CHEATCMP("170G")) { Weather_ForceWeatherNow(WEATHER_SUNNY);		CHud::SetHelpMessage((wchar *)L"Sunny weather", true); }
-	if (!_CHEATCMP("270G")) { Weather_ForceWeatherNow(WEATHER_EXTRA_SUNNY);	CHud::SetHelpMessage((wchar *)L"Extra sunny weather", true); }
-	if (!_CHEATCMP("370G")) { Weather_ForceWeatherNow(WEATHER_HURRICANE);		CHud::SetHelpMessage((wchar *)L"Hurricane weather", true); }
+	if (!_CHEATCMP("070G")) { Weather_ReleaseWeather();				Hud_SetHelpMessage((wchar *)L"Normal weather", true); }
+	if (!_CHEATCMP("170G")) { Weather_ForceWeatherNow(WEATHER_SUNNY);		Hud_SetHelpMessage((wchar *)L"Sunny weather", true); }
+	if (!_CHEATCMP("270G")) { Weather_ForceWeatherNow(WEATHER_EXTRA_SUNNY);	Hud_SetHelpMessage((wchar *)L"Extra sunny weather", true); }
+	if (!_CHEATCMP("370G")) { Weather_ForceWeatherNow(WEATHER_HURRICANE);		Hud_SetHelpMessage((wchar *)L"Hurricane weather", true); }
 
 #undef _CHEATCMP
 }
@@ -2287,7 +2288,7 @@ void CPad::Update(int16 pad)
 	bHornHistory[iCurrHornHistory] = GetHorn();
 
 	if ( !Input_displayNoControllerMessage ) // rouz edit (ChatGPT)
-		CGame::bDemoMode = false;
+		Game_bDemoMode = false;
 #endif
 
 #if (defined GTA_PS2 || defined FIX_BUGS)
@@ -2317,7 +2318,7 @@ void CPad::Update(int16 pad)
 	}
 
 	if ( !Input_displayNoControllerMessage ) // rouz edit (ChatGPT)
-		CGame::bDemoMode = false;
+		Game_bDemoMode = false;
 
 	if ( JustOutOfFrontend != 0 )
 		--JustOutOfFrontend;
@@ -3565,29 +3566,29 @@ void CPad::PrintErrorMessage(void)
 	if (TheCamera.m_WideScreenOn)
 		return;
 
-	if ( Input_displayNoControllerMessage && !CGame::playingIntro && !FrontEndMenuManager.m_bMenuActive ) // rouz edit (ChatGPT)
+	if ( Input_displayNoControllerMessage && !Game_playingIntro && !FrontEndMenuManager.m_bMenuActive ) // rouz edit (ChatGPT)
 	{
 		([](const CRect &r,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
 })(Rect_Make(SCREEN_STRETCH_X(20.0f), SCREEN_SCALE_FROM_BOTTOM(130.0f), SCREEN_STRETCH_FROM_RIGHT(20.0f), SCREEN_SCALE_Y(140.0f)), CRGBA(50, 50, 50, 210));
 #ifdef FIX_BUGS
-		CFont::SetScale(SCREEN_SCALE_X(0.85f), SCREEN_SCALE_Y(1.0f));
+		Font_SetScale(SCREEN_SCALE_X(0.85f), SCREEN_SCALE_Y(1.0f));
 #else
-		CFont::SetScale(0.85f, 1.0f);
+		Font_SetScale(0.85f, 1.0f);
 #endif
-		CFont::SetJustifyOff();
-		CFont::SetBackgroundOff();
+		Font_SetJustifyOff();
+		Font_SetBackgroundOff();
 #ifdef FIX_BUGS
-		CFont::SetCentreSize(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH - 20));
+		Font_SetCentreSize(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH - 20));
 #else
-		CFont::SetCentreSize(SCREEN_WIDTH - 20);
+		Font_SetCentreSize(SCREEN_WIDTH - 20);
 #endif
-		CFont::SetCentreOn();
-		CFont::SetPropOn();
-		CFont::SetColor(CRGBA(255, 255, 200, 200));
-		CFont::SetFontStyle(FONT_STANDARD);
-		CFont::PrintString
+		Font_SetCentreOn();
+		Font_SetPropOn();
+		Font_SetColor(CRGBA(255, 255, 200, 200));
+		Font_SetFontStyle(FONT_STANDARD);
+		Font_PrintString
 		(
 			SCREEN_WIDTH  / 2,
 			SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(40.0f),
@@ -3601,22 +3602,22 @@ void CPad::PrintErrorMessage(void)
     Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
 })(Rect_Make(SCREEN_STRETCH_X(20.0f), SCREEN_SCALE_FROM_BOTTOM(130.0f), SCREEN_STRETCH_FROM_RIGHT(20.0f), SCREEN_SCALE_Y(140.0f)), CRGBA(50, 50, 50, 210));
 #ifdef FIX_BUGS
-		CFont::SetScale(SCREEN_SCALE_X(0.85f), SCREEN_SCALE_Y(1.0f));
+		Font_SetScale(SCREEN_SCALE_X(0.85f), SCREEN_SCALE_Y(1.0f));
 #else
-		CFont::SetScale(0.85f, 1.0f);
+		Font_SetScale(0.85f, 1.0f);
 #endif
-		CFont::SetJustifyOff();
-		CFont::SetBackgroundOff();
+		Font_SetJustifyOff();
+		Font_SetBackgroundOff();
 #ifdef FIX_BUGS
-		CFont::SetCentreSize(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH - 20));
+		Font_SetCentreSize(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH - 20));
 #else
-		CFont::SetCentreSize(SCREEN_WIDTH - 20);
+		Font_SetCentreSize(SCREEN_WIDTH - 20);
 #endif
-		CFont::SetCentreOn();
-		CFont::SetPropOn();
-		CFont::SetColor(CRGBA(255, 255, 200, 200));
-		CFont::SetFontStyle(FONT_STANDARD);
-		CFont::PrintString
+		Font_SetCentreOn();
+		Font_SetPropOn();
+		Font_SetColor(CRGBA(255, 255, 200, 200));
+		Font_SetFontStyle(FONT_STANDARD);
+		Font_PrintString
 		(
 			SCREEN_WIDTH  / 2,
 			SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(40.0f),
@@ -3657,7 +3658,7 @@ void CPad::ResetCheats(void)
 	gbBlackCars = false;
 	gbPinkCars = false;
 
-	CCarCtrl::bMadDriversCheat = false;
+	CarCtrl_bMadDriversCheat = false;
 	TrafficLights_bGreenLightsCheat = false;
 	Stats_ShowChaseStatOnScreen = 0;
 	CPed::bNastyLimbsCheat = false;

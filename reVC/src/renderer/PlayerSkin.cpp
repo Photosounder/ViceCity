@@ -136,7 +136,7 @@ void PlayerSkin_BackendSetRenderers(PlayerSkinClump *clump)
 void PlayerSkin_BackendLoadPlayer(void)
 {
     // Retain the original typed native operation and its borrowed owner arguments
-    CWorld::Players[0].LoadPlayerSkin();
+    World_Players[0].LoadPlayerSkin();
 }
 void PlayerSkin_BackendDestroyClump(PlayerSkinClump *clump)
 {

@@ -54,7 +54,7 @@ float Clouds_BackendOrientation(void)
 bool Clouds_BackendOutside(void)
 {
     // Retain the original typed owner operation at its original C call point
-    return CGame::CanSeeOutSideFromCurrArea();
+    return Game_CanSeeOutSideFromCurrArea();
 }
 float Clouds_BackendScreenWidth(void)
 {

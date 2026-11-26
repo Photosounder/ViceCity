@@ -36,52 +36,53 @@ struct tPickupMessage
 	uint16 money;
 };
 
-class CPickups
-{
-	static int32 aPickUpsCollected[NUMCOLLECTEDPICKUPS];
-	static int16 CollectedPickUpIndex;
-	static int16 NumMessages;
-	static tPickupMessage aMessages[NUMPICKUPMESSAGES];
-public:
-	static int32 PlayerOnWeaponPickup;
-
-	static void Init();
-	static void Update();
-	static void RenderPickUpText();
-	static void DoCollectableEffects(CEntity *ent);
-	static void DoMoneyEffects(CEntity *ent);
-	static void DoMineEffects(CEntity *ent);
-	static void DoPickUpEffects(CEntity *ent);
-	static int32 GenerateNewOne(CVector pos, uint32 modelIndex, uint8 type, uint32 quantity, uint32 rate = 0, bool highPriority = false, char* pText = nil);
-	static int32 GenerateNewOne_WeaponType(CVector pos, eWeaponType weaponType, uint8 type, uint32 quantity);
-	static void RemovePickUp(int32 pickupIndex);
-	static void AddToCollectedPickupsArray(int32 index);
-	static bool IsPickUpPickedUp(int32 pickupId);
-	static int32 ModelForWeapon(eWeaponType weaponType);
-	static enum eWeaponType WeaponForModel(int32 model);
-	static int32 GetActualPickupIndex(int32 index);
-	static int32 GetNewUniquePickupIndex(int32 slot);
-	static void PassTime(uint32 time);
-	static bool GivePlayerGoodiesWithPickUpMI(int16 modelIndex, int playerIndex);
-	static bool TestForPickupsInBubble(CVector pos, float range);
-	static bool TryToMerge_WeaponType(CVector pos, eWeaponType weapon, uint8 type, uint32 quantity, bool unused);
-	static void CreateSomeMoney(CVector, int);
-	static void DetonateMinesHitByGunShot(CVector *vec1, CVector *vec2);
-	static void RemoveUnnecessaryPickups(const CVector& center, float radius);
-	static void Load(uint8 *buf, uint32 size);
-	static void Save(uint8 *buf, uint32 *size);
-
-	static CPickup aPickUps[NUMPICKUPS];
-
-	// unused
-	static bool bPickUpcamActivated;
-	static CVehicle *pPlayerVehicle;
-	static CVector StaticCamCoors;
-	static uint32 StaticCamStartTime;
-	
-	static void RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType);
-	static CPickup *FindPickUpForThisObject(CEntity*);
-};
+//+ rouz edit (Claude)
+// Formerly the static class CPickups, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int32 Pickups_aPickUpsCollected[NUMCOLLECTEDPICKUPS];
+extern int16 Pickups_CollectedPickUpIndex;
+extern int16 Pickups_NumMessages;
+extern tPickupMessage Pickups_aMessages[NUMPICKUPMESSAGES];
+extern int32 Pickups_PlayerOnWeaponPickup;
+void Pickups_Init();
+void Pickups_Update();
+void Pickups_RenderPickUpText();
+void Pickups_DoCollectableEffects(CEntity *ent);
+void Pickups_DoMoneyEffects(CEntity *ent);
+void Pickups_DoMineEffects(CEntity *ent);
+void Pickups_DoPickUpEffects(CEntity *ent);
+int32 Pickups_GenerateNewOne_WeaponType(CVector pos, eWeaponType weaponType, uint8 type, uint32 quantity);
+void Pickups_RemovePickUp(int32 pickupIndex);
+void Pickups_AddToCollectedPickupsArray(int32 index);
+bool Pickups_IsPickUpPickedUp(int32 pickupId);
+int32 Pickups_ModelForWeapon(eWeaponType weaponType);
+enum eWeaponType Pickups_WeaponForModel(int32 model);
+int32 Pickups_GetActualPickupIndex(int32 index);
+int32 Pickups_GetNewUniquePickupIndex(int32 slot);
+void Pickups_PassTime(uint32 time);
+bool Pickups_GivePlayerGoodiesWithPickUpMI(int16 modelIndex, int playerIndex);
+bool Pickups_TestForPickupsInBubble(CVector pos, float range);
+bool Pickups_TryToMerge_WeaponType(CVector pos, eWeaponType weapon, uint8 type, uint32 quantity, bool unused);
+void Pickups_CreateSomeMoney(CVector, int);
+void Pickups_DetonateMinesHitByGunShot(CVector *vec1, CVector *vec2);
+void Pickups_Load(uint8 *buf, uint32 size);
+void Pickups_Save(uint8 *buf, uint32 *size);
+extern bool Pickups_bPickUpcamActivated;
+extern CVehicle * Pickups_pPlayerVehicle;
+extern CVector Pickups_StaticCamCoors;
+extern uint32 Pickups_StaticCamStartTime;
+void Pickups_RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType);
+CPickup *Pickups_FindPickUpForThisObject(CEntity*);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+int32 Pickups_GenerateNewOne(CVector pos, uint32 modelIndex, uint8 type, uint32 quantity, uint32 rate = 0, bool highPriority = false, char* pText = nil);
+void Pickups_RemoveUnnecessaryPickups(const CVector& center, float radius);
+extern CPickup Pickups_aPickUps[NUMPICKUPS];
+#endif
+//- rouz edit (Claude)
 
 extern uint16 AmmoForWeapon[WEAPONTYPE_TOTALWEAPONS + 1];
 extern uint16 AmmoForWeapon_OnStreet[WEAPONTYPE_TOTALWEAPONS + 1];
@@ -106,29 +107,32 @@ public:
 	void Update();
 };
 
-class CPacManPickups
-{
-	friend class CPacManPickup;
-
-	static CPacManPickup aPMPickUps[NUMPACMANPICKUPS];
-	static CVector LastPickUpCoors;
-	static int PillsEatenInRace;
-	static bool bPMActive;
-public:
-	static void Init(void);
-	static void Update(void);
-	static void GeneratePMPickUps(CVector, float, int16, uint8);
-	static void GeneratePMPickUpsForRace(int32);
-	static void GenerateOnePMPickUp(CVector);
-	static void Render(void);
-	static void StartPacManRace(int32);
-	static void StartPacManRecord(void);
-	static uint32 QueryPowerPillsEatenInRace(void);
-	static void ResetPowerPillsEatenInRace(void);
-	static void ClearPMPickUps(void);
-	static void CleanUpPacManStuff(void);
-	static void StartPacManScramble(CVector, float, int16);
-	static uint32 QueryPowerPillsCarriedByPlayer(void);
-	static void ResetPowerPillsCarriedByPlayer(void);
-
-};
+//+ rouz edit (Claude)
+// Formerly the static class CPacManPickups, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern CVector PacManPickups_LastPickUpCoors;
+extern int PacManPickups_PillsEatenInRace;
+extern bool PacManPickups_bPMActive;
+void PacManPickups_Init(void);
+void PacManPickups_Update(void);
+void PacManPickups_GeneratePMPickUps(CVector, float, int16, uint8);
+void PacManPickups_GeneratePMPickUpsForRace(int32);
+void PacManPickups_GenerateOnePMPickUp(CVector);
+void PacManPickups_Render(void);
+void PacManPickups_StartPacManRace(int32);
+void PacManPickups_StartPacManRecord(void);
+uint32 PacManPickups_QueryPowerPillsEatenInRace(void);
+void PacManPickups_ResetPowerPillsEatenInRace(void);
+void PacManPickups_ClearPMPickUps(void);
+void PacManPickups_CleanUpPacManStuff(void);
+void PacManPickups_StartPacManScramble(CVector, float, int16);
+uint32 PacManPickups_QueryPowerPillsCarriedByPlayer(void);
+void PacManPickups_ResetPowerPillsCarriedByPlayer(void);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CPacManPickup PacManPickups_aPMPickUps[NUMPACMANPICKUPS];
+#endif
+//- rouz edit (Claude)

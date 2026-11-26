@@ -9,51 +9,60 @@ struct CDirectory;
 struct CAnimBlendAssocGroup;
 class CCutsceneHead;
 
-class CCutsceneMgr
-{
-	static CCutsceneObject *ms_pCutsceneObjects[NUMCUTSCENEOBJECTS];
-	
-	static int32 ms_numCutsceneObjs;
-	static bool ms_loaded;
-	static bool ms_animLoaded;
-	static bool ms_useLodMultiplier;
-
-	static char ms_cutsceneName[CUTSCENENAMESIZE];
-	static CAnimBlendAssocGroup ms_cutsceneAssociations;
-	static CVector ms_cutsceneOffset;
-	static float ms_cutsceneTimer;
-	static bool ms_wasCutsceneSkipped;
-	static bool ms_useCutsceneShadows;
-public:
-	static CDirectory *ms_pCutsceneDir;
-	static uint32 ms_cutsceneLoadStatus;
-
-	static bool HasLoaded(void) { return ms_loaded; }
-	static bool WasCutsceneSkipped(void) { return ms_wasCutsceneSkipped; }
-	static bool UseLodMultiplier(void) { return ms_useLodMultiplier; }
-	static CCutsceneObject* GetCutsceneObject(int id) { return ms_pCutsceneObjects[id]; }
-	static int GetCutsceneTimeInMilleseconds(void) { return 1000.0f * ms_cutsceneTimer; }
-	static char *GetCutsceneName(void) { return ms_cutsceneName; }
-	static void SetCutsceneOffset(const CVector& vec) { ms_cutsceneOffset = vec; }
-	static bool HasCutsceneFinished(void);
-
-	static void Initialise(void);
-	static void Shutdown(void);
-	static void LoadCutsceneData(const char *szCutsceneName);
-	static void FinishCutscene(void);
-	static void SetupCutsceneToStart(void);
-	static void SetCutsceneAnim(const char *animName, CObject *pObject);
-	static void SetCutsceneAnimToLoop(const char *animName);
-	static CCutsceneHead *AddCutsceneHead(CObject *pObject, int modelId);
-	static CCutsceneObject *CreateCutsceneObject(int modelId);
-	static void DeleteCutsceneData(void);
-	static void LoadAnimationUncompressed(char const*);
-	static void Update(void);
-
-	static void AttachObjectToParent(CObject *pObject, CEntity *pAttachTo);
-	static void AttachObjectToFrame(CObject *pObject, CEntity *pAttachTo, const char *frame);
-	static void AttachObjectToBone(CObject *pObject, CObject *pAttachTo, int frame);
-	static void RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver();
-	static void DisableCutsceneShadows() { ms_useCutsceneShadows = false; }
-};
+//+ rouz edit (Claude)
+// Formerly the static class CCutsceneMgr, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern CCutsceneObject * CutsceneMgr_ms_pCutsceneObjects[NUMCUTSCENEOBJECTS];
+extern int32 CutsceneMgr_ms_numCutsceneObjs;
+extern bool CutsceneMgr_ms_loaded;
+extern bool CutsceneMgr_ms_animLoaded;
+extern bool CutsceneMgr_ms_useLodMultiplier;
+extern char CutsceneMgr_ms_cutsceneName[CUTSCENENAMESIZE];
+extern CVector CutsceneMgr_ms_cutsceneOffset;
+extern float CutsceneMgr_ms_cutsceneTimer;
+extern bool CutsceneMgr_ms_wasCutsceneSkipped;
+extern bool CutsceneMgr_ms_useCutsceneShadows;
+extern CDirectory * CutsceneMgr_ms_pCutsceneDir;
+extern uint32 CutsceneMgr_ms_cutsceneLoadStatus;
+bool CutsceneMgr_HasCutsceneFinished(void);
+void CutsceneMgr_Initialise(void);
+void CutsceneMgr_Shutdown(void);
+void CutsceneMgr_LoadCutsceneData(const char *szCutsceneName);
+void CutsceneMgr_FinishCutscene(void);
+void CutsceneMgr_SetupCutsceneToStart(void);
+void CutsceneMgr_SetCutsceneAnim(const char *animName, CObject *pObject);
+void CutsceneMgr_SetCutsceneAnimToLoop(const char *animName);
+CCutsceneHead *CutsceneMgr_AddCutsceneHead(CObject *pObject, int modelId);
+CCutsceneObject *CutsceneMgr_CreateCutsceneObject(int modelId);
+void CutsceneMgr_DeleteCutsceneData(void);
+void CutsceneMgr_LoadAnimationUncompressed(char const*);
+void CutsceneMgr_Update(void);
+void CutsceneMgr_AttachObjectToParent(CObject *pObject, CEntity *pAttachTo);
+void CutsceneMgr_AttachObjectToFrame(CObject *pObject, CEntity *pAttachTo, const char *frame);
+void CutsceneMgr_AttachObjectToBone(CObject *pObject, CObject *pAttachTo, int frame);
+void CutsceneMgr_RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver();
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CAnimBlendAssocGroup CutsceneMgr_ms_cutsceneAssociations;
+static inline bool CutsceneMgr_HasLoaded(void);
+static inline bool CutsceneMgr_WasCutsceneSkipped(void);
+static inline bool CutsceneMgr_UseLodMultiplier(void);
+static inline CCutsceneObject* CutsceneMgr_GetCutsceneObject(int id);
+static inline int CutsceneMgr_GetCutsceneTimeInMilleseconds(void);
+static inline char *CutsceneMgr_GetCutsceneName(void);
+static inline void CutsceneMgr_SetCutsceneOffset(const CVector& vec);
+static inline void CutsceneMgr_DisableCutsceneShadows();
+static inline bool CutsceneMgr_HasLoaded(void) { return CutsceneMgr_ms_loaded; }
+static inline bool CutsceneMgr_WasCutsceneSkipped(void) { return CutsceneMgr_ms_wasCutsceneSkipped; }
+static inline bool CutsceneMgr_UseLodMultiplier(void) { return CutsceneMgr_ms_useLodMultiplier; }
+static inline CCutsceneObject* CutsceneMgr_GetCutsceneObject(int id) { return CutsceneMgr_ms_pCutsceneObjects[id]; }
+static inline int CutsceneMgr_GetCutsceneTimeInMilleseconds(void) { return 1000.0f * CutsceneMgr_ms_cutsceneTimer; }
+static inline char *CutsceneMgr_GetCutsceneName(void) { return CutsceneMgr_ms_cutsceneName; }
+static inline void CutsceneMgr_SetCutsceneOffset(const CVector& vec) { CutsceneMgr_ms_cutsceneOffset = vec; }
+static inline void CutsceneMgr_DisableCutsceneShadows() { CutsceneMgr_ms_useCutsceneShadows = false; }
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)

@@ -30,29 +30,35 @@ public:
 	float GetAngle(void) { return angle*TWOPI/UINT16_MAX; }
 };
 
-class COcclusion
-{
-public:
-	static int32 NumOccludersOnMap;
-	static int16 FarAwayList;
-	static int16 NearbyList;
-	static int16 ListWalkThroughFA;
-	static int16 PreviousListWalkThroughFA;
-	static int16 NumActiveOccluders;
-
-	static COccluder aOccluders[NUMOCCLUSIONVOLUMES];
-	static CActiveOccluder aActiveOccluders[NUMACTIVEOCCLUDERS];
-
-	static void Init(void);
-	static void AddOne(float x, float y, float z, float width, float length, float height, float angle);
-	static void ProcessBeforeRendering(void); 
-	static bool OccluderHidesBehind(CActiveOccluder *occl1, CActiveOccluder *occl2);
-	static bool IsAABoxOccluded(CVector pos, float width, float length, float height);
-	static bool IsPositionOccluded(CVector pos, float side);
-#ifndef MASTER
-	static void Render();
+//+ rouz edit (Claude)
+// Formerly the static class COcclusion, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
 #endif
-};
+extern int32 Occlusion_NumOccludersOnMap;
+extern int16 Occlusion_FarAwayList;
+extern int16 Occlusion_NearbyList;
+extern int16 Occlusion_ListWalkThroughFA;
+extern int16 Occlusion_PreviousListWalkThroughFA;
+extern int16 Occlusion_NumActiveOccluders;
+void Occlusion_Init(void);
+void Occlusion_AddOne(float x, float y, float z, float width, float length, float height, float angle);
+void Occlusion_ProcessBeforeRendering(void);
+bool Occlusion_OccluderHidesBehind(CActiveOccluder *occl1, CActiveOccluder *occl2);
+bool Occlusion_IsAABoxOccluded(CVector pos, float width, float length, float height);
+bool Occlusion_IsPositionOccluded(CVector pos, float side);
+#ifndef MASTER
+void Occlusion_Render();
+#endif
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern COccluder Occlusion_aOccluders[NUMOCCLUSIONVOLUMES];
+extern CActiveOccluder Occlusion_aActiveOccluders[NUMACTIVEOCCLUDERS];
+#ifndef MASTER
+#endif
+#endif
+//- rouz edit (Claude)
 
 bool CalcScreenCoors(CVector const &in, CVector *out, float *outw, float *outh);
 bool CalcScreenCoors(CVector const &in, CVector *out);

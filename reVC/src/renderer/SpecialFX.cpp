@@ -108,28 +108,28 @@ float SpecialFX_BackendScreenHeight(void)
 void SpecialFX_BackendFontScale(float x,float y)
 {
     // Set the original font scale with C-computed values
-    CFont::SetScale(x,y);
+    Font_SetScale(x,y);
 }
 void SpecialFX_BackendFontCentreSize(float value)
 {
     // Retain the original nominally unused centre-size write
-    CFont::SetCentreSize(value);
+    Font_SetCentreSize(value);
 }
 void SpecialFX_BackendFontColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Construct the original typed font color after original narrowing
-    CFont::SetColor(CRGBA(r,g,b,a));
+    Font_SetColor(CRGBA(r,g,b,a));
 }
 void SpecialFX_BackendFontStyle(int16_t style)
 {
     // Set the original typed font style selected by C
-    CFont::SetFontStyle(style);
+    Font_SetFontStyle(style);
 }
 bool SpecialFX_BackendJapanese(void)
 {
     // Read the original locale predicate only when the original macro uses it
     #ifdef MORE_LANGUAGES
-    return CFont::IsJapanese();
+    return Font_IsJapanese();
 #else
     return false;
 #endif
@@ -137,7 +137,7 @@ bool SpecialFX_BackendJapanese(void)
 void SpecialFX_BackendPrintString(float x,float y,uint16_t *text)
 {
     // Print through the exact original typed Unicode overload
-    CFont::PrintString(x,y,text);
+    Font_PrintString(x,y,text);
 }
 void SpecialFX_BackendPolygon(float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
@@ -186,22 +186,22 @@ bool SpecialFX_BackendFirstPerson(void)
 void SpecialFX_BackendFontJustifyOff(void)
 {
     // Preserve the original typed font JustifyOff operation
-    CFont::SetJustifyOff();
+    Font_SetJustifyOff();
 }
 void SpecialFX_BackendFontBackgroundOff(void)
 {
     // Preserve the original typed font BackgroundOff operation
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 void SpecialFX_BackendFontCentreOff(void)
 {
     // Preserve the original typed font CentreOff operation
-    CFont::SetCentreOff();
+    Font_SetCentreOff();
 }
 void SpecialFX_BackendFontPropOn(void)
 {
     // Preserve the original typed font PropOn operation
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 void SpecialFX_BackendSrcBlend(bool additive)
 {

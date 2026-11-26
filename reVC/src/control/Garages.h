@@ -91,78 +91,91 @@ public:
 
 };
 
-class CGarages
-{
-	enum {
+//+ rouz edit (Claude)
+// Formerly the static class CGarages, now C globals and functions shared with C
+enum {
 		MESSAGE_LENGTH = 8,
 	};
-public:
-	static int32 BankVansCollected;
-	static bool BombsAreFree;
-	static bool RespraysAreFree;
-	static int32 CarsCollected;
-	static int32 CarTypesCollected[TOTAL_COLLECTCARS_GARAGES];
-	static int32 CrushedCarId;
-	static uint32 LastTimeHelpMessage;
-	static int32 MessageNumberInString;
-	static char MessageIDString[MESSAGE_LENGTH];
-	static int32 MessageNumberInString2;
-	static uint32 MessageStartTime;
-	static uint32 MessageEndTime;
-	static uint32 NumGarages;
-	static bool PlayerInGarage;
-	static int32 PoliceCarsCollected;
-	static CGarage aGarages[NUM_GARAGES];
-	static CStoredCar aCarsInSafeHouses[TOTAL_HIDEOUT_GARAGES][NUM_GARAGE_STORED_CARS];
-	static bool bCamShouldBeOutisde;
-
-	static void Init(void);
-#ifndef PS2
-	static void Shutdown(void);
+#ifdef __cplusplus
+extern "C" {
 #endif
-	static void Update(void);
-
-	static int16 AddOne(float X1, float Y1, float Z1, float X2, float Y2, float X3, float Y3, float Z2, uint8 type, int32 targetId);
-	static void ChangeGarageType(int16, uint8, int32);
-	static void PrintMessages(void);
-	static void TriggerMessage(const char* text, int16, uint16 time, int16);
-	static void SetTargetCarForMissonGarage(int16, CVehicle*);
-	static bool HasCarBeenDroppedOffYet(int16);
-	static void DeActivateGarage(int16);
-	static void ActivateGarage(int16);
-	static int32 QueryCarsCollected(int16);
-	static bool HasImportExportGarageCollectedThisCar(int16, int8);
-	static bool IsGarageOpen(int16);
-	static bool IsGarageClosed(int16);
-	static bool HasThisCarBeenCollected(int16, uint8);
-	static void OpenGarage(int16 garage) { aGarages[garage].OpenThisGarage(); }
-	static void CloseGarage(int16 garage) { aGarages[garage].CloseThisGarage(); }
-	static bool HasResprayHappened(int16);
-	static void SetGarageDoorToRotate(int16);
-	static void SetLeaveCameraForThisGarage(int16);
-	static bool IsThisCarWithinGarageArea(int16, CEntity*);
-	static bool HasCarBeenCrushed(int32);
-	static bool IsPointInAGarageCameraZone(CVector);
-	static bool CameraShouldBeOutside(void);
-	static void GivePlayerDetonator(void);
-	static void PlayerArrestedOrDied(void);
-	static bool IsPointWithinHideOutGarage(Const CVector&);
-	static bool IsPointWithinAnyGarage(Const CVector&);
-	static void SetAllDoorsBackToOriginalHeight(void);
-	static void Save(uint8* buf, uint32* size);
-	static void Load(uint8* buf, uint32 size);
-	static bool IsModelIndexADoor(uint32 id);
-	static void SetFreeBombs(bool bValue) { BombsAreFree = bValue; }
-	static void SetFreeResprays(bool bValue) { RespraysAreFree = bValue; }
-	static void StopCarFromBlowingUp(CAutomobile*);
-	static void SetMaxNumStoredCarsForGarage(int16 garage, uint8 num) { aGarages[garage].m_nMaxStoredCars = num; }
-
-	static bool IsCarSprayable(CVehicle*);
-	static float FindDoorHeightForMI(int32);
-	static void CloseHideOutGaragesBeforeSave(void);
-	static int32 CountCarsInHideoutGarage(uint8);
-	static int32 GetBombTypeForGarageType(uint8 type) { return type - GARAGE_BOMBSHOP1 + 1; }
-	static int32 GetCarsCollectedIndexForGarageType(uint8 type)
+extern int32 Garages_BankVansCollected;
+extern bool Garages_BombsAreFree;
+extern bool Garages_RespraysAreFree;
+extern int32 Garages_CarsCollected;
+extern int32 Garages_CarTypesCollected[TOTAL_COLLECTCARS_GARAGES];
+extern int32 Garages_CrushedCarId;
+extern uint32 Garages_LastTimeHelpMessage;
+extern int32 Garages_MessageNumberInString;
+extern char Garages_MessageIDString[MESSAGE_LENGTH];
+extern int32 Garages_MessageNumberInString2;
+extern uint32 Garages_MessageStartTime;
+extern uint32 Garages_MessageEndTime;
+extern uint32 Garages_NumGarages;
+extern bool Garages_PlayerInGarage;
+extern int32 Garages_PoliceCarsCollected;
+extern bool Garages_bCamShouldBeOutisde;
+void Garages_Init(void);
+#ifndef PS2
+void Garages_Shutdown(void);
+#endif
+void Garages_Update(void);
+int16 Garages_AddOne(float X1, float Y1, float Z1, float X2, float Y2, float X3, float Y3, float Z2, uint8 type, int32 targetId);
+void Garages_ChangeGarageType(int16, uint8, int32);
+void Garages_PrintMessages(void);
+void Garages_TriggerMessage(const char* text, int16, uint16 time, int16);
+void Garages_SetTargetCarForMissonGarage(int16, CVehicle*);
+bool Garages_HasCarBeenDroppedOffYet(int16);
+void Garages_DeActivateGarage(int16);
+void Garages_ActivateGarage(int16);
+int32 Garages_QueryCarsCollected(int16);
+bool Garages_HasImportExportGarageCollectedThisCar(int16, int8);
+bool Garages_IsGarageOpen(int16);
+bool Garages_IsGarageClosed(int16);
+bool Garages_HasThisCarBeenCollected(int16, uint8);
+bool Garages_HasResprayHappened(int16);
+void Garages_SetGarageDoorToRotate(int16);
+void Garages_SetLeaveCameraForThisGarage(int16);
+bool Garages_IsThisCarWithinGarageArea(int16, CEntity*);
+bool Garages_HasCarBeenCrushed(int32);
+bool Garages_IsPointInAGarageCameraZone(CVector);
+bool Garages_CameraShouldBeOutside(void);
+void Garages_GivePlayerDetonator(void);
+void Garages_PlayerArrestedOrDied(void);
+void Garages_SetAllDoorsBackToOriginalHeight(void);
+void Garages_Save(uint8* buf, uint32* size);
+void Garages_Load(uint8* buf, uint32 size);
+bool Garages_IsModelIndexADoor(uint32 id);
+void Garages_StopCarFromBlowingUp(CAutomobile*);
+bool Garages_IsCarSprayable(CVehicle*);
+float Garages_FindDoorHeightForMI(int32);
+void Garages_CloseHideOutGaragesBeforeSave(void);
+int32 Garages_CountCarsInHideoutGarage(uint8);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CGarage Garages_aGarages[NUM_GARAGES];
+extern CStoredCar Garages_aCarsInSafeHouses[TOTAL_HIDEOUT_GARAGES][NUM_GARAGE_STORED_CARS];
+#ifndef PS2
+#endif
+static inline void Garages_OpenGarage(int16 garage);
+static inline void Garages_CloseGarage(int16 garage);
+bool Garages_IsPointWithinHideOutGarage(Const CVector&);
+bool Garages_IsPointWithinAnyGarage(Const CVector&);
+static inline void Garages_SetFreeBombs(bool bValue);
+static inline void Garages_SetFreeResprays(bool bValue);
+static inline void Garages_SetMaxNumStoredCarsForGarage(int16 garage, uint8 num);
+static inline int32 Garages_GetBombTypeForGarageType(uint8 type);
+static inline int32 Garages_GetCarsCollectedIndexForGarageType(uint8 type);
+static inline int32 Garages_FindSafeHouseIndexForGarageType(uint8 type);
+static inline bool Garages_IsThisGarageTypeSafehouse(uint8 type);
+static inline void Garages_OpenGarage(int16 garage) { Garages_aGarages[garage].OpenThisGarage(); }
+static inline void Garages_CloseGarage(int16 garage) { Garages_aGarages[garage].CloseThisGarage(); }
+static inline void Garages_SetFreeBombs(bool bValue) { Garages_BombsAreFree = bValue; }
+static inline void Garages_SetFreeResprays(bool bValue) { Garages_RespraysAreFree = bValue; }
+static inline void Garages_SetMaxNumStoredCarsForGarage(int16 garage, uint8 num) { Garages_aGarages[garage].m_nMaxStoredCars = num; }
+static inline int32 Garages_GetBombTypeForGarageType(uint8 type) { return type - GARAGE_BOMBSHOP1 + 1; }
+static inline int32 Garages_GetCarsCollectedIndexForGarageType(uint8 type)
 	{
 		switch (type) {
 		case GARAGE_COLLECTCARS_1: return 0;
@@ -173,7 +186,7 @@ public:
 		}
 		return 0;
 	}
-	static int32 FindSafeHouseIndexForGarageType(uint8 type)
+static inline int32 Garages_FindSafeHouseIndexForGarageType(uint8 type)
 	{
 		switch (type) {
 		case GARAGE_HIDEOUT_ONE: return 0;
@@ -191,6 +204,6 @@ public:
 		}
 		return -1;
 	}
-	static bool IsThisGarageTypeSafehouse(uint8 type) { return FindSafeHouseIndexForGarageType(type) >= 0; }
-
-};
+static inline bool Garages_IsThisGarageTypeSafehouse(uint8 type) { return Garages_FindSafeHouseIndexForGarageType(type) >= 0; }
+#endif
+//- rouz edit (Claude)

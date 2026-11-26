@@ -43,7 +43,7 @@
 #include "Occlusion.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 
-char CFileLoader::ms_line[256];
+char FileLoader_ms_line[256];
 
 const char*
 GetFilename(const char *filename)
@@ -60,7 +60,7 @@ LoadingScreenLoadingFile(const char *filename)
 }
 
 void
-CFileLoader::LoadLevel(const char *filename)
+FileLoader_LoadLevel(const char *filename)
 {
 	int fd;
 	RwTexDictionary *savedTxd;
@@ -77,7 +77,7 @@ CFileLoader::LoadLevel(const char *filename)
 	fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
 
-	for(line = LoadLine(fd); line; line = LoadLine(fd)){
+	for(line = FileLoader_LoadLine(fd); line; line = FileLoader_LoadLine(fd)){
 		if(*line == '#')
 			continue;
 
@@ -90,31 +90,31 @@ CFileLoader::LoadLevel(const char *filename)
 			PUSH_MEMID(MEMID_TEXTURES);
 			strcpy(txdname, line+11);
 			LoadingScreenLoadingFile(txdname);
-			RwTexDictionary *txd = LoadTexDictionary(txdname);
-			AddTexDictionaries(savedTxd, txd);
+			RwTexDictionary *txd = FileLoader_LoadTexDictionary(txdname);
+			FileLoader_AddTexDictionaries(savedTxd, txd);
 			RwTexDictionaryDestroy(txd);
 			POP_MEMID();
 		}else if(strncmp(line, "COLFILE", 7) == 0){
 			LoadingScreenLoadingFile(line+10);
-			LoadCollisionFile(line+10, 0);
+			FileLoader_LoadCollisionFile(line+10, 0);
 		}else if(strncmp(line, "MODELFILE", 9) == 0){
 			LoadingScreenLoadingFile(line + 10);
-			LoadModelFile(line + 10);
+			FileLoader_LoadModelFile(line + 10);
 		}else if(strncmp(line, "HIERFILE", 8) == 0){
 			LoadingScreenLoadingFile(line + 9);
-			LoadClumpFile(line + 9);
+			FileLoader_LoadClumpFile(line + 9);
 		}else if(strncmp(line, "IDE", 3) == 0){
 			LoadingScreenLoadingFile(line + 4);
-			LoadObjectTypes(line + 4);
+			FileLoader_LoadObjectTypes(line + 4);
 		}else if(strncmp(line, "IPL", 3) == 0){
 			if(!objectsLoaded){
 				LoadingScreenLoadingFile("Collision");
 				PUSH_MEMID(MEMID_WORLD);
 				CObjectData::Initialise("DATA\\OBJECT.DAT");
-				CStreaming::Init();
+				Streaming_Init();
 				POP_MEMID();
 				PUSH_MEMID(MEMID_COLLISION);
-				CColStore::LoadAllCollision();
+				ColStore_LoadAllCollision();
 				POP_MEMID();
 				for(int i = 0; i < MODELINFOSIZE; i++)
 					if(((CBaseModelInfo*)ModelRegistry_Get(i))) // rouz edit (ChatGPT)
@@ -123,7 +123,7 @@ CFileLoader::LoadLevel(const char *filename)
 			}
 			PUSH_MEMID(MEMID_WORLD);
 			LoadingScreenLoadingFile(line + 4);
-			LoadScene(line + 4);
+			FileLoader_LoadScene(line + 4);
 			POP_MEMID();
 		}else if(strncmp(line, "SPLASH", 6) == 0){
 #ifndef DISABLE_LOADING_SCREEN
@@ -141,29 +141,29 @@ CFileLoader::LoadLevel(const char *filename)
 
 	int i;
 	for(i = 1; i < COLSTORESIZE; i++)
-		if(CColStore::GetSlot(i))
-			Rect_Grow(&CColStore::GetBoundingBox(i), 120.0f);
-	CWorld::RepositionCertainDynamicObjects();
-	CColStore::RemoveAllCollision();
+		if(ColStore_GetSlot(i))
+			Rect_Grow(&ColStore_GetBoundingBox(i), 120.0f);
+	World_RepositionCertainDynamicObjects();
+	ColStore_RemoveAllCollision();
 }
 
 char*
-CFileLoader::LoadLine(int fd)
+FileLoader_LoadLine(int fd)
 {
 	int i;
 	char *line;
 
-	if(FileMgr_ReadLine(fd, ms_line, 256) == false)
+	if(FileMgr_ReadLine(fd, FileLoader_ms_line, 256) == false)
 		return nil;
-	for(i = 0; ms_line[i] != '\0'; i++)
-		if(ms_line[i] < ' ' || ms_line[i] == ',')
-			ms_line[i] = ' ';
-	for(line = ms_line; *line <= ' ' && *line != '\0'; line++);
+	for(i = 0; FileLoader_ms_line[i] != '\0'; i++)
+		if(FileLoader_ms_line[i] < ' ' || FileLoader_ms_line[i] == ',')
+			FileLoader_ms_line[i] = ' ';
+	for(line = FileLoader_ms_line; *line <= ' ' && *line != '\0'; line++);
 	return line;
 }
 
 RwTexDictionary*
-CFileLoader::LoadTexDictionary(const char *filename)
+FileLoader_LoadTexDictionary(const char *filename)
 {
 	RwTexDictionary *txd;
 	RwStream *stream;
@@ -189,7 +189,7 @@ struct ColHeader
 };
 
 void
-CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
+FileLoader_LoadCollisionFile(const char *filename, uint8 colSlot)
 {
 	int fd;
 	char modelname[24];
@@ -210,20 +210,20 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
 		if(mi){
 			if(mi->GetColModel() && mi->DoesOwnColModel()){
-				LoadCollisionModel(work_buff+24, *mi->GetColModel(), modelname);
+				FileLoader_LoadCollisionModel(work_buff+24, *mi->GetColModel(), modelname);
 			}else{
 //+ rouz edit (ChatGPT)
 				// Construct the collision model in pool storage without invoking C++ new.
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+				CColModel *model = ((CColModel*)CPool_New(Pools_GetColModelPool()));
 				//- rouz edit (ChatGPT)
 				assert(model);
 				// Invoke the complete C collision owner at the original native lifetime or operation boundary
 				ColModel_Init(model);
 //- rouz edit (ChatGPT)
 				model->level = colSlot;
-				LoadCollisionModel(work_buff+24, *model, modelname);
+				FileLoader_LoadCollisionModel(work_buff+24, *model, modelname);
 				mi->SetColModel(model, true);
 			}
 		}else{
@@ -238,7 +238,7 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 
 
 bool
-CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlot)
+FileLoader_LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlot)
 {
 	uint32 modelsize;
 	char modelname[24];
@@ -260,19 +260,19 @@ CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlo
 
 		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, 0, MODELINFOSIZE-1, &modelIndex); // rouz edit (ChatGPT)
 		if(mi){
-			CColStore::IncludeModelIndex(colSlot, modelIndex);
+			ColStore_IncludeModelIndex(colSlot, modelIndex);
 //+ rouz edit (ChatGPT)
 			// Construct the collision model in pool storage without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+			CColModel *model = ((CColModel*)CPool_New(Pools_GetColModelPool()));
 			//- rouz edit (ChatGPT)
 			assert(model);
 			// Invoke the complete C collision owner at the original native lifetime or operation boundary
 			ColModel_Init(model);
 //- rouz edit (ChatGPT)
 			model->level = colSlot;
-			LoadCollisionModel(work_buff, *model, modelname);
+			FileLoader_LoadCollisionModel(work_buff, *model, modelname);
 			mi->SetColModel(model, true);
 		}else{
 			debug("colmodel %s can't find a modelinfo\n", modelname);
@@ -282,7 +282,7 @@ CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlo
 }
 
 bool
-CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
+FileLoader_LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 {
 	uint32 modelsize;
 	char modelname[24];
@@ -301,23 +301,23 @@ CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 		if(modelsize > 15*1024)
 			debug("colmodel %s is huge, size %d\n", modelname, modelsize);
 
-		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, CColStore::GetSlot(colSlot)->minIndex, CColStore::GetSlot(colSlot)->maxIndex, nil); // rouz edit (ChatGPT)
+		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, ColStore_GetSlot(colSlot)->minIndex, ColStore_GetSlot(colSlot)->maxIndex, nil); // rouz edit (ChatGPT)
 		if(mi){
 			if(mi->GetColModel()){
-				LoadCollisionModel(work_buff, *mi->GetColModel(), modelname);
+				FileLoader_LoadCollisionModel(work_buff, *mi->GetColModel(), modelname);
 			}else{
 //+ rouz edit (ChatGPT)
 				// Construct the collision model in pool storage without invoking C++ new.
 				//+ rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-				CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+				CColModel *model = ((CColModel*)CPool_New(Pools_GetColModelPool()));
 				//- rouz edit (ChatGPT)
 				assert(model);
 				// Invoke the complete C collision owner at the original native lifetime or operation boundary
 				ColModel_Init(model);
 //- rouz edit (ChatGPT)
 				model->level = colSlot;
-				LoadCollisionModel(work_buff, *model, modelname);
+				FileLoader_LoadCollisionModel(work_buff, *model, modelname);
 				mi->SetColModel(model, true);
 			}
 		}else{
@@ -328,7 +328,7 @@ CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 }
 
 void
-CFileLoader::LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
+FileLoader_LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
 {
 	int i;
 
@@ -437,7 +437,7 @@ GetNameAndLOD(char *nodename, char *name, int *n)
 }
 
 RpAtomic*
-CFileLoader::FindRelatedModelInfoCB(RpAtomic *atomic, void *data)
+FileLoader_FindRelatedModelInfoCB(RpAtomic *atomic, void *data)
 {
 	CSimpleModelInfo *mi;
 	char *nodename, name[24];
@@ -472,7 +472,7 @@ InitClump(RpClump *clump)
 #endif
 
 void
-CFileLoader::LoadModelFile(const char *filename)
+FileLoader_LoadModelFile(const char *filename)
 {
 	RwStream *stream;
 	RpClump *clump;
@@ -483,7 +483,7 @@ CFileLoader::LoadModelFile(const char *filename)
 		clump = RpClumpStreamRead(stream);
 		if(clump){
 			InitClump(clump);
-			RpClumpForAllAtomics(clump, FindRelatedModelInfoCB, clump);
+			RpClumpForAllAtomics(clump, FileLoader_FindRelatedModelInfoCB, clump);
 			RpClumpDestroy(clump);
 		}
 	}
@@ -491,7 +491,7 @@ CFileLoader::LoadModelFile(const char *filename)
 }
 
 void
-CFileLoader::LoadClumpFile(const char *filename)
+FileLoader_LoadClumpFile(const char *filename)
 {
 	RwStream *stream;
 	RpClump *clump;
@@ -519,7 +519,7 @@ CFileLoader::LoadClumpFile(const char *filename)
 }
 
 bool
-CFileLoader::LoadClumpFile(RwStream *stream, uint32 id)
+FileLoader_LoadClumpFile(RwStream *stream, uint32 id)
 {
 	RpClump *clump;
 	CClumpModelInfo *mi;
@@ -536,7 +536,7 @@ CFileLoader::LoadClumpFile(RwStream *stream, uint32 id)
 }
 
 bool
-CFileLoader::StartLoadClumpFile(RwStream *stream, uint32 id)
+FileLoader_StartLoadClumpFile(RwStream *stream, uint32 id)
 {
 	if(RwStreamFindChunk(stream, rwID_CLUMP, nil, nil)){
 		printf("Start loading %s\n", ((CBaseModelInfo*)ModelRegistry_Get(id))->GetModelName()); // rouz edit (ChatGPT)
@@ -549,7 +549,7 @@ CFileLoader::StartLoadClumpFile(RwStream *stream, uint32 id)
 }
 
 bool
-CFileLoader::FinishLoadClumpFile(RwStream *stream, uint32 id)
+FileLoader_FinishLoadClumpFile(RwStream *stream, uint32 id)
 {
 	RpClump *clump;
 	CClumpModelInfo *mi;
@@ -572,7 +572,7 @@ CFileLoader::FinishLoadClumpFile(RwStream *stream, uint32 id)
 CSimpleModelInfo *gpRelatedModelInfo;
 
 bool
-CFileLoader::LoadAtomicFile(RwStream *stream, uint32 id)
+FileLoader_LoadAtomicFile(RwStream *stream, uint32 id)
 {
 	RpClump *clump;
 
@@ -582,14 +582,14 @@ CFileLoader::LoadAtomicFile(RwStream *stream, uint32 id)
 			return false;
 		InitClump(clump);
 		gpRelatedModelInfo = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
-		RpClumpForAllAtomics(clump, SetRelatedModelInfoCB, clump);
+		RpClumpForAllAtomics(clump, FileLoader_SetRelatedModelInfoCB, clump);
 		RpClumpDestroy(clump);
 	}
 	return true;
 }
 
 RpAtomic*
-CFileLoader::SetRelatedModelInfoCB(RpAtomic *atomic, void *data)
+FileLoader_SetRelatedModelInfoCB(RpAtomic *atomic, void *data)
 {
 	char *nodename, name[24];
 	int n;
@@ -606,7 +606,7 @@ CFileLoader::SetRelatedModelInfoCB(RpAtomic *atomic, void *data)
 }
 
 RpClump*
-CFileLoader::LoadAtomicFile2Return(const char *filename)
+FileLoader_LoadAtomicFile2Return(const char *filename)
 {
 	RwStream *stream;
 	RpClump *clump;
@@ -630,7 +630,7 @@ MoveTexturesCB(RwTexture *texture, void *pData)
 }
 
 void
-CFileLoader::AddTexDictionaries(RwTexDictionary *dst, RwTexDictionary *src)
+FileLoader_AddTexDictionaries(RwTexDictionary *dst, RwTexDictionary *src)
 {
 	RwTexDictionaryForAllTextures(src, MoveTexturesCB, dst);
 }
@@ -639,7 +639,7 @@ CFileLoader::AddTexDictionaries(RwTexDictionary *dst, RwTexDictionary *src)
 #define isLine4(l, a, b, c, d) ((l[0] == a) && (l[1] == b) && (l[2] == c) && (l[3] == d))
 
 void
-CFileLoader::LoadObjectTypes(const char *filename)
+FileLoader_LoadObjectTypes(const char *filename)
 {
 	enum {
 		NONE,
@@ -668,7 +668,7 @@ CFileLoader::LoadObjectTypes(const char *filename)
 
 	fd = FileMgr_OpenFile(filename, "rb");
 	assert(fd > 0);
-	for(line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)){
+	for(line = FileLoader_LoadLine(fd); line; line = FileLoader_LoadLine(fd)){
 		if(*line == '\0' || *line == '#')
 			continue;
 
@@ -685,38 +685,38 @@ CFileLoader::LoadObjectTypes(const char *filename)
 			section = NONE;
 		}else switch(section){
 		case OBJS:
-			id = LoadObject(line);
+			id = FileLoader_LoadObject(line);
 			if(id > maxID) maxID = id;
 			if(id < minID) minID = id;
 			break;
 		case TOBJ:
-			id = LoadTimeObject(line);
+			id = FileLoader_LoadTimeObject(line);
 			if(id > maxID) maxID = id;
 			if(id < minID) minID = id;
 			break;
 		case WEAP:
-			LoadWeaponObject(line);
+			FileLoader_LoadWeaponObject(line);
 			break;
 		case HIER:
-			LoadClumpObject(line);
+			FileLoader_LoadClumpObject(line);
 			break;
 		case CARS:
-			LoadVehicleObject(line);
+			FileLoader_LoadVehicleObject(line);
 			break;
 		case PEDS:
-			LoadPedObject(line);
+			FileLoader_LoadPedObject(line);
 			break;
 		case PATH:
 			if(pathIndex == -1){
-				id = LoadPathHeader(line, pathType);
+				id = FileLoader_LoadPathHeader(line, pathType);
 				pathIndex = 0;
 			}else{
 				if(pathType == 0)
-					LoadPedPathNode(line, id, pathIndex);
+					FileLoader_LoadPedPathNode(line, id, pathIndex);
 				else if (pathType == 1)
-					LoadCarPathNode(line, id, pathIndex, false);
+					FileLoader_LoadCarPathNode(line, id, pathIndex, false);
 				else if (pathType == 2)
-					LoadCarPathNode(line, id, pathIndex, true);
+					FileLoader_LoadCarPathNode(line, id, pathIndex, true);
 				pathIndex++;
 				if(pathIndex == 12)
 					pathIndex = -1;
@@ -753,7 +753,7 @@ SetModelInfoFlags(CSimpleModelInfo *mi, uint32 flags)
 }
 
 int
-CFileLoader::LoadObject(const char *line)
+FileLoader_LoadObject(const char *line)
 {
 	int id, numObjs;
 	char model[24], txd[24];
@@ -800,7 +800,7 @@ CFileLoader::LoadObject(const char *line)
 }
 
 int
-CFileLoader::LoadTimeObject(const char *line)
+FileLoader_LoadTimeObject(const char *line)
 {
 	int id, numObjs;
 	char model[24], txd[24];
@@ -854,7 +854,7 @@ CFileLoader::LoadTimeObject(const char *line)
 }
 
 int
-CFileLoader::LoadWeaponObject(const char *line)
+FileLoader_LoadWeaponObject(const char *line)
 {
 	int id, numObjs;
 	char model[24], txd[24], animFile[16];
@@ -869,13 +869,13 @@ CFileLoader::LoadWeaponObject(const char *line)
 	mi->m_lodDistances[0] = dist;
 	mi->SetTexDictionary(txd);
 	mi->SetAnimFile(animFile);
-	mi->SetColModel(&CTempColModels::ms_colModelWeapon);
+	mi->SetColModel(&TempColModels_ms_colModelWeapon);
 	MatchModelString(model, id);
 	return id;
 }
 
 void
-CFileLoader::LoadClumpObject(const char *line)
+FileLoader_LoadClumpObject(const char *line)
 {
 	int id;
 	char model[24], txd[24];
@@ -885,12 +885,12 @@ CFileLoader::LoadClumpObject(const char *line)
 		mi = (CClumpModelInfo*)ModelRegistry_AddClump(id);
 		mi->SetModelName(model);
 		mi->SetTexDictionary(txd);
-		mi->SetColModel(&CTempColModels::ms_colModelBBox);
+		mi->SetColModel(&TempColModels_ms_colModelBBox);
 	}
 }
 
 void
-CFileLoader::LoadVehicleObject(const char *line)
+FileLoader_LoadVehicleObject(const char *line)
 {
 	int id;
 	char model[24], txd[24];
@@ -965,12 +965,12 @@ CFileLoader::LoadVehicleObject(const char *line)
 		mi->m_vehicleClass = -1;
 		return;
 	}
-	CCarCtrl::AddToCarArray(id, mi->m_vehicleClass);
+	CarCtrl_AddToCarArray(id, mi->m_vehicleClass);
 	mi->m_frequency = frequency;
 }
 
 void
-CFileLoader::LoadPedObject(const char *line)
+FileLoader_LoadPedObject(const char *line)
 {
 	int id;
 	char model[24], txd[24];
@@ -989,7 +989,7 @@ CFileLoader::LoadPedObject(const char *line)
 	mi->SetModelName(model);
 	mi->SetTexDictionary(txd);
 	mi->SetAnimFile(animFile);
-	mi->SetColModel(&CTempColModels::ms_colModelPed1);
+	mi->SetColModel(&TempColModels_ms_colModelPed1);
 	mi->m_pedType = PedType_FindPedType(pedType);
 	mi->m_pedStatType = PedStats_GetPedStatType(pedStats);
 	for(animGroupId = 0; animGroupId < NUM_ANIM_ASSOC_GROUPS; animGroupId++)
@@ -1004,7 +1004,7 @@ CFileLoader::LoadPedObject(const char *line)
 }
 
 int
-CFileLoader::LoadPathHeader(const char *line, int &type)
+FileLoader_LoadPathHeader(const char *line, int &type)
 {
 	int id;
 	char modelname[32];
@@ -1014,7 +1014,7 @@ CFileLoader::LoadPathHeader(const char *line, int &type)
 }
 
 void
-CFileLoader::LoadPedPathNode(const char *line, int id, int node)
+FileLoader_LoadPedPathNode(const char *line, int id, int node)
 {
 	int type, next, cross, numLeft, numRight, speed, flags;
 	float x, y, z, width, spawnRate;
@@ -1033,7 +1033,7 @@ CFileLoader::LoadPedPathNode(const char *line, int id, int node)
 }
 
 void
-CFileLoader::LoadCarPathNode(const char *line, int id, int node, bool waterPath)
+FileLoader_LoadCarPathNode(const char *line, int id, int node, bool waterPath)
 {
 	int type, next, cross, numLeft, numRight, speed, flags;
 	float x, y, z, width, spawnRate;
@@ -1054,7 +1054,7 @@ CFileLoader::LoadCarPathNode(const char *line, int id, int node, bool waterPath)
 
 
 void
-CFileLoader::LoadScene(const char *filename)
+FileLoader_LoadScene(const char *filename)
 {
 	enum {
 		NONE,
@@ -1076,7 +1076,7 @@ CFileLoader::LoadScene(const char *filename)
 
 	fd = FileMgr_OpenFile(filename, "rb");
 	assert(fd > 0);
-	for(line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)){
+	for(line = FileLoader_LoadLine(fd); line; line = FileLoader_LoadLine(fd)){
 		if(*line == '\0' || *line == '#')
 			continue;
 
@@ -1091,32 +1091,32 @@ CFileLoader::LoadScene(const char *filename)
 			section = NONE;
 		}else switch(section){
 		case INST:
-			LoadObjectInstance(line);
+			FileLoader_LoadObjectInstance(line);
 			break;
 		case ZONE:
-			LoadZone(line);
+			FileLoader_LoadZone(line);
 			break;
 		case CULL:
-			LoadCullZone(line);
+			FileLoader_LoadCullZone(line);
 			break;
 		case OCCL:
-			LoadOcclusionVolume(line);
+			FileLoader_LoadOcclusionVolume(line);
 			break;
 		case PICK:
 			// unused
-			LoadPickup(line);
+			FileLoader_LoadPickup(line);
 			break;
 		case PATH:
 			if(pathIndex == -1){
-				LoadPathHeader(line, pathType);
+				FileLoader_LoadPathHeader(line, pathType);
 				pathIndex = 0;
 			}else{
 				if(pathType == 0)
-					LoadPedPathNode(line, -1, pathIndex);
+					FileLoader_LoadPedPathNode(line, -1, pathIndex);
 				else if (pathType == 1)
-					LoadCarPathNode(line, -1, pathIndex, false);
+					FileLoader_LoadCarPathNode(line, -1, pathIndex, false);
 				else if (pathType == 2)
-					LoadCarPathNode(line, -1, pathIndex, true);
+					FileLoader_LoadCarPathNode(line, -1, pathIndex, true);
 				pathIndex++;
 				if(pathIndex == 12)
 					pathIndex = -1;
@@ -1130,7 +1130,7 @@ CFileLoader::LoadScene(const char *filename)
 }
 
 void
-CFileLoader::LoadObjectInstance(const char *line)
+FileLoader_LoadObjectInstance(const char *line)
 {
 	int id;
 	char name[24];
@@ -1176,7 +1176,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 			// Allocate a treadable map entity from its pool without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			entity = ((CTreadable*)CPool_New(CPools::GetTreadablePool()));
+			entity = ((CTreadable*)CPool_New(Pools_GetTreadablePool()));
 			//- rouz edit (ChatGPT)
 			assert(entity);
 			std::allocator<CTreadable>().construct((CTreadable*)entity);
@@ -1187,7 +1187,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 			// Allocate a building map entity from its pool without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			entity = ((CBuilding*)CPool_New(CPools::GetBuildingPool()));
+			entity = ((CBuilding*)CPool_New(Pools_GetBuildingPool()));
 			//- rouz edit (ChatGPT)
 			assert(entity);
 			std::allocator<CBuilding>().construct((CBuilding*)entity);
@@ -1205,14 +1205,14 @@ CFileLoader::LoadObjectInstance(const char *line)
 		}
 		if(SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) < 2.0f) // rouz edit (ChatGPT)
 			entity->bIsVisible = false;
-		CWorld::Add(entity);
+		World_Add(entity);
 
 		CColModel *col = entity->GetColModel();
 		if(col->numSpheres || col->numBoxes || col->numTriangles){
 			if(col->level != 0) {
                 // Keep the returned entity rectangle alive through the C containment call
                 const CRect entityBounds = entity->GetBoundRect();
-                Rect_ContainRect(&CColStore::GetBoundingBox(col->level), &entityBounds);
+                Rect_ContainRect(&ColStore_GetBoundingBox(col->level), &entityBounds);
             }
 		}else
 			entity->bUsesCollision = false;
@@ -1224,14 +1224,14 @@ CFileLoader::LoadObjectInstance(const char *line)
 		// Allocate a dummy map object from its pool without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		entity = ((CDummy*)CPool_New(CPools::GetDummyPool()));
+		entity = ((CDummy*)CPool_New(Pools_GetDummyPool()));
 		//- rouz edit (ChatGPT)
 		assert(entity);
 		std::allocator<CDummyObject>().construct((CDummyObject*)entity);
 //- rouz edit (ChatGPT)
 		entity->SetModelIndexNoCreate(id);
 		entity->GetMatrix() = CMatrix(xform);
-		CWorld::Add(entity);
+		World_Add(entity);
 		if(IsGlass(entity->GetModelIndex()) && !mi->m_isArtistGlass)
 			entity->bIsVisible = false;
 		entity->m_level = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&entity->GetPosition())));
@@ -1242,7 +1242,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 }
 
 void
-CFileLoader::LoadZone(const char *line)
+FileLoader_LoadZone(const char *line)
 {
 	char name[24];
 	int type, level;
@@ -1254,7 +1254,7 @@ CFileLoader::LoadZone(const char *line)
 }
 
 void
-CFileLoader::LoadCullZone(const char *line)
+FileLoader_LoadCullZone(const char *line)
 {
 	CVector pos;
 	float minx, miny, minz;
@@ -1272,7 +1272,7 @@ CFileLoader::LoadCullZone(const char *line)
 
 // unused
 void
-CFileLoader::LoadPickup(const char *line)
+FileLoader_LoadPickup(const char *line)
 {
 	int id;
 	float x, y, z;
@@ -1281,7 +1281,7 @@ CFileLoader::LoadPickup(const char *line)
 }
 
 void
-CFileLoader::LoadOcclusionVolume(const char *line)
+FileLoader_LoadOcclusionVolume(const char *line)
 {
 	float x, y, z;
 	float width, length, height;
@@ -1291,13 +1291,13 @@ CFileLoader::LoadOcclusionVolume(const char *line)
 		&x, &y, &z,
 		&width, &length, &height,
 		&angle);
-	COcclusion::AddOne(x, y, z + height/2.0f, width, length, height, angle);
+	Occlusion_AddOne(x, y, z + height/2.0f, width, length, height, angle);
 }
 
 
 // unused
 void
-CFileLoader::ReloadPaths(const char *filename)
+FileLoader_ReloadPaths(const char *filename)
 {
 	enum {
 		NONE,
@@ -1310,7 +1310,7 @@ CFileLoader::ReloadPaths(const char *filename)
 
 	int fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
-	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
+	for (line = FileLoader_LoadLine(fd); line; line = FileLoader_LoadLine(fd)) {
 		if (*line == '\0' || *line == '#')
 			continue;
 
@@ -1325,15 +1325,15 @@ CFileLoader::ReloadPaths(const char *filename)
 			switch (section) {
 				case PATH:
 					if (pathIndex == -1) {
-						id = LoadPathHeader(line, pathType);
+						id = FileLoader_LoadPathHeader(line, pathType);
 						pathIndex = 0;
 					} else {
 						if(pathType == 0)
-							LoadPedPathNode(line, id, pathIndex);
+							FileLoader_LoadPedPathNode(line, id, pathIndex);
 						else if (pathType == 1)
-							LoadCarPathNode(line, id, pathIndex, false);
+							FileLoader_LoadCarPathNode(line, id, pathIndex, false);
 						else if (pathType == 2)
-							LoadCarPathNode(line, id, pathIndex, true);
+							FileLoader_LoadCarPathNode(line, id, pathIndex, true);
 						pathIndex++;
 						if (pathIndex == 12)
 							pathIndex = -1;
@@ -1348,7 +1348,7 @@ CFileLoader::ReloadPaths(const char *filename)
 }
 
 void
-CFileLoader::ReloadObjectTypes(const char *filename)
+FileLoader_ReloadObjectTypes(const char *filename)
 {
 	enum {
 		NONE,
@@ -1365,7 +1365,7 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 	int fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
 	FileMgr_ChangeDir("\\");
-	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
+	for (line = FileLoader_LoadLine(fd); line; line = FileLoader_LoadLine(fd)) {
 		if (*line == '\0' || *line == '#')
 			continue;
 
@@ -1379,7 +1379,7 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 			switch (section) {
 				case OBJS:
 				case TOBJ:
-					ReloadObject(line);
+					FileLoader_ReloadObject(line);
 					break;
 				case TWODFX:
 					Effect2d_Load(line); // rouz edit (ChatGPT)
@@ -1393,7 +1393,7 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 }
 
 void
-CFileLoader::ReloadObject(const char *line)
+FileLoader_ReloadObject(const char *line)
 {
 	int id, numObjs;
 	char model[24], txd[24];
@@ -1434,7 +1434,7 @@ CFileLoader::ReloadObject(const char *line)
 
 // unused mobile function - crashes
 void
-CFileLoader::ReLoadScene(const char *filename)
+FileLoader_ReLoadScene(const char *filename)
 {
 	char *line;
 	FileMgr_ChangeDir("\\DATA\\");
@@ -1442,7 +1442,7 @@ CFileLoader::ReLoadScene(const char *filename)
 	assert(fd > 0);
 	FileMgr_ChangeDir("\\");
 
-	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
+	for (line = FileLoader_LoadLine(fd); line; line = FileLoader_LoadLine(fd)) {
 		if (*line == '#')
 			continue;
 
@@ -1450,7 +1450,7 @@ CFileLoader::ReLoadScene(const char *filename)
 			break;
 
 		if (strncmp(line, "IDE", 3) == 0) {
-			LoadObjectTypes(line + 4);
+			FileLoader_LoadObjectTypes(line + 4);
 		}
 	}
 	FileMgr_CloseFile(fd);

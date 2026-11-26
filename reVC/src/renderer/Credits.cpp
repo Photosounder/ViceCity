@@ -60,32 +60,32 @@ float Credits_BackendScreenHeight(void)
 void Credits_BackendFontScale(float x,float y)
 {
     // Set font scale after the original C screen calculations
-    CFont::SetScale(x,y);
+    Font_SetScale(x,y);
 }
 void Credits_BackendFontColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Retain the original typed color construction
-    CFont::SetColor(CRGBA(r,g,b,a));
+    Font_SetColor(CRGBA(r,g,b,a));
 }
 void Credits_BackendPrintString(float x,float y,uint16_t *text)
 {
     // Borrow the original Unicode buffer through the exact print overload
-    CFont::PrintString(x,y,text);
+    Font_PrintString(x,y,text);
 }
 void Credits_BackendFontCentreSize(float value)
 {
     // Set the original C-computed font centre size
-    CFont::SetCentreSize(value);
+    Font_SetCentreSize(value);
 }
 void Credits_BackendFontStyle(int16_t style)
 {
     // Select the exact original font style
-    CFont::SetFontStyle(style);
+    Font_SetFontStyle(style);
 }
 void Credits_BackendDrawFonts(void)
 {
     // Flush the original credits font submissions
-    CFont::DrawFonts();
+    Font_DrawFonts();
 }
 bool Credits_BackendCutsceneBorders(void)
 {
@@ -109,21 +109,21 @@ void Credits_BackendDrawBorders(void)
 void Credits_BackendFontJustifyOff(void)
 {
     // Retain the original font JustifyOff operation
-    CFont::SetJustifyOff();
+    Font_SetJustifyOff();
 }
 void Credits_BackendFontBackgroundOff(void)
 {
     // Retain the original font BackgroundOff operation
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 void Credits_BackendFontCentreOn(void)
 {
     // Retain the original font CentreOn operation
-    CFont::SetCentreOn();
+    Font_SetCentreOn();
 }
 void Credits_BackendFontPropOn(void)
 {
     // Retain the original font PropOn operation
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 //- rouz edit (ChatGPT)

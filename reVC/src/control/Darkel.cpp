@@ -15,67 +15,67 @@
 void Darkel_BackendJustifyOff(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetJustifyOff();
+    Font_SetJustifyOff();
 }
 
 void Darkel_BackendBackgroundOff(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 
 void Darkel_BackendCentreSize(float size)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetCentreSize(size);
+    Font_SetCentreSize(size);
 }
 
 void Darkel_BackendCentreOn(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetCentreOn();
+    Font_SetCentreOn();
 }
 
 void Darkel_BackendPropOn(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 
 void Darkel_BackendScale(float x,float y)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetScale(x,y);
+    Font_SetScale(x,y);
 }
 
 void Darkel_BackendColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetColor(CRGBA(r,g,b,a));
+    Font_SetColor(CRGBA(r,g,b,a));
 }
 
 void Darkel_BackendFontStyle(int16_t style)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetFontStyle(style);
+    Font_SetFontStyle(style);
 }
 
 void Darkel_BackendPrint(float x,float y,uint16_t *text)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::PrintString(x,y,text);
+    Font_PrintString(x,y,text);
 }
 
 void Darkel_BackendCentreOff(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetCentreOff();
+    Font_SetCentreOff();
 }
 
 void Darkel_BackendRightJustifyOn(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CFont::SetRightJustifyOn();
+    Font_SetRightJustifyOn();
 }
 
 
@@ -168,13 +168,13 @@ int32_t * Darkel_BackendRandomPedType(void)
 void Darkel_BackendClearShortCut(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CGameLogic::ClearShortCut();
+    GameLogic_ClearShortCut();
 }
 
 void Darkel_BackendRemoveDropOff(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    CGameLogic::RemoveShortCutDropOffPointForMission();
+    GameLogic_RemoveShortCutDropOffPointForMission();
 }
 
 CPlayerPed * Darkel_BackendPlayer(void)

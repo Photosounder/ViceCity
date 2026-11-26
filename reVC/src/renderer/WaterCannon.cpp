@@ -71,7 +71,7 @@ bool WaterCannon_BackendExtinguish(WaterCannonVector pos, float range)
 CPool * WaterCannon_BackendPedPool(void)
 {
 	// Read the original live ped pool at every query
-	return CPools::GetPedPool();
+	return Pools_GetPedPool();
 }
 CPed * WaterCannon_BackendPed(void *slot)
 {

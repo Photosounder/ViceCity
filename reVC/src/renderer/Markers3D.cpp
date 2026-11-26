@@ -199,12 +199,12 @@ Markers3DVector2D Markers3D_BackendPlayer(void)
 bool Markers3D_BackendCollision(Markers3DVector2D pos)
 {
     // Enter the exact original collision-loaded predicate
-    return CColStore::HasCollisionLoaded(CVector2D(pos.x,pos.y));
+    return ColStore_HasCollisionLoaded(CVector2D(pos.x,pos.y));
 }
 float Markers3D_BackendGround(float x,float y,float z)
 {
     // Retain the original ground query and null found pointer
-    return CWorld::FindGroundZFor3DCoord(x,y,z,nil);
+    return World_FindGroundZFor3DCoord(x,y,z,nil);
 }
 float Markers3D_BackendReadLegacy(const void *pos,int32_t axis)
 {
@@ -277,7 +277,7 @@ void Markers3D_BackendCorona(void *marker,float size,float drawDist)
 void * Markers3D_BackendLoad(const char *name)
 {
     // Enter the original typed atomic-file loader
-    return CFileLoader::LoadAtomicFile2Return(name);
+    return FileLoader_LoadAtomicFile2Return(name);
 }
 void * Markers3D_BackendCameraFrame(void *camera)
 {

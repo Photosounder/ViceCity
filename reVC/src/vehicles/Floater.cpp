@@ -79,7 +79,7 @@ cBuoyancy::ProcessBuoyancy(CPhysical *phys, float buoyancy, CVector *point, CVec
 {
 	m_numSteps = 2.0f;
 
-	if(!CWaterLevel::GetWaterLevel(phys->GetPosition(), &m_waterlevel, phys->bTouchingWater))
+	if(!WaterLevel_GetWaterLevel(phys->GetPosition(), &m_waterlevel, phys->bTouchingWater))
 		return false;
 	memcpy(m_matrix, phys->GetMatrix().f, sizeof(m_matrix));
 
@@ -96,7 +96,7 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 {
 	m_numSteps = 2.0f;
 
-	if(!CWaterLevel::GetWaterLevel(veh->GetPosition(), &m_waterlevel, veh->bTouchingWater))
+	if(!WaterLevel_GetWaterLevel(veh->GetPosition(), &m_waterlevel, veh->bTouchingWater))
 		return false;
 	memcpy(m_matrix, veh->GetMatrix().f, sizeof(m_matrix));
 	PreCalcSetup(veh, buoyancy);
@@ -209,7 +209,7 @@ cBuoyancy::FindWaterLevel(const CVector &zpos, CVector *waterLevel, tWaterLevel 
 	// m_position is the global position of our floater
 	// zpos is the global z coordinate of our floater
 	CVector xWaterLevel = FromC(Floater_RotateOffset(this, ToC(*waterLevel)));
-	CWaterLevel::GetWaterLevel(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y, m_position.z,
+	WaterLevel_GetWaterLevel(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y, m_position.z,
 		&waterLevel->z, true);
 	waterLevel->z -= xWaterLevel.z + zpos.z;	// make local
 	*waterPosition = (tWaterLevel)Floater_ClampWaterLevel(this, &waterLevel->z);
@@ -220,11 +220,11 @@ void
 cBuoyancy::FindWaterLevelNorm(const CVector &zpos, CVector *waterLevel, tWaterLevel *waterPosition, CVector *normal)
 {
 	CVector xWaterLevel = FromC(Floater_RotateOffset(this, ToC(*waterLevel)));
-	CWaterLevel::GetWaterLevel(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y, m_position.z,
+	WaterLevel_GetWaterLevel(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y, m_position.z,
 		&waterLevel->z, true);
 	waterLevel->z -= xWaterLevel.z + zpos.z;	// make local
 	if(waterLevel->z >= m_dimMin.z)
-		*normal = CWaterLevel::GetWaterNormal(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y);
+		*normal = WaterLevel_GetWaterNormal(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y);
 	*waterPosition = (tWaterLevel)Floater_ClampWaterLevel(this, &waterLevel->z);
 }
 

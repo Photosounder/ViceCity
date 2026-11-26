@@ -137,10 +137,10 @@ void RestoreDefGraphics(int8 action) {
 	#ifdef NO_ISLAND_LOADING
 	    	if (!FrontEndMenuManager.m_bGameNotLoaded) {
 	    		FrontEndMenuManager.m_PrefsIslandLoading = FrontEndMenuManager.ISLAND_LOADING_LOW;
-				CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
-				CStreaming::RemoveUnusedBuildings(CGame::currLevel);
-				CStreaming::RequestIslands(CGame::currLevel);
-		        CStreaming::LoadAllRequestedModels(true);
+				Streaming_RemoveUnusedBigBuildings(Game_currLevel);
+				Streaming_RemoveUnusedBuildings(Game_currLevel);
+				Streaming_RequestIslands(Game_currLevel);
+		        Streaming_LoadAllRequestedModels(true);
 	    	} else
 	    		FrontEndMenuManager.m_PrefsIslandLoading = FrontEndMenuManager.ISLAND_LOADING_LOW;
 	#endif
@@ -174,7 +174,7 @@ void RestoreDefDisplay(int8 action) {
 	#ifdef GRAPHICS_MENU_OPTIONS // otherwise Frontend will handle those
 		FrontEndMenuManager.m_PrefsBrightness = 256;
 		FrontEndMenuManager.m_PrefsLOD = 1.2f;
-		CRenderer::ms_lodDistScale = 1.2f;
+		Renderer_ms_lodDistScale = 1.2f;
 		FrontEndMenuManager.m_PrefsShowSubtitles = false;
 		FrontEndMenuManager.m_PrefsShowLegends = true;
 		FrontEndMenuManager.m_PrefsRadarMode = 0;
@@ -191,26 +191,26 @@ void IslandLoadingAfterChange(int8 before, int8 after) {
 		    FrontEndMenuManager.m_PrefsIslandLoading = before; // calls below needs previous mode :shrug:
 		    
 		    if (after == FrontEndMenuManager.ISLAND_LOADING_HIGH) {
-			    CStreaming::RemoveIslandsNotUsed(LEVEL_BEACH);
-			    CStreaming::RemoveIslandsNotUsed(LEVEL_MAINLAND);
+			    Streaming_RemoveIslandsNotUsed(LEVEL_BEACH);
+			    Streaming_RemoveIslandsNotUsed(LEVEL_MAINLAND);
 			}
 		    if (before == FrontEndMenuManager.ISLAND_LOADING_LOW) {
 			    FrontEndMenuManager.m_PrefsIslandLoading = after;
-			    CStreaming::RequestBigBuildings(CGame::currLevel);
+			    Streaming_RequestBigBuildings(Game_currLevel);
 			    
 		    } else if (before == FrontEndMenuManager.ISLAND_LOADING_HIGH) {
 			    FrontEndMenuManager.m_PrefsIslandLoading = after;
-			    CStreaming::RequestIslands(CGame::currLevel);
+			    Streaming_RequestIslands(Game_currLevel);
 		    } else
 		    	    FrontEndMenuManager.m_PrefsIslandLoading = after;
 		    	    
 		} else { // low
-		    CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
-		    CStreaming::RemoveUnusedBuildings(CGame::currLevel);
-		    CStreaming::RequestIslands(CGame::currLevel);
+		    Streaming_RemoveUnusedBigBuildings(Game_currLevel);
+		    Streaming_RemoveUnusedBuildings(Game_currLevel);
+		    Streaming_RequestIslands(Game_currLevel);
 		}
 
-		CStreaming::LoadAllRequestedModels(true);
+		Streaming_LoadAllRequestedModels(true);
 	}
 
 	FrontEndMenuManager.SetHelperText(0);

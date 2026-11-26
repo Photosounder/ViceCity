@@ -86,7 +86,7 @@ bool PointLights_BackendVerticalLine(PointLightsVector coors,float z2,float *gro
     // Use the actual collision record and original vertical-line flags
     CColPoint point;
     CEntity *entity;
-    bool result=CWorld::ProcessVerticalLine(CVector(coors.x,coors.y,coors.z),z2,point,entity,true,false,false,false,true,false,nil);
+    bool result=World_ProcessVerticalLine(CVector(coors.x,coors.y,coors.z),z2,point,entity,true,false,false,false,true,false,nil);
     if(result){
         // Publish the original collision height only on success
         *groundZ=point.point.z;

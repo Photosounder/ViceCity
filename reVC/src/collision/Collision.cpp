@@ -93,35 +93,35 @@ bool StoredPoly_BackendLine(const StoredPolyVertex *p0,const StoredPolyVertex *p
 }
 #endif
 
-eLevelName CCollision::ms_collisionInMemory;
+eLevelName Collision_ms_collisionInMemory;
 //+ rouz edit (ChatGPT)
-CLinkList CCollision::ms_colModelCache;
+CLinkList Collision_ms_colModelCache;
 //- rouz edit (ChatGPT)
 
 void
-CCollision::Init(void)
+Collision_Init(void)
 {
 	// Zero-initialize list nodes here so CITA records the owning subsystem
 	//+ rouz edit (ChatGPT)
-	CLinkList_Init(&ms_colModelCache, (CLink*)calloc(NUMCOLCACHELINKS, sizeof(CLink)), NUMCOLCACHELINKS);
+	CLinkList_Init(&Collision_ms_colModelCache, (CLink*)calloc(NUMCOLCACHELINKS, sizeof(CLink)), NUMCOLCACHELINKS);
 	//- rouz edit (ChatGPT)
-	ms_collisionInMemory = LEVEL_GENERIC;
-	CColStore::Initialise();
+	Collision_ms_collisionInMemory = LEVEL_GENERIC;
+	ColStore_Initialise();
 }
 
 void
-CCollision::Shutdown(void)
+Collision_Shutdown(void)
 {
 	// Free the subsystem node array and reset its list sentinels
 	//+ rouz edit (ChatGPT)
-	free(ms_colModelCache.links);
-	CLinkList_Init(&ms_colModelCache, NULL, 0);
+	free(Collision_ms_colModelCache.links);
+	CLinkList_Init(&Collision_ms_colModelCache, NULL, 0);
 	//- rouz edit (ChatGPT)
-	CColStore::Shutdown();
+	ColStore_Shutdown();
 }
 
 void
-CCollision::Update(void)
+Collision_Update(void)
 {
 }
 
@@ -164,19 +164,19 @@ GetCollisionInSector(CSector &sect)
 }
 
 void
-CCollision::LoadCollisionWhenINeedIt(bool forceChange)
+Collision_LoadCollisionWhenINeedIt(bool forceChange)
 {
 }
 
 void
-CCollision::SortOutCollisionAfterLoad(void)
+Collision_SortOutCollisionAfterLoad(void)
 {
-	CColStore::LoadCollision(TheCamera.GetPosition());
-	CStreaming::LoadAllRequestedModels(false);
+	ColStore_LoadCollision(TheCamera.GetPosition());
+	Streaming_LoadAllRequestedModels(false);
 }
 
 void
-CCollision::LoadCollisionScreen(eLevelName level)
+Collision_LoadCollisionScreen(eLevelName level)
 {
 	static Const char *levelNames[] = {
 		"",
@@ -195,38 +195,38 @@ CCollision::LoadCollisionScreen(eLevelName level)
 
 
 bool
-CCollision::TestSphereSphere(const CSphere &s1, const CSphere &s2)
+Collision_TestSphereSphere(const CSphere &s1, const CSphere &s2)
 {
 	// Delegate to the C implementation
-	return Collision_TestSphereSphere(&s1, &s2);
+	return CollisionTests_TestSphereSphere(&s1, &s2);
 }
 
 bool
-CCollision::TestSphereBox(const CSphere &sph, const CBox &box)
+Collision_TestSphereBox(const CSphere &sph, const CBox &box)
 {
 	// Delegate to the C implementation
-	return Collision_TestSphereBox(&sph, &box);
+	return CollisionTests_TestSphereBox(&sph, &box);
 }
 
 bool
-CCollision::TestLineBox(const CColLine &line, const CBox &box)
+Collision_TestLineBox(const CColLine &line, const CBox &box)
 {
 	// Delegate to the C implementation
-	return Collision_TestLineBox(&line, &box);
+	return CollisionTests_TestLineBox(&line, &box);
 }
 
 bool
-CCollision::TestVerticalLineBox(const CColLine &line, const CBox &box)
+Collision_TestVerticalLineBox(const CColLine &line, const CBox &box)
 {
 	// Delegate to the C implementation
-	return Collision_TestVerticalLineBox(&line, &box);
+	return CollisionTests_TestVerticalLineBox(&line, &box);
 }
 
 bool
-CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
+Collision_TestLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
 {
 	// Delegate to the C implementation
-	return Collision_TestLineTriangle(&line, verts, &tri, &plane);
+	return CollisionTriangle_TestLineTriangle(&line, verts, &tri, &plane);
 }
 
 // Test if line segment intersects with sphere.
@@ -234,25 +234,25 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 // The code is reversed from the original code and rather ugly, see Process for a clear version.
 // TODO: actually rewrite this mess
 bool
-CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
+Collision_TestLineSphere(const CColLine &line, const CColSphere &sph)
 {
 	// Delegate to the C implementation
-	return Collision_TestLineSphere(&line, &sph);
+	return CollisionTests_TestLineSphere(&line, &sph);
 }
 
 bool
-CCollision::TestSphereTriangle(const CColSphere &sphere,
+Collision_TestSphereTriangle(const CColSphere &sphere,
 	const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane)
 {
 	// Delegate to the C implementation
-	return Collision_TestSphereTriangle(&sphere, verts, &tri, &plane);
+	return CollisionTriangle_TestSphereTriangle(&sphere, verts, &tri, &plane);
 }
 
 bool
-CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, bool ignoreSeeThrough, bool ignoreShootThrough)
+Collision_TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, bool ignoreSeeThrough, bool ignoreShootThrough)
 {
 	// Delegate to the C implementation
-	return Collision_TestLineOfSight(&line, matrix.f, &model, ignoreSeeThrough, ignoreShootThrough, &ms_colModelCache);
+	return CollisionModel_TestLineOfSight(&line, matrix.f, &model, ignoreSeeThrough, ignoreShootThrough, &Collision_ms_colModelCache);
 }
 
 // TODO: TestPillWithSpheresInColModel, but only called from overloaded CWeapon::FireMelee which isn't used
@@ -265,43 +265,43 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 // For Lines mindist is between [0,1]
 
 bool
-CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &mindistsq)
+Collision_ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &mindistsq)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessSphereSphere(&s1, &s2, &point, &mindistsq);
+	return CollisionProcess_ProcessSphereSphere(&s1, &s2, &point, &mindistsq);
 }
 
 bool
-CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &mindistsq)
+Collision_ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &mindistsq)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessSphereBox(&sph, &box, &point, &mindistsq);
+	return CollisionProcess_ProcessSphereBox(&sph, &box, &point, &mindistsq);
 }
 
 bool
-CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist)
+Collision_ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessLineBox(&line, &box, &point, &mindist);
+	return CollisionProcess_ProcessLineBox(&line, &box, &point, &mindist);
 }
 
 // If line.p0 lies inside sphere, no collision is registered.
 bool
-CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist)
+Collision_ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessLineSphere(&line, &sphere, &point, &mindist);
+	return CollisionProcess_ProcessLineSphere(&line, &sphere, &point, &mindist);
 }
 
 // unused
 bool
-CCollision::ProcessVerticalLineTriangle(const CColLine &line,
+Collision_ProcessVerticalLineTriangle(const CColLine &line,
 	const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
 	CColPoint &point, float &mindist, CStoredCollPoly *poly)
 {
 #ifdef VU_COLLISION
 	// not used in favour of optimized loops
-	bool res = ProcessLineTriangle(line, verts, tri, plane, point, mindist);
+	bool res = Collision_ProcessLineTriangle(line, verts, tri, plane, point, mindist);
 	if(res && poly){
 		// Copy complete decoded values before the original native vector expression
 		const CollisionVector3 collisionVertexValue6_0=CompressedVector_Get(&verts[tri.a]);
@@ -438,13 +438,13 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 
 
 bool
-CCollision::ProcessLineTriangle(const CColLine &line,
+Collision_ProcessLineTriangle(const CColLine &line,
 	const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
 	CColPoint &point, float &mindist, CStoredCollPoly *poly)
 {
 	// Do the intersection in C and track the polygon here
 	float v[9];
-	if (!Collision_ProcessLineTriangle(&line, verts, &tri, &plane, &point, &mindist, v))
+	if (!CollisionTriangle_ProcessLineTriangle(&line, verts, &tri, &plane, &point, &mindist, v))
 		return false;
 	if (poly) {
 		const StoredPolyVertex storedVertex0 = StoredPoly_FromNative(CVector(v[0], v[1], v[2]));
@@ -459,30 +459,30 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 }
 
 bool
-CCollision::ProcessSphereTriangle(const CColSphere &sphere,
+Collision_ProcessSphereTriangle(const CColSphere &sphere,
 	const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane,
 	CColPoint &point, float &mindistsq)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessSphereTriangle(&sphere, verts, &tri, &plane, &point, &mindistsq);
+	return CollisionTriangle_ProcessSphereTriangle(&sphere, verts, &tri, &plane, &point, &mindistsq);
 }
 
 bool
-CCollision::ProcessLineOfSight(const CColLine &line,
+Collision_ProcessLineOfSight(const CColLine &line,
 	const CMatrix &matrix, CColModel &model,
 	CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessLineOfSight(&line, matrix.f, &model, &point, &mindist, ignoreSeeThrough, ignoreShootThrough, &ms_colModelCache);
+	return CollisionModel_ProcessLineOfSight(&line, matrix.f, &model, &point, &mindist, ignoreSeeThrough, ignoreShootThrough, &Collision_ms_colModelCache);
 }
 
 bool
-CCollision::ProcessVerticalLine(const CColLine &line,
+Collision_ProcessVerticalLine(const CColLine &line,
 	const CMatrix &matrix, CColModel &model,
 	CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CStoredCollPoly *poly)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessVerticalLine(&line, matrix.f, &model, &point, &mindist, ignoreSeeThrough, poly, &ms_colModelCache);
+	return CollisionModel_ProcessVerticalLine(&line, matrix.f, &model, &point, &mindist, ignoreSeeThrough, poly, &Collision_ms_colModelCache);
 }
 
 enum {
@@ -506,12 +506,12 @@ static uint8 fakeSPR[16*1024];
 // Returned ColPoints are in world space.
 // NB: only vehicles can have col models with lines, exactly 4, one for each wheel
 int32
-CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
+Collision_ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	const CMatrix &matrixB, CColModel &modelB,
 	CColPoint *spherepoints, CColPoint *linepoints, float *linedists)
 {
 	// Delegate to the C implementation
-	return Collision_ProcessColModels(matrixA.f, &modelA, matrixB.f, &modelB, spherepoints, linepoints, linedists, &ms_colModelCache);
+	return CollisionModel_ProcessColModels(matrixA.f, &modelA, matrixB.f, &modelB, spherepoints, linepoints, linedists, &Collision_ms_colModelCache);
 }
 
 
@@ -520,35 +520,35 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 //
 
 float
-CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
+Collision_DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
 {
 	// Delegate to the C implementation
-	return Collision_DistToLine(&l0->x, &l1->x, &point->x);
+	return CollisionTests_DistToLine(&l0->x, &l1->x, &point->x);
 }
 
 // same as above but also return the point on the line
 float
-CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest)
+Collision_DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest)
 {
 	// Delegate to the C implementation
 	return Collision_DistToLineClosest(&l0->x, &l1->x, &point->x, &closest.x);
 }
 
 void
-CCollision::CalculateTrianglePlanes(CColModel *model)
+Collision_CalculateTrianglePlanes(CColModel *model)
 {
 	// Delegate to the C implementation
-	Collision_CalculateTrianglePlanes(&ms_colModelCache, model);
+	CollisionModel_CalculateTrianglePlanes(&Collision_ms_colModelCache, model);
 }
 
 void
-CCollision::RemoveTrianglePlanes(CColModel *model)
+Collision_RemoveTrianglePlanes(CColModel *model)
 {
 	if(model->trianglePlanes){
 		// Use the C linked-list functions and node types
 		//+ rouz edit (ChatGPT)
 		// Invoke the complete C collision owner at the original native lifetime or operation boundary
-		CLinkList_Remove(&ms_colModelCache, ColModel_GetLinkPtr(model));
+		CLinkList_Remove(&Collision_ms_colModelCache, ColModel_GetLinkPtr(model));
 		//- rouz edit (ChatGPT)
 		// Invoke the complete C collision owner at the original native lifetime or operation boundary
 		ColModel_RemoveTrianglePlanes(model);
@@ -556,7 +556,7 @@ CCollision::RemoveTrianglePlanes(CColModel *model)
 }
 
 void
-CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
+Collision_DrawColModel(const CMatrix &mat, const CColModel &colModel)
 {
 	int i;
 	CVector min, max;
@@ -886,7 +886,7 @@ GetSurfaceColor(uint8 surf, uint8 &r, uint8 &g, uint8 &b)
 }
 
 void
-CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, int32 id)
+Collision_DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, int32 id)
 {
 	int i;
 	int s;

@@ -2,7 +2,7 @@
 #include <math.h>
 #include "GameLogicMath.h"
 
-void GameLogic_PassTime(uint32_t time, int32_t clockMinutes, int32_t clockHours, int32_t daysPassed, int32_t *outMinutes, int32_t *outHours, int32_t *outDays)
+void GameLogicMath_PassTime(uint32_t time, int32_t clockMinutes, int32_t clockHours, int32_t daysPassed, int32_t *outMinutes, int32_t *outHours, int32_t *outDays)
 {
 	int32_t minutes = time + clockMinutes;
 	int32_t hours = clockHours;

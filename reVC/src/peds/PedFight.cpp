@@ -90,7 +90,7 @@ CheckForPedsOnGroundToAttack(CPed *attacker, CPed **pedOnGround)
 	float angleDiff;
 	float distance;
 
-	if (!CGame::nastyGame)
+	if (!Game_nastyGame)
 		return NO_PED;
 
 	for (int currentPedId = 0; currentPedId < attacker->m_numNearPeds; currentPedId++) {
@@ -167,11 +167,10 @@ CheckForPedsOnGroundToAttack(CPed *attacker, CPed **pedOnGround)
 static CVector
 NormalisedHorizontal(const CVector &v)
 {
-	float in[3] = { v.x, v.y, v.z };
-	float out[3];
+	CVector out;
 
-	General_NormalisedHorizontal(in, out);
-	return CVector(out[0], out[1], out[2]);
+	General_NormalisedHorizontal(&v, &out);
+	return CVector(out.x, out.y, out.z);
 }
 
 void
@@ -351,7 +350,7 @@ CPed::SetAttack(CEntity *victim)
 	if (WeaponInfo_IsFlagSet(curWeapon,WEAPONFLAG_CANAIM)) {
 		CVector aimPos = GetRight() * 0.1f + GetForward() * 0.2f + GetPosition();
 		aimPos += GetUp() * 0.35f;
-		CEntity *obstacle = CWorld::TestSphereAgainstWorld(aimPos, 0.2f, nil, true, false, false, true, false, false);
+		CEntity *obstacle = World_TestSphereAgainstWorld(aimPos, 0.2f, nil, true, false, false, true, false, false);
 		if (obstacle) {
 			if(gaTempSphereColPoints[0].surfaceB != SURFACE_TRANSPARENT_CLOTH && gaTempSphereColPoints[0].surfaceB != SURFACE_METAL_CHAIN_FENCE &&
 				gaTempSphereColPoints[0].surfaceB != SURFACE_WOOD_BENCH && gaTempSphereColPoints[0].surfaceB != SURFACE_SCAFFOLD_POLE) {
@@ -445,7 +444,7 @@ CPed::SetAttack(CEntity *victim)
 				AnimationId fireAnim;
 				if (WeaponInfo_IsFlagSet(curWeapon,WEAPONFLAG_THROW))
 					fireAnim = ANIM_THROWABLE_START_THROW;
-				else if (CGame::nastyGame && (WeaponInfo_IsFlagSet(curWeapon,WEAPONFLAG_GROUND_2ND) || WeaponInfo_IsFlagSet(curWeapon,WEAPONFLAG_GROUND_3RD))) {
+				else if (Game_nastyGame && (WeaponInfo_IsFlagSet(curWeapon,WEAPONFLAG_GROUND_2ND) || WeaponInfo_IsFlagSet(curWeapon,WEAPONFLAG_GROUND_3RD))) {
 					PedOnGroundState pedOnGround = CheckForPedsOnGroundToAttack(this, nil);
 					if (pedOnGround > PED_IN_FRONT_OF_ATTACKER || pedOnGround == NO_PED && bIsStanding && m_pCurSurface && m_pCurSurface->IsVehicle()) {
 						fireAnim = GetFireAnimGround(curWeapon, false);
@@ -799,7 +798,7 @@ CPed::Attack(void)
 						// Use the complete C animation manager at the original call boundary
 						weaponAnimAssoc = AnimManager_BlendAnimation(GetClump(), ourWeapon->m_AnimToPlay, GetSecondFireAnim(ourWeapon), 8.0f);
 
-					} else if(!CGame::nastyGame || ourWeapon->m_eWeaponFire != WEAPON_FIRE_MELEE ||
+					} else if(!Game_nastyGame || ourWeapon->m_eWeaponFire != WEAPON_FIRE_MELEE ||
 					          !GetFireAnimGround(ourWeapon, false) || 
 						 CheckForPedsOnGroundToAttack(this, nil) < PED_ON_THE_FLOOR) {
 
@@ -998,7 +997,7 @@ CPed::Attack(void)
 	if (weaponAnimTime > animLoopEnd || !AnimAssociation_IsRunning(weaponAnimAssoc) && ourWeapon->m_eWeaponFire != WEAPON_FIRE_PROJECTILE) {
 		if (GetWeapon()->m_eWeaponState == WEAPONSTATE_RELOADING) {
 			if (GetReloadAnim(ourWeapon) && !reloadAnimAssoc) {
-				if (!CWorld::Players[CWorld::PlayerInFocus].m_bFastReload) {
+				if (!World_Players[World_PlayerInFocus].m_bFastReload) {
 					// Use the complete C animation manager at the original call boundary
 					CAnimBlendAssociation *newReloadAssoc = AnimManager_BlendAnimation(
 						GetClump(), ourWeapon->m_AnimToPlay,
@@ -1023,7 +1022,7 @@ CPed::Attack(void)
 
 			PedOnGroundState pedOnGroundState;
 			if (ourWeapon->m_eWeaponFire == WEAPON_FIRE_MELEE &&
-				(CGame::nastyGame && ((pedOnGroundState = CheckForPedsOnGroundToAttack(this, nil)) > PED_IN_FRONT_OF_ATTACKER)
+				(Game_nastyGame && ((pedOnGroundState = CheckForPedsOnGroundToAttack(this, nil)) > PED_IN_FRONT_OF_ATTACKER)
 				|| GetWeapon()->m_eWeaponType == WEAPONTYPE_BASEBALLBAT && pedOnGroundState == NO_PED && bIsStanding && m_pCurSurface && m_pCurSurface->IsVehicle())) {
 
 				AnimationId fireAnim = GetFireAnimGround(ourWeapon, false);
@@ -1178,7 +1177,7 @@ void
 CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
 {
 	if (m_nPedState == PED_DEAD) {
-		if (CGame::nastyGame) {
+		if (Game_nastyGame) {
 			if (hitLevel == HITLEVEL_GROUND) {
 				CAnimBlendAssociation *floorHitAssoc;
 				// Use the complete C animation plugin API with explicit overload and render arguments
@@ -1197,7 +1196,7 @@ CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
 					floorHitAssoc->flags &= ~ASSOC_FADEOUTWHENDONE;
 				}
 			}
-			if (CGame::nastyGame) {
+			if (Game_nastyGame) {
 				CVector headPos = GetNodePosition(PED_HEAD);
 				for(int i = 0; i < 4; ++i) {
 					CVector bloodDir(0.0f, 0.0f, 0.1f);
@@ -1589,7 +1588,7 @@ CPed::ChooseAttackAI(uint8 buttonPressure, bool fightWithWeapon)
 	in.pedFlags = m_pedStats->m_flags;
 	in.dist = dist;
 	in.targetOnGroundOrGettingUp = m_pedInObjective->OnGroundOrGettingUp();
-	in.nastyGame = CGame::nastyGame;
+	in.nastyGame = Game_nastyGame;
 	in.targetIsPlayer = m_pedInObjective->IsPlayer();
 	in.targetDead = m_pedInObjective->m_nPedState == PED_DEAD;
 	in.weaponFlagGround2nd = WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_2ND);
@@ -1655,7 +1654,7 @@ CPed::ChooseAttackPlayer(uint8 buttonPressure, bool fightWithWeapon)
 						}
 					}
 				}
-			} else if (CGame::nastyGame && dist < 1.2f && neededTurn < DEGTORAD(55.0f)) {
+			} else if (Game_nastyGame && dist < 1.2f && neededTurn < DEGTORAD(55.0f)) {
 				if (!nearPed->DyingOrDead() || groundAttackDeadPed) {
 					if (!nearPed->IsPedHeadAbovePos(-0.3f)) {
 						groundAttackAlivePed = nearPed;
@@ -1880,7 +1879,7 @@ CPed::FightStrike(CVector &touchedNodePos, bool fightWithWeapon)
 		return false;
 
 	if (this == FindPlayerPed() && fightWithWeapon && GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED)
-		CGlass::BreakGlassPhysically(touchedNodePos, radius);
+		Glass_BreakGlassPhysically(touchedNodePos, radius);
 
 	for (int i = 0; i < m_numNearPeds; i++) {
 		int8 pedFound = 0;
@@ -2019,7 +2018,7 @@ CPed::FightHitPed(CPed *victim, CVector &touchPoint, CVector &dir, int16 piece)
 			victim->InflictDamage(this, WEAPONTYPE_UNARMED, damageMult * 3.0f, (ePedPieceTypes)piece, direction);
 	}
 
-	if (CGame::nastyGame && weaponInfo->m_AnimToPlay == ASSOCGRP_KNIFE && m_curFightMove >= FIGHTMOVE_MELEE1
+	if (Game_nastyGame && weaponInfo->m_AnimToPlay == ASSOCGRP_KNIFE && m_curFightMove >= FIGHTMOVE_MELEE1
 		&& victim->GetIsOnScreen()) {
 
 		static float particleRightLen = 0.05f;
@@ -2044,7 +2043,7 @@ CPed::FightHitPed(CPed *victim, CVector &touchPoint, CVector &dir, int16 piece)
 		if (!(General_GetRandomNumber() & 3)) {
 			CParticle::AddParticle(PARTICLE_TEST, bloodPos, dir, nil, 0.0f, 0, 0, 0, 0);
 		}
-	} else if (CGame::nastyGame && (tFightMoves[m_curFightMove].hitLevel > HITLEVEL_MEDIUM || fightingWithWeapon)
+	} else if (Game_nastyGame && (tFightMoves[m_curFightMove].hitLevel > HITLEVEL_MEDIUM || fightingWithWeapon)
 			&& victim->GetIsOnScreen()) {
 
 		// Just for particles. We will restore it below.
@@ -2297,7 +2296,7 @@ CPed::InvestigateEvent(void)
 						// Use the complete C animation manager at the original call boundary
 						AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_CAM, 4.0f);
 						SetLookTimer(General_GetRandomNumberInRangeInt(2500, 5000));
-						if (!CGame::germanGame)
+						if (!Game_germanGame)
 							Say(SOUND_PED_CHAT_EVENT);
 
 					} else {
@@ -2350,7 +2349,7 @@ CPed::InvestigateEvent(void)
 						AnimManager_BlendAnimation(GetClump(), animGroup, animToPlay, 4.0f);
 						SetLookTimer(General_GetRandomNumberInRangeInt(1000, 2500));
 					}
-					if (!CGame::germanGame)
+					if (!Game_germanGame)
 						Say(SOUND_PED_CHAT_EVENT);
 				}
 				break;
@@ -2463,7 +2462,7 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 	int random;
 
 	if (damagedBy == FindPlayerPed() && damagedBy != this && damage > 3.0f)
-		++CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel;
+		++World_Players[World_PlayerInFocus].m_nHavocLevel;
 
 	if (player == this) {
 		if (!player->m_bCanBeDamaged)
@@ -2472,7 +2471,7 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 		if (damagedBy && damagedBy->IsPed() && ((CPed*)damagedBy)->m_nPedType == PEDTYPE_GANG7)
 			return false;
 
-		if ((method == WEAPONTYPE_FLAMETHROWER || method == WEAPONTYPE_MOLOTOV) && CWorld::Players[CWorld::PlayerInFocus].m_bFireproof)
+		if ((method == WEAPONTYPE_FLAMETHROWER || method == WEAPONTYPE_MOLOTOV) && World_Players[World_PlayerInFocus].m_bFireproof)
 			return false;
 
 		player->AnnoyPlayerPed(false);
@@ -2692,7 +2691,7 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 				if (bExplosionProof)
 					return false;
 
-				if (CGame::nastyGame && !IsPlayer() && !bInVehicle &&
+				if (Game_nastyGame && !IsPlayer() && !bInVehicle &&
 					1.0f + healthImpact > m_fArmour + m_fHealth) {
 
 					random = General_GetRandomNumber();
@@ -2761,7 +2760,7 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 
 	if (m_fArmour != 0.0f && method != WEAPONTYPE_DROWNING) {
 		if (player == this)
-			CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss = (*Timer_GetTimeInMilliseconds());
+			World_Players[World_PlayerInFocus].m_nTimeLastArmourLoss = (*Timer_GetTimeInMilliseconds());
 
 		if (healthImpact < m_fArmour) {
 			m_fArmour = m_fArmour - healthImpact;
@@ -2774,7 +2773,7 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 
 	if (healthImpact != 0.0f) {
 		if (player == this)
-			CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss = (*Timer_GetTimeInMilliseconds());
+			World_Players[World_PlayerInFocus].m_nTimeLastHealthLoss = (*Timer_GetTimeInMilliseconds());
 
 		m_lastWepDam = method;
 		m_lastDamEntity = damagedBy;
@@ -2809,7 +2808,7 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 						if (m_pMyVehicle->pDriver == this) {
 							if (m_pMyVehicle->GetStatus() == STATUS_SIMPLE) {
 								m_pMyVehicle->SetStatus(STATUS_PHYSICS);
-								CCarCtrl::SwitchVehicleToRealPhysics(m_pMyVehicle);
+								CarCtrl_SwitchVehicleToRealPhysics(m_pMyVehicle);
 							}
 							m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_NONE;
 							m_pMyVehicle->AutoPilot.m_nCruiseSpeed = 0;
@@ -2828,8 +2827,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 						SetDie(dieAnim, dieDelta, dieSpeed);
 
 						if (damagedBy == FindPlayerPed() && damagedBy != this) {
-							CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 10;
-							CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention += 5.f;
+							World_Players[World_PlayerInFocus].m_nHavocLevel += 10;
+							World_Players[World_PlayerInFocus].m_fMediaAttention += 5.f;
 						}
 					}
 				}
@@ -2867,8 +2866,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 
 		if (damagedBy == player || damagedBy && damagedBy == FindPlayerVehicle()) {
 			Darkel_RegisterKillByPlayer(this, method, headShot);
-			CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 10;
-			CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention += 5.f;
+			World_Players[World_PlayerInFocus].m_nHavocLevel += 10;
+			World_Players[World_PlayerInFocus].m_fMediaAttention += 5.f;
 			m_threatEntity = player;
 		} else {
 			Darkel_RegisterKillNotByPlayer(this, method);
@@ -2929,7 +2928,7 @@ CPed::RemoveBodyPart(PedNode nodeId, int8 direction)
 	// Use the C animation frame while retaining the original live SDK objects
 	frame = AnimBlendFrame_GetFrame(m_pFrames[nodeId]);
 	if (frame) {
-		if (CGame::nastyGame) {
+		if (Game_nastyGame) {
 			if (CEntity::GetIsOnScreen()) {
 				m_pedIK.GetComponentPosition(pos, nodeId);
 				CParticle::AddParticle(PARTICLE_TEST, pos,
@@ -3014,12 +3013,12 @@ CPed::PlacePedOnDryLand(void)
 	CColPoint foundCol;
 	float foundColZ;
 
-	CWaterLevel::GetWaterLevelNoWaves(GetPosition().x, GetPosition().y, GetPosition().z, &waterLevel);
+	WaterLevel_GetWaterLevelNoWaves(GetPosition().x, GetPosition().y, GetPosition().z, &waterLevel);
 
 	CVector potentialGround = GetPosition();
 	potentialGround.z = waterLevel;
 
-	if (!CWorld::TestSphereAgainstWorld(potentialGround, 5.0f, nil, true, false, false, false, false, false))
+	if (!World_TestSphereAgainstWorld(potentialGround, 5.0f, nil, true, false, false, false, false, false))
 		return false;
 
 	// Delegate the horizontal direction to the C implementation
@@ -3028,7 +3027,7 @@ CPed::PlacePedOnDryLand(void)
 	CVector posToCheck = 0.5f * potentialGroundDist + CollisionVector_ToNative(gaTempSphereColPoints[0].point);
 	posToCheck.z = 3.0f + waterLevel;
 
-	if (CWorld::ProcessVerticalLine(posToCheck, waterLevel - 1.0f, foundCol, foundEnt, true, true, false, true, false, false, nil)) {
+	if (World_ProcessVerticalLine(posToCheck, waterLevel - 1.0f, foundCol, foundEnt, true, true, false, true, false, false, nil)) {
 		foundColZ = foundCol.point.z;
 		if (foundColZ >= waterLevel) {
 			posToCheck.z = 0.8f + foundColZ;
@@ -3042,7 +3041,7 @@ CPed::PlacePedOnDryLand(void)
 	posToCheck = 5.0f * potentialGroundDist + GetPosition();
 	posToCheck.z = 3.0f + waterLevel;
 
-	if (!CWorld::ProcessVerticalLine(posToCheck, waterLevel - 1.0f, foundCol, foundEnt, true, true, false, true, false, false, nil))
+	if (!World_ProcessVerticalLine(posToCheck, waterLevel - 1.0f, foundCol, foundEnt, true, true, false, true, false, false, nil))
 		return false;
 
 	foundColZ = foundCol.point.z;
@@ -3355,7 +3354,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 			m_vecMoveSpeed.z = 0.0f;
 			if (damageDir == 1 || damageDir == 3)
 				damageDir = 2;
-			if (CGame::nastyGame)
+			if (Game_nastyGame)
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
 		} else if (knockedUp) {
 			float vehColMaxY = vehColModel->boundingBox.max.y;

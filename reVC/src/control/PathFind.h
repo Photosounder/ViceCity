@@ -38,17 +38,31 @@ enum
 
 VALIDATE_SIZE(CPedPathNode, 0x10);
 
-class CPedPath {
-public:
-	static bool CalcPedRoute(int8 pathType, CVector position, CVector destination, CVector *pointPoses, int16 *pointsFound, int16 maxPoints);
-	static void AddNodeToPathList(CPedPathNode *pNodeToAdd, int16 id, CPedPathNode *pNodeList);
-	static void RemoveNodeFromList(CPedPathNode *pNode);
-	static void AddNodeToList(CPedPathNode *pNode, int16 index, CPedPathNode *pList);
-	static void AddBlockade(CEntity *pEntity, CPedPathNode(*pathNodes)[40], CVector *pPosition);
-	static void AddBlockadeSectorList(CPtrList& list, CPedPathNode(*pathNodes)[40], CVector *pPosition);
-	static void AddBuildingBlockade(CEntity*, CPedPathNode(*)[40], CVector*);
-	static void AddBuildingBlockadeSectorList(CPtrList&, CPedPathNode(*)[40], CVector*);
-};
+//+ rouz edit (Claude)
+// Formerly the static class CPedPath, now C globals and functions shared with C
+#ifdef __cplusplus
+class CPedPathNode;
+class CPtrList;
+#else
+typedef struct CPedPathNode CPedPathNode;
+typedef struct CPtrList CPtrList;
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+bool PedPath_CalcPedRoute(int8 pathType, CVector position, CVector destination, CVector *pointPoses, int16 *pointsFound, int16 maxPoints);
+void PedPath_AddNodeToPathList(CPedPathNode *pNodeToAdd, int16 id, CPedPathNode *pNodeList);
+void PedPath_RemoveNodeFromList(CPedPathNode *pNode);
+void PedPath_AddNodeToList(CPedPathNode *pNode, int16 index, CPedPathNode *pList);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+void PedPath_AddBlockade(CEntity *pEntity, CPedPathNode(*pathNodes)[40], CVector *pPosition);
+void PedPath_AddBlockadeSectorList(CPtrList& list, CPedPathNode(*pathNodes)[40], CVector *pPosition);
+void PedPath_AddBuildingBlockade(CEntity*, CPedPathNode(*)[40], CVector*);
+void PedPath_AddBuildingBlockadeSectorList(CPtrList&, CPedPathNode(*)[40], CVector*);
+#endif
+//- rouz edit (Claude)
 
 struct CPathNode : public CPathNodeData
 {

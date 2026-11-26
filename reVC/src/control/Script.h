@@ -425,176 +425,199 @@ enum {
 	MAX_NUM_STORED_LINES = 1024
 };
 
-class CTheScripts
-{
-public:
-	static uint8 ScriptSpace[SIZE_SCRIPT_SPACE];
-	static CRunningScript ScriptsArray[MAX_NUM_SCRIPTS];
-	static intro_text_line IntroTextLines[MAX_NUM_INTRO_TEXT_LINES];
-	static intro_script_rectangle IntroRectangles[MAX_NUM_INTRO_RECTANGLES];
-	static Sprite2d ScriptSprites[MAX_NUM_SCRIPT_SRPITES];
-	static script_sphere_struct ScriptSphereArray[MAX_NUM_SCRIPT_SPHERES];
-	static tUsedObject UsedObjectArray[MAX_NUM_USED_OBJECTS];
-	static int32 MultiScriptArray[MAX_NUM_MISSION_SCRIPTS];
-	static tBuildingSwap BuildingSwapArray[MAX_NUM_BUILDING_SWAPS];
-	static CEntity* InvisibilitySettingArray[MAX_NUM_INVISIBILITY_SETTINGS];
-	static CStoredLine aStoredLines[MAX_NUM_STORED_LINES];
-	static bool DbgFlag;
-	static uint32 OnAMissionFlag;
-	static CMissionCleanup MissionCleanUp;
-	static CStuckCarCheck StuckCars;
-	static CUpsideDownCarCheck UpsideDownCars;
-	static int32 StoreVehicleIndex;
-	static bool StoreVehicleWasRandom;
-	static CRunningScript *pIdleScripts;
-	static CRunningScript *pActiveScripts;
-	static int32 NextFreeCollectiveIndex;
-	static int32 LastRandomPedId;
-	static uint16 NumberOfUsedObjects;
-	static bool bAlreadyRunningAMissionScript;
-	static bool bUsingAMultiScriptFile;
-	static uint16 NumberOfMissionScripts;
-	static uint32 LargestMissionScriptSize;
-	static uint32 MainScriptSize;
-	static uint8 FailCurrentMission;
-	static uint16 NumScriptDebugLines;
-	static uint16 NumberOfIntroRectanglesThisFrame;
-	static uint16 NumberOfIntroTextLinesThisFrame;
-	static uint8 UseTextCommands;
-	static uint16 CommandsExecuted;
-	static uint16 ScriptsUpdated;
-	static uint32 LastMissionPassedTime;
-	static uint16 NumberOfExclusiveMissionScripts;
+//+ rouz edit (Claude)
+// Formerly the static class CTheScripts, now C globals and functions shared with C
+#ifdef __cplusplus
+class CRunningScript;
+#else
+typedef struct CRunningScript CRunningScript;
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern uint8 TheScripts_ScriptSpace[SIZE_SCRIPT_SPACE];
+extern intro_text_line TheScripts_IntroTextLines[MAX_NUM_INTRO_TEXT_LINES];
+extern intro_script_rectangle TheScripts_IntroRectangles[MAX_NUM_INTRO_RECTANGLES];
+extern Sprite2d TheScripts_ScriptSprites[MAX_NUM_SCRIPT_SRPITES];
+extern script_sphere_struct TheScripts_ScriptSphereArray[MAX_NUM_SCRIPT_SPHERES];
+extern tUsedObject TheScripts_UsedObjectArray[MAX_NUM_USED_OBJECTS];
+extern int32 TheScripts_MultiScriptArray[MAX_NUM_MISSION_SCRIPTS];
+extern tBuildingSwap TheScripts_BuildingSwapArray[MAX_NUM_BUILDING_SWAPS];
+extern CEntity* TheScripts_InvisibilitySettingArray[MAX_NUM_INVISIBILITY_SETTINGS];
+extern bool TheScripts_DbgFlag;
+extern uint32 TheScripts_OnAMissionFlag;
+extern int32 TheScripts_StoreVehicleIndex;
+extern bool TheScripts_StoreVehicleWasRandom;
+extern CRunningScript * TheScripts_pIdleScripts;
+extern CRunningScript * TheScripts_pActiveScripts;
+extern int32 TheScripts_NextFreeCollectiveIndex;
+extern int32 TheScripts_LastRandomPedId;
+extern uint16 TheScripts_NumberOfUsedObjects;
+extern bool TheScripts_bAlreadyRunningAMissionScript;
+extern bool TheScripts_bUsingAMultiScriptFile;
+extern uint16 TheScripts_NumberOfMissionScripts;
+extern uint32 TheScripts_LargestMissionScriptSize;
+extern uint32 TheScripts_MainScriptSize;
+extern uint8 TheScripts_FailCurrentMission;
+extern uint16 TheScripts_NumScriptDebugLines;
+extern uint16 TheScripts_NumberOfIntroRectanglesThisFrame;
+extern uint16 TheScripts_NumberOfIntroTextLinesThisFrame;
+extern uint8 TheScripts_UseTextCommands;
+extern uint16 TheScripts_CommandsExecuted;
+extern uint16 TheScripts_ScriptsUpdated;
+extern uint32 TheScripts_LastMissionPassedTime;
+extern uint16 TheScripts_NumberOfExclusiveMissionScripts;
 #if (defined GTA_PC && !defined GTAVC_JP_PATCH || defined GTA_XBOX || defined SUPPORT_XBOX_SCRIPT || defined GTA_MOBILE || defined SUPPORT_MOBILE_SCRIPT)
 #define CARDS_IN_SUIT (13)
 #define NUM_SUITS (4)
 #define MAX_DECKS (6)
 #define CARDS_IN_DECK (CARDS_IN_SUIT * NUM_SUITS)
 #define CARDS_IN_STACK (CARDS_IN_DECK * MAX_DECKS)
-	static int16 CardStack[CARDS_IN_STACK];
-	static int16 CardStackPosition;
+extern int16 TheScripts_CardStack[CARDS_IN_STACK];
+extern int16 TheScripts_CardStackPosition;
 #endif
-	static bool bPlayerIsInTheStatium;
-	static uint8 RiotIntensity;
-	static bool bPlayerHasMetDebbieHarry;
-
-	static void Init();
-	static void Process();
-
-	static CRunningScript* StartTestScript();
-	static bool IsPlayerOnAMission();
-	static void ClearSpaceForMissionEntity(const CVector&, CEntity*);
-
-	static void UndoBuildingSwaps();
-	static void UndoEntityInvisibilitySettings();
-
-	static void ScriptDebugLine3D(float x1, float y1, float z1, float x2, float y2, float z2, uint32 col, uint32 col2);
-	static void RenderTheScriptDebugLines();
-
-	static void SaveAllScripts(uint8*, uint32*);
-	static void LoadAllScripts(uint8*, uint32);
-
-	static bool IsDebugOn() { return DbgFlag; };
-	static void InvertDebugFlag() { DbgFlag = !DbgFlag; }
-
-	static int32* GetPointerToScriptVariable(int32 offset) { assert(offset >= 8 && offset < CTheScripts::GetSizeOfVariableSpace()); return (int32*)&ScriptSpace[offset]; }
-
-	// Delegate to the C implementation
-	static int32 Read4BytesFromScript(uint32* pIp) { return ScriptBC_Read4(ScriptSpace, pIp); }
-	static int16 Read2BytesFromScript(uint32* pIp) { return ScriptBC_Read2(ScriptSpace, pIp); }
-	static int8 Read1ByteFromScript(uint32* pIp) { return ScriptBC_Read1(ScriptSpace, pIp); }
-	static float ReadFloatFromScript(uint32* pIp) {
-		return Read2BytesFromScript(pIp) / 16.0f;
+extern bool TheScripts_bPlayerIsInTheStatium;
+extern uint8 TheScripts_RiotIntensity;
+extern bool TheScripts_bPlayerHasMetDebbieHarry;
+void TheScripts_Init();
+void TheScripts_Process();
+CRunningScript* TheScripts_StartTestScript();
+bool TheScripts_IsPlayerOnAMission();
+void TheScripts_UndoBuildingSwaps();
+void TheScripts_UndoEntityInvisibilitySettings();
+void TheScripts_ScriptDebugLine3D(float x1, float y1, float z1, float x2, float y2, float z2, uint32 col, uint32 col2);
+void TheScripts_RenderTheScriptDebugLines();
+void TheScripts_SaveAllScripts(uint8*, uint32*);
+void TheScripts_LoadAllScripts(uint8*, uint32);
+CRunningScript* TheScripts_StartNewScript(uint32);
+void TheScripts_CleanUpThisVehicle(CVehicle*);
+void TheScripts_CleanUpThisPed(CPed*);
+void TheScripts_CleanUpThisObject(CObject*);
+bool TheScripts_IsPedStopped(CPed*);
+bool TheScripts_IsPlayerStopped(CPlayerInfo*);
+bool TheScripts_IsVehicleStopped(CVehicle*);
+void TheScripts_PrintListSizes();
+void TheScripts_ReadObjectNamesFromScript();
+void TheScripts_UpdateObjectIndices();
+void TheScripts_ReadMultiScriptFileOffsetsFromScript();
+void TheScripts_DrawScriptSpheres();
+void TheScripts_HighlightImportantArea(uint32, float, float, float, float, float);
+void TheScripts_HighlightImportantAngledArea(uint32, float, float, float, float, float, float, float, float, float);
+void TheScripts_DrawDebugSquare(float, float, float, float);
+void TheScripts_DrawDebugAngledSquare(float, float, float, float, float, float, float, float);
+void TheScripts_DrawDebugCube(float, float, float, float, float, float);
+void TheScripts_DrawDebugAngledCube(float, float, float, float, float, float, float, float, float, float);
+void TheScripts_AddToInvisibilitySwapArray(CEntity*, bool);
+void TheScripts_AddToBuildingSwapArray(CBuilding*, int32, int32);
+int32 TheScripts_GetActualScriptSphereIndex(int32 index);
+int32 TheScripts_AddScriptSphere(int32 id, CVector pos, float radius);
+int32 TheScripts_GetNewUniqueScriptSphereIndex(int32 index);
+void TheScripts_RemoveScriptSphere(int32 index);
+void TheScripts_RemoveScriptTextureDictionary();
+void TheScripts_RemoveThisPed(CPed* pPed);
+#ifdef MISSION_SWITCHER
+void TheScripts_SwitchToMission(int32 mission);
+#endif
+#ifdef GTA_SCRIPT_COLLECTIVE
+int TheScripts_AddPedsInVehicleToCollective(int);
+int TheScripts_AddPedsInAreaToCollective(float, float, float, float);
+int TheScripts_FindFreeSlotInCollectiveArray();
+#endif
+#ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
+#endif
+#ifdef USE_DEBUG_SCRIPT_LOADER
+extern int TheScripts_ScriptToLoad;
+int TheScripts_OpenScript();
+#endif
+#ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
+void TheScripts_LogAfterScriptInitializing();
+void TheScripts_LogBeforeScriptProcessing();
+void TheScripts_LogAfterScriptProcessing();
+#endif
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CRunningScript TheScripts_ScriptsArray[MAX_NUM_SCRIPTS];
+extern CStoredLine TheScripts_aStoredLines[MAX_NUM_STORED_LINES];
+extern CMissionCleanup TheScripts_MissionCleanUp;
+extern CStuckCarCheck TheScripts_StuckCars;
+extern CUpsideDownCarCheck TheScripts_UpsideDownCars;
+#if (defined GTA_PC && !defined GTAVC_JP_PATCH || defined GTA_XBOX || defined SUPPORT_XBOX_SCRIPT || defined GTA_MOBILE || defined SUPPORT_MOBILE_SCRIPT)
+#define CARDS_IN_SUIT (13)
+#define NUM_SUITS (4)
+#define MAX_DECKS (6)
+#define CARDS_IN_DECK (CARDS_IN_SUIT * NUM_SUITS)
+#define CARDS_IN_STACK (CARDS_IN_DECK * MAX_DECKS)
+#endif
+void TheScripts_ClearSpaceForMissionEntity(const CVector&, CEntity*);
+static inline bool TheScripts_IsDebugOn();
+static inline void TheScripts_InvertDebugFlag();
+static inline int32* TheScripts_GetPointerToScriptVariable(int32 offset);
+static inline int32 TheScripts_Read4BytesFromScript(uint32* pIp);
+static inline int16 TheScripts_Read2BytesFromScript(uint32* pIp);
+static inline int8 TheScripts_Read1ByteFromScript(uint32* pIp);
+static inline float TheScripts_ReadFloatFromScript(uint32* pIp);
+static inline void TheScripts_ReadTextLabelFromScript(uint32* pIp, char* buf);
+static inline wchar* TheScripts_GetTextByKeyFromScript(uint32* pIp);
+static inline int32 TheScripts_GetSizeOfVariableSpace();
+static inline uint32& TheScripts_GetLastMissionPassedTime();
+#ifdef MISSION_SWITCHER
+#endif
+#ifdef GTA_SCRIPT_COLLECTIVE
+static inline void TheScripts_AdvanceCollectiveIndex();
+void TheScripts_SetObjectiveForAllPedsInCollective(int, eObjective, int16, int16);
+void TheScripts_SetObjectiveForAllPedsInCollective(int, eObjective, CVector, float);
+void TheScripts_SetObjectiveForAllPedsInCollective(int, eObjective, CVector);
+void TheScripts_SetObjectiveForAllPedsInCollective(int, eObjective, void*);
+void TheScripts_SetObjectiveForAllPedsInCollective(int, eObjective);
+#endif
+#ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
+static inline bool TheScripts_MissionSupportsMissionReplay(int index);
+#endif
+#ifdef USE_DEBUG_SCRIPT_LOADER
+#endif
+#ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
+#endif
+static inline bool TheScripts_IsDebugOn() { return TheScripts_DbgFlag; };
+static inline void TheScripts_InvertDebugFlag() { TheScripts_DbgFlag = !TheScripts_DbgFlag; }
+static inline int32* TheScripts_GetPointerToScriptVariable(int32 offset) { assert(offset >= 8 && offset < TheScripts_GetSizeOfVariableSpace()); return (int32*)&TheScripts_ScriptSpace[offset]; }
+static inline int32 TheScripts_Read4BytesFromScript(uint32* pIp) { return ScriptBC_Read4(TheScripts_ScriptSpace, pIp); }
+static inline int16 TheScripts_Read2BytesFromScript(uint32* pIp) { return ScriptBC_Read2(TheScripts_ScriptSpace, pIp); }
+static inline int8 TheScripts_Read1ByteFromScript(uint32* pIp) { return ScriptBC_Read1(TheScripts_ScriptSpace, pIp); }
+static inline float TheScripts_ReadFloatFromScript(uint32* pIp) {
+		return TheScripts_Read2BytesFromScript(pIp) / 16.0f;
 	}
-	static void ReadTextLabelFromScript(uint32* pIp, char* buf) {
-		strncpy(buf, (const char*)&CTheScripts::ScriptSpace[*pIp], KEY_LENGTH_IN_SCRIPT);
+static inline void TheScripts_ReadTextLabelFromScript(uint32* pIp, char* buf) {
+		strncpy(buf, (const char*)&TheScripts_ScriptSpace[*pIp], KEY_LENGTH_IN_SCRIPT);
 	}
-	static wchar* GetTextByKeyFromScript(uint32* pIp) {
-		wchar* text = Text_Get(&TheText,(const char*)&CTheScripts::ScriptSpace[*pIp]);
+static inline wchar* TheScripts_GetTextByKeyFromScript(uint32* pIp) {
+		wchar* text = Text_Get(&TheText,(const char*)&TheScripts_ScriptSpace[*pIp]);
 		*pIp += KEY_LENGTH_IN_SCRIPT;
 		return text;
 	}
-	static int32 GetSizeOfVariableSpace()
+static inline int32 TheScripts_GetSizeOfVariableSpace()
 	{
 		uint32 tmp = 3;
-		return Read4BytesFromScript(&tmp);
+		return TheScripts_Read4BytesFromScript(&tmp);
 	}
-
-	static CRunningScript* StartNewScript(uint32);
-
-	static void CleanUpThisVehicle(CVehicle*);
-	static void CleanUpThisPed(CPed*);
-	static void CleanUpThisObject(CObject*);
-
-	static bool IsPedStopped(CPed*);
-	static bool IsPlayerStopped(CPlayerInfo*);
-	static bool IsVehicleStopped(CVehicle*);
-
-	static void PrintListSizes();
-	static void ReadObjectNamesFromScript();
-	static void UpdateObjectIndices();
-	static void ReadMultiScriptFileOffsetsFromScript();
-	static void DrawScriptSpheres();
-	static void HighlightImportantArea(uint32, float, float, float, float, float);
-	static void HighlightImportantAngledArea(uint32, float, float, float, float, float, float, float, float, float);
-	static void DrawDebugSquare(float, float, float, float);
-	static void DrawDebugAngledSquare(float, float, float, float, float, float, float, float);
-	static void DrawDebugCube(float, float, float, float, float, float);
-	static void DrawDebugAngledCube(float, float, float, float, float, float, float, float, float, float);
-
-	static void AddToInvisibilitySwapArray(CEntity*, bool);
-	static void AddToBuildingSwapArray(CBuilding*, int32, int32);
-
-	static int32 GetActualScriptSphereIndex(int32 index);
-	static int32 AddScriptSphere(int32 id, CVector pos, float radius);
-	static int32 GetNewUniqueScriptSphereIndex(int32 index);
-	static void RemoveScriptSphere(int32 index);
-	static void RemoveScriptTextureDictionary();
-public:
-	static void RemoveThisPed(CPed* pPed);
-
-	static uint32& GetLastMissionPassedTime() { return LastMissionPassedTime; }
-#ifdef MISSION_SWITCHER
-	static void SwitchToMission(int32 mission);
-#endif
-
+static inline uint32& TheScripts_GetLastMissionPassedTime() { return TheScripts_LastMissionPassedTime; }
 #ifdef GTA_SCRIPT_COLLECTIVE
-	static void AdvanceCollectiveIndex()
+static inline void TheScripts_AdvanceCollectiveIndex()
 	{
-		if (NextFreeCollectiveIndex == INT32_MAX)
-			NextFreeCollectiveIndex = 0;
+		if (TheScripts_NextFreeCollectiveIndex == INT32_MAX)
+			TheScripts_NextFreeCollectiveIndex = 0;
 		else
-			NextFreeCollectiveIndex++;
+			TheScripts_NextFreeCollectiveIndex++;
 	}
-
-	static int AddPedsInVehicleToCollective(int);
-	static int AddPedsInAreaToCollective(float, float, float, float);
-	static int FindFreeSlotInCollectiveArray();
-	static void SetObjectiveForAllPedsInCollective(int, eObjective, int16, int16);
-	static void SetObjectiveForAllPedsInCollective(int, eObjective, CVector, float);
-	static void SetObjectiveForAllPedsInCollective(int, eObjective, CVector);
-	static void SetObjectiveForAllPedsInCollective(int, eObjective, void*);
-	static void SetObjectiveForAllPedsInCollective(int, eObjective);
 #endif
-
 #ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
-	static bool MissionSupportsMissionReplay(int index)
+static inline bool TheScripts_MissionSupportsMissionReplay(int index)
 	{
 		return index >= 3 && index <= 35 || index >= 51 && index <= 65 || index >= 67 && index <= 74 || index >= 83 && index <= 87;
 	}
 #endif
-
-#ifdef USE_DEBUG_SCRIPT_LOADER
-	static int ScriptToLoad;
-	static int OpenScript();
 #endif
-
-#ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
-	static void LogAfterScriptInitializing();
-	static void LogBeforeScriptProcessing();
-	static void LogAfterScriptProcessing();
-#endif
-};
+//- rouz edit (Claude)
 
 #ifdef MISSION_REPLAY
 extern int AllowMissionReplay;

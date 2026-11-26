@@ -18,7 +18,7 @@ void
 CPed::ServiceTalking(void)
 {
 	// Play the sound if the C code decided it is time
-	uint16 sound = PedChat_ServiceTalking(this, CGame::germanGame, IsPlayer(), (*Timer_GetTimeInMilliseconds()), General_GetRandomNumberInRangeInt);
+	uint16 sound = PedChat_ServiceTalking(this, Game_germanGame, IsPlayer(), (*Timer_GetTimeInMilliseconds()), General_GetRandomNumberInRangeInt);
 	if (sound != SOUND_NO_SOUND)
 		DMAudio_PlayOneShot(m_audioEntityId, sound, 1.0f);
 }

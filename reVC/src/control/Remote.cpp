@@ -15,7 +15,7 @@ static_assert(int(REMOTE_DRIVINGSTYLE_STOP_FOR_CARS)==int(DRIVINGSTYLE_STOP_FOR_
 RemoteVehicle * Remote_BackendAllocate(uint16_t model)
 {
     // Access the original native operation or named field with its actual type
-    CAutomobile *car=(CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+    CAutomobile *car=(CAutomobile*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
     assert(car);
     std::allocator<CAutomobile>().construct(car,model,MISSION_VEHICLE);
     return car;
@@ -28,7 +28,7 @@ float Remote_BackendBaseDistance(RemoteVehicle *car)
 float Remote_BackendGroundZ(float x,float y,float z,bool *found)
 {
     // Access the original native operation or named field with its actual type
-    return CWorld::FindGroundZFor3DCoord(x,y,z,found);
+    return World_FindGroundZFor3DCoord(x,y,z,found);
 }
 void Remote_BackendRotate(RemoteVehicle *car,float rotation)
 {
@@ -53,7 +53,7 @@ void Remote_BackendLocked(RemoteVehicle *car,bool value)
 void Remote_BackendJoinRoad(RemoteVehicle *car)
 {
     // Access the original native operation or named field with its actual type
-    CCarCtrl::JoinCarWithRoadSystem(car);
+    CarCtrl_JoinCarWithRoadSystem(car);
 }
 uint8_t * Remote_BackendCarMission(RemoteVehicle *car)
 {
@@ -98,7 +98,7 @@ void Remote_BackendEngineOn(RemoteVehicle *car,bool value)
 void Remote_BackendAddWorld(RemoteVehicle *car)
 {
     // Access the original native operation or named field with its actual type
-    CWorld::Add(car);
+    World_Add(car);
 }
 RemoteVehicle * Remote_BackendPlayerVehicle(void)
 {
@@ -108,7 +108,7 @@ RemoteVehicle * Remote_BackendPlayerVehicle(void)
 RemoteVehicle ** Remote_BackendRemoteSlot(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle;
+    return &World_Players[World_PlayerInFocus].m_pRemoteVehicle;
 }
 void Remote_BackendRegisterReference(RemoteVehicle *car,RemoteVehicle **slot)
 {
@@ -138,31 +138,31 @@ uint8_t * Remote_BackendCreatedBy(RemoteVehicle *car)
 int32_t * Remote_BackendMissionCars(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CCarCtrl::NumMissionCars;
+    return &CarCtrl_NumMissionCars;
 }
 int32_t * Remote_BackendRandomCars(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CCarCtrl::NumRandomCars;
+    return &CarCtrl_NumRandomCars;
 }
 uint32_t * Remote_BackendLostTime(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CWorld::Players[CWorld::PlayerInFocus].m_nTimeLostRemoteCar;
+    return &World_Players[World_PlayerInFocus].m_nTimeLostRemoteCar;
 }
 bool * Remote_BackendRemoteMode(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CWorld::Players[CWorld::PlayerInFocus].m_bInRemoteMode;
+    return &World_Players[World_PlayerInFocus].m_bInRemoteMode;
 }
 bool * Remote_BackendBlowUp(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CWorld::Players[CWorld::PlayerInFocus].field_D5;
+    return &World_Players[World_PlayerInFocus].field_D5;
 }
 bool * Remote_BackendLostFlag(void)
 {
     // Access the original native operation or named field with its actual type
-    return &CWorld::Players[CWorld::PlayerInFocus].field_D6;
+    return &World_Players[World_PlayerInFocus].field_D6;
 }
 //- rouz edit (ChatGPT)

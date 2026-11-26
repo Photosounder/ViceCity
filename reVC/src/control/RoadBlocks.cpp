@@ -188,19 +188,19 @@ int32_t RoadBlocks_BackendVehicleModel(CVehicle *vehicle)
 CPool * RoadBlocks_BackendPedPool(void)
 {
     // Access the original typed primitive at its original C policy access point
-    return CPools::GetPedPool();
+    return Pools_GetPedPool();
 }
 
 CPool * RoadBlocks_BackendVehiclePool(void)
 {
     // Access the original typed primitive at its original C policy access point
-    return CPools::GetVehiclePool();
+    return Pools_GetVehiclePool();
 }
 
 CPool * RoadBlocks_BackendObjectPool(void)
 {
     // Access the original typed primitive at its original C policy access point
-    return CPools::GetObjectPool();
+    return Pools_GetObjectPool();
 }
 
 CCopPed * RoadBlocks_BackendConstructCop(CCopPed *cop,int32_t type)
@@ -338,7 +338,7 @@ void RoadBlocks_BackendCopAlpha(CCopPed *entity,int32_t alpha)
 void RoadBlocks_BackendAddCop(CCopPed *entity)
 {
     // Access the original typed primitive at its original C policy access point
-    CWorld::Add(entity);
+    World_Add(entity);
 }
 
 void RoadBlocks_BackendVehicleAlpha(CAutomobile *entity,int32_t alpha)
@@ -350,19 +350,19 @@ void RoadBlocks_BackendVehicleAlpha(CAutomobile *entity,int32_t alpha)
 void RoadBlocks_BackendAddVehicle(CAutomobile *entity)
 {
     // Access the original typed primitive at its original C policy access point
-    CWorld::Add(entity);
+    World_Add(entity);
 }
 
 void RoadBlocks_BackendColliding(RoadBlockVector point,float radius,int16_t *count)
 {
     // Access the original typed primitive at its original C policy access point
-    CWorld::FindObjectsKindaColliding(CVector(point.x,point.y,point.z),radius,0,count,2,nil,false,true,true,false,false);
+    World_FindObjectsKindaColliding(CVector(point.x,point.y,point.z),radius,0,count,2,nil,false,true,true,false,false);
 }
 
 float RoadBlocks_BackendGroundZ(float x,float y,float z,bool *found)
 {
     // Access the original typed primitive at its original C policy access point
-    return CWorld::FindGroundZFor3DCoord(x,y,z,found);
+    return World_FindGroundZFor3DCoord(x,y,z,found);
 }
 
 void RoadBlocks_BackendCarStatus(CAutomobile *car,int32_t status)
@@ -404,7 +404,7 @@ void RoadBlocks_BackendCarLock(CAutomobile *car,int32_t value)
 void RoadBlocks_BackendCarJoinRoad(CAutomobile *car)
 {
     // Access the original typed primitive at its original C policy access point
-    CCarCtrl::JoinCarWithRoadSystem(car);
+    CarCtrl_JoinCarWithRoadSystem(car);
 }
 
 void RoadBlocks_BackendCarLocked(CAutomobile *car,bool value)
@@ -512,7 +512,7 @@ RoadBlockVector RoadBlocks_BackendCarPosition(CAutomobile *car)
 void RoadBlocks_BackendRemoveObject(CObject *object)
 {
     // Access the original typed primitive at its original C policy access point
-    CWorld::Remove(object);
+    World_Remove(object);
 }
 
 void RoadBlocks_BackendObjectMatrix(CObject *object,CMatrix *matrix)
@@ -536,7 +536,7 @@ uint32_t * RoadBlocks_BackendObjectLife(CObject *object)
 void RoadBlocks_BackendAddObject(CObject *object)
 {
     // Access the original typed primitive at its original C policy access point
-    CWorld::Add(object);
+    World_Add(object);
 }
 
 CMatrix * RoadBlocks_BackendMatrixConstruct(RoadBlockMatrixStorage *storage)

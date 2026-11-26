@@ -37,7 +37,7 @@ int32 NumDetachedPedNodeGroups;
 int32 NumDetachedCarNodeGroups;
 
 bool 
-CPedPath::CalcPedRoute(int8 pathType, CVector position, CVector destination, CVector *pointPoses, int16 *pointsFound, int16 maxPoints)
+PedPath_CalcPedRoute(int8 pathType, CVector position, CVector destination, CVector *pointPoses, int16 *pointsFound, int16 maxPoints)
 {
 	*pointsFound = 0;
 	CVector vecDistance = destination - position;
@@ -63,19 +63,19 @@ CPedPath::CalcPedRoute(int8 pathType, CVector position, CVector destination, CVe
 			pathNodes[x][y].nodeIdY = y;
 		}
 	}
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	if (pathType != ROUTE_NO_BLOCKADE) {
 		// Delegate the range of sectors to the C implementation
 		int nStartX, nStartY, nEndX, nEndY;
-		World_ClampSectorRange(CWorld::GetSectorIndexX(vecSectorStartPos.x), CWorld::GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X, &nStartX, &nEndX);
-		World_ClampSectorRange(CWorld::GetSectorIndexY(vecSectorStartPos.y), CWorld::GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y, &nStartY, &nEndY);
+		World_ClampSectorRange(World_GetSectorIndexX(vecSectorStartPos.x), World_GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X, &nStartX, &nEndX);
+		World_ClampSectorRange(World_GetSectorIndexY(vecSectorStartPos.y), World_GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y, &nStartY, &nEndY);
 		for (int32 y = nStartY; y <= nEndY; y++) {
 			for (int32 x = nStartX; x <= nEndX; x++) {
-				CSector *pSector = CWorld::GetSector(x, y);
-				AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_VEHICLES], pathNodes, &vecSectorStartPos);
-				AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], pathNodes, &vecSectorStartPos);
-				AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_OBJECTS], pathNodes, &vecSectorStartPos);
-				AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], pathNodes, &vecSectorStartPos);
+				CSector *pSector = World_GetSector(x, y);
+				PedPath_AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_VEHICLES], pathNodes, &vecSectorStartPos);
+				PedPath_AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], pathNodes, &vecSectorStartPos);
+				PedPath_AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_OBJECTS], pathNodes, &vecSectorStartPos);
+				PedPath_AddBlockadeSectorList(pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], pathNodes, &vecSectorStartPos);
 			}
 		}
 	}
@@ -99,23 +99,23 @@ CPedPath::CalcPedRoute(int8 pathType, CVector position, CVector destination, CVe
 			const uint8 nodeIdX = pPreviousNode->nodeIdX;
 			const uint8 nodeIdY = pPreviousNode->nodeIdY;
 			if (nodeIdX > 0) {
-				AddNodeToPathList(&pathNodes[nodeIdX - 1][nodeIdY], pathNodeIndex + 5, pathNodesList);
+				PedPath_AddNodeToPathList(&pathNodes[nodeIdX - 1][nodeIdY], pathNodeIndex + 5, pathNodesList);
 				if (nodeIdY > 0)
-					AddNodeToPathList(&pathNodes[nodeIdX - 1][nodeIdY - 1], pathNodeIndex + 7, pathNodesList);
+					PedPath_AddNodeToPathList(&pathNodes[nodeIdX - 1][nodeIdY - 1], pathNodeIndex + 7, pathNodesList);
 				if (nodeIdY < 39)
-					AddNodeToPathList(&pathNodes[nodeIdX - 1][nodeIdY + 1], pathNodeIndex + 7, pathNodesList);
+					PedPath_AddNodeToPathList(&pathNodes[nodeIdX - 1][nodeIdY + 1], pathNodeIndex + 7, pathNodesList);
 			}
 			if (nodeIdX < 39) {
-				AddNodeToPathList(&pathNodes[nodeIdX + 1][nodeIdY], pathNodeIndex + 5, pathNodesList);
+				PedPath_AddNodeToPathList(&pathNodes[nodeIdX + 1][nodeIdY], pathNodeIndex + 5, pathNodesList);
 				if (nodeIdY > 0)
-					AddNodeToPathList(&pathNodes[nodeIdX + 1][nodeIdY - 1], pathNodeIndex + 7, pathNodesList);
+					PedPath_AddNodeToPathList(&pathNodes[nodeIdX + 1][nodeIdY - 1], pathNodeIndex + 7, pathNodesList);
 				if (nodeIdY < 39)
-					AddNodeToPathList(&pathNodes[nodeIdX + 1][nodeIdY + 1], pathNodeIndex + 7, pathNodesList);
+					PedPath_AddNodeToPathList(&pathNodes[nodeIdX + 1][nodeIdY + 1], pathNodeIndex + 7, pathNodesList);
 			}
 			if (nodeIdY > 0)
-				AddNodeToPathList(&pathNodes[nodeIdX][nodeIdY - 1], pathNodeIndex + 5, pathNodesList);
+				PedPath_AddNodeToPathList(&pathNodes[nodeIdX][nodeIdY - 1], pathNodeIndex + 5, pathNodesList);
 			if (nodeIdY < 39)
-				AddNodeToPathList(&pathNodes[nodeIdX][nodeIdY + 1], pathNodeIndex + 5, pathNodesList);
+				PedPath_AddNodeToPathList(&pathNodes[nodeIdX][nodeIdY + 1], pathNodeIndex + 5, pathNodesList);
 			pPreviousNode = pPreviousNode->prev;
 			if (!pPreviousNode)
 				break;
@@ -155,45 +155,45 @@ CPedPath::CalcPedRoute(int8 pathType, CVector position, CVector destination, CVe
 
 
 void 
-CPedPath::AddNodeToPathList(CPedPathNode *pNodeToAdd, int16 id, CPedPathNode *pNodeList) 
+PedPath_AddNodeToPathList(CPedPathNode *pNodeToAdd, int16 id, CPedPathNode *pNodeList) 
 {
 	if (!pNodeToAdd->bBlockade && id < pNodeToAdd->id) {
 		if (pNodeToAdd->id != INT16_MAX)
-			RemoveNodeFromList(pNodeToAdd);
-		AddNodeToList(pNodeToAdd, id, pNodeList);
+			PedPath_RemoveNodeFromList(pNodeToAdd);
+		PedPath_AddNodeToList(pNodeToAdd, id, pNodeList);
 	}
 }
 
 void 
-CPedPath::RemoveNodeFromList(CPedPathNode *pNode)
+PedPath_RemoveNodeFromList(CPedPathNode *pNode)
 {
 	// Delegate to the C implementation
-	PedPath_RemoveNodeFromList(pNode);
+	PathLogic_RemoveNodeFromList(pNode);
 }
 
 void 
-CPedPath::AddNodeToList(CPedPathNode *pNode, int16 index, CPedPathNode *pList)
+PedPath_AddNodeToList(CPedPathNode *pNode, int16 index, CPedPathNode *pList)
 {
 	// Delegate to the C implementation
-	PedPath_AddNodeToList(pNode, index, pList);
+	PathLogic_AddNodeToList(pNode, index, pList);
 }
 
 void
-CPedPath::AddBlockadeSectorList(CPtrList& list, CPedPathNode(*pathNodes)[40], CVector *pPosition)
+PedPath_AddBlockadeSectorList(CPtrList& list, CPedPathNode(*pathNodes)[40], CVector *pPosition)
 {
 	CPtrNode* listNode = list.first;
 	while (listNode) {
 		CEntity* pEntity = (CEntity*)listNode->item;
-		if (pEntity->m_scanCode != CWorld::GetCurrentScanCode() && pEntity->bUsesCollision) {
-			pEntity->m_scanCode = CWorld::GetCurrentScanCode();
-			AddBlockade(pEntity, pathNodes, pPosition);
+		if (pEntity->m_scanCode != World_GetCurrentScanCode() && pEntity->bUsesCollision) {
+			pEntity->m_scanCode = World_GetCurrentScanCode();
+			PedPath_AddBlockade(pEntity, pathNodes, pPosition);
 		}
 		listNode = listNode->next;
 	}
 }
 
 void 
-CPedPath::AddBlockade(CEntity *pEntity, CPedPathNode(*pathNodes)[40], CVector *pPosition)
+PedPath_AddBlockade(CEntity *pEntity, CPedPathNode(*pathNodes)[40], CVector *pPosition)
 {
 	const CBox& boundingBox = pEntity->GetColModel()->boundingBox;
 	const float fBoundMaxY = boundingBox.max.y + 0.3f;
@@ -1518,7 +1518,7 @@ CPathFind::GeneratePedCreationCoors(float x, float y, float minDist, float maxDi
 				*pPosition = pos;
 
 				bool found;
-				float groundZ = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z+2.0f, &found);
+				float groundZ = World_FindGroundZFor3DCoord(pos.x, pos.y, pos.z+2.0f, &found);
 				if(!found)
 					return false;
 				if(PathLogic_TooFarFromGround(groundZ, pos.z))
@@ -1556,7 +1556,7 @@ CPathFind::FindNextNodeWandering(uint8 type, CVector coors, CPathNode **lastNode
 		pedCoors.z += 1.0f;
 		CVector nodeCoors = m_pathNodes[next].GetPosition();
 		nodeCoors.z += 1.0f;
-		if(!CWorld::GetIsLineOfSightClear(pedCoors, nodeCoors, true, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(pedCoors, nodeCoors, true, false, false, false, false, false))
 			continue;
 		CVector2D nodeDir = m_pathNodes[next].GetPosition() - node->GetPosition();
 		nodeDir.Normalise();

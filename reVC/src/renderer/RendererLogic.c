@@ -1,6 +1,7 @@
 //+ rouz edit (Claude)
 #include <math.h>
 #include "RendererLogic.h"
+#include "Vector.h" // rouz edit (Claude)
 
 static float calcNewDelta(const RendererV2 *a, const RendererV2 *b)
 {
@@ -254,21 +255,21 @@ bool Visibility_CompIsHidden(float dot, bool angleCull, float distToCameraSq)
 {
 	return dot > 0.0f && (angleCull || 0.1f * distToCameraSq < dot * dot);
 }
-float Visibility_DotWithCameraVector(const float atomicPos[3], const float cameraPos[3], const float clumpForward[3], const float clumpRight[3], unsigned int flags)
+float Visibility_DotWithCameraVector(const CVector *atomicPos, const CVector *cameraPos, const CVector *clumpForward, const CVector *clumpRight, unsigned int flags)
 {
 	/* Flags from ATOMIC_FLAG_* */
 	const unsigned int LEFT = 0x4, RIGHT = 0x8, FRONT = 0x10, REAR = 0x20, REARDOOR = 0x200, FRONTDOOR = 0x400;
 	float dist[3], dot, dotdoor;
 
-	dist[0] = atomicPos[0] - cameraPos[0];
-	dist[1] = atomicPos[1] - cameraPos[1];
-	dist[2] = atomicPos[2] - cameraPos[2];
+	dist[0] = atomicPos->x - cameraPos->x;
+	dist[1] = atomicPos->y - cameraPos->y;
+	dist[2] = atomicPos->z - cameraPos->z;
 	/* Forward/backward facing */
 	if (flags & (FRONT | REAR))
-		dot = dist[0] * clumpForward[0] + dist[1] * clumpForward[1] + dist[2] * clumpForward[2];
+		dot = dist[0] * clumpForward->x + dist[1] * clumpForward->y + dist[2] * clumpForward->z;
 	/* Left/right facing */
 	else if (flags & (LEFT | RIGHT))
-		dot = dist[0] * clumpRight[0] + dist[1] * clumpRight[1] + dist[2] * clumpRight[2];
+		dot = dist[0] * clumpRight->x + dist[1] * clumpRight->y + dist[2] * clumpRight->z;
 	else
 		dot = 0.0f;
 	if (flags & (LEFT | REAR))
@@ -276,9 +277,9 @@ float Visibility_DotWithCameraVector(const float atomicPos[3], const float camer
 
 	if (flags & (REARDOOR | FRONTDOOR)) {
 		if (flags & REARDOOR)
-			dotdoor = -(dist[0] * clumpForward[0] + dist[1] * clumpForward[1] + dist[2] * clumpForward[2]);
+			dotdoor = -(dist[0] * clumpForward->x + dist[1] * clumpForward->y + dist[2] * clumpForward->z);
 		else if (flags & FRONTDOOR)
-			dotdoor = dist[0] * clumpForward[0] + dist[1] * clumpForward[1] + dist[2] * clumpForward[2];
+			dotdoor = dist[0] * clumpForward->x + dist[1] * clumpForward->y + dist[2] * clumpForward->z;
 		else
 			dotdoor = 0.0f;
 

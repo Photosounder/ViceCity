@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdint.h>
 #include <stdbool.h>
 #include "WeaponData.h"
@@ -55,9 +56,9 @@ float Weapon_SpeedInaccuracy(float inaccuracy, float playerSpeed);
 // Frequency of the shake of the pad when the player fires, from the firing rate of the weapon
 uint8_t Weapon_ShakeFrequency(int firingRate);
 // Box around a shot from a source to a target, 2 units larger on every side, in which peds jump away
-void Weapon_ShotBox(const float source[3], const float target[3], float boxMin[3], float boxMax[3]);
+void Weapon_ShotBox(const CVector *source, const CVector *target, CVector *boxMin, CVector *boxMax);
 // Whether a position is strictly inside a box
-bool Weapon_PositionInBox(const float pos[3], const float boxMin[3], const float boxMax[3]);
+bool Weapon_PositionInBox(const CVector *pos, const CVector *boxMin, const CVector *boxMax);
 // Offset on the ground along the facing direction of an angle (-sin, cos) scaled by a length
 void Weapon_AngleOffset(float angle, float scale, float offset[2]);
 // Power a projectile is thrown with at a seek target, from the distance to it (0.2 to 1)

@@ -1,6 +1,7 @@
 //+ rouz edit (Claude)
 #include <math.h>
 #include "CameraMath.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "VectorMath.h"
 #include "General.h"
 #ifndef M_PI
@@ -291,7 +292,7 @@ float Camera_SmoothInterpolation(float numerator, float denominator)
 	// Smooth it
 	return 0.5f - 0.5 * cosf(inter * PI);
 }
-void Camera_ObbeOffsetDirection(float speedX, float speedY, float speedZ, float angleOffset, bool flatten, float dir[3])
+void Camera_ObbeOffsetDirection(float speedX, float speedY, float speedZ, float angleOffset, bool flatten, CVector *dir)
 {
 	VectorMath3 v;
 	float angle;
@@ -308,9 +309,9 @@ void Camera_ObbeOffsetDirection(float speedX, float speedY, float speedZ, float 
 	v.y += sinf(angle);
 	v.z += 0.0f;
 	VectorMath_Normalise(&v);
-	dir[0] = v.x;
-	dir[1] = v.y;
-	dir[2] = v.z;
+	dir->x = v.x;
+	dir->y = v.y;
+	dir->z = v.z;
 }
 float Camera_ShakeDistanceMultiplier(float dx, float dy, float dz)
 {
@@ -370,7 +371,7 @@ void Camera_FrontNormalised(float frontX, float frontY, float *normX, float *nor
 		*normY /= l;
 	}
 }
-void Camera_AvoidFront(float distX, float distY, float distZ, float forwardX, float forwardY, float front[3], float *dist)
+void Camera_AvoidFront(float distX, float distY, float distZ, float forwardX, float forwardY, CVector *front, float *dist)
 {
 	float beta = 0.0f;
 	float alpha = 0.0f;
@@ -384,9 +385,9 @@ void Camera_AvoidFront(float distX, float distY, float distZ, float forwardX, fl
 		beta = General_GetATanOfXY(distX, distY);
 	if (distOnGround != 0.0f || distZ != 0.0f)
 		alpha = General_GetATanOfXY(distOnGround, distZ);
-	front[0] = cosf(alpha) * cosf(beta);
-	front[1] = cosf(alpha) * sinf(beta);
-	front[2] = sinf(alpha);
+	front->x = cosf(alpha) * cosf(beta);
+	front->y = cosf(alpha) * sinf(beta);
+	front->z = sinf(alpha);
 }
 float Camera_AvoidNearClip(float frontDist, float closeLimit, float defaultNear, float currentNear)
 {
@@ -423,20 +424,20 @@ void Camera_OrbitOffset(float distance, float angle, float *x, float *y)
 	*x = distance * cosf(angle);
 	*y = distance * sinf(angle);
 }
-void Camera_SphericalDirection(float alpha, float beta, float dir[3])
+void Camera_SphericalDirection(float alpha, float beta, CVector *dir)
 {
-	dir[0] = cosf(alpha) * cosf(beta);
-	dir[1] = cosf(alpha) * sinf(beta);
-	dir[2] = sinf(alpha);
+	dir->x = cosf(alpha) * cosf(beta);
+	dir->y = cosf(alpha) * sinf(beta);
+	dir->z = sinf(alpha);
 }
 
-void Camera_UpFromRoll(float roll, float up[3])
+void Camera_UpFromRoll(float roll, CVector *up)
 {
 	const float halfPi = (float)3.14159265358979323846 / 2;
 
-	up[0] = cosf(roll + halfPi);
-	up[1] = 0.0f;
-	up[2] = sinf(roll + halfPi);
+	up->x = cosf(roll + halfPi);
+	up->y = 0.0f;
+	up->z = sinf(roll + halfPi);
 }
 float Camera_CarTargetRoll(bool dPad, bool dPadLeft, float moveSpeedAlongForward, float leftStickX, float tiltOvershoot, float maxRollAngle, float forwardDotFront)
 {
@@ -540,11 +541,11 @@ float Camera_TopDownHeightTarget(float pedAverageSpeed)
 		return 7.0f;
 	return 0.0f;
 }
-void Camera_LookPoint(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float point[3])
+void Camera_LookPoint(float alpha, float beta, float sourceX, float sourceY, float sourceZ, CVector *point)
 {
-	point[0] = 3.0f * cosf(alpha) * cosf(beta) + sourceX;
-	point[1] = 3.0f * cosf(alpha) * sinf(beta) + sourceY;
-	point[2] = 3.0f * sinf(alpha) + sourceZ;
+	point->x = 3.0f * cosf(alpha) * cosf(beta) + sourceX;
+	point->y = 3.0f * cosf(alpha) * sinf(beta) + sourceY;
+	point->z = 3.0f * sinf(alpha) + sourceZ;
 }
 float Camera_MouseLookDelta(float mouseAccel, float look, float fov)
 {
@@ -622,15 +623,15 @@ float Camera_ClampAlphaStop(float alpha, float low, float high, float *alphaSpee
 	}
 	return alpha;
 }
-void Camera_TargetHistoryPos(const float target[3], float beta, float alpha, float distance, float pos[3])
+void Camera_TargetHistoryPos(const CVector *target, float beta, float alpha, float distance, CVector *pos)
 {
 	float frontX = -(cosf(beta) * cosf(alpha));
 	float frontY = -(sinf(beta) * cosf(alpha));
 	float frontZ = sinf(alpha);
 
-	pos[0] = target[0] - frontX * distance;
-	pos[1] = target[1] - frontY * distance;
-	pos[2] = target[2] - frontZ * distance;
+	pos->x = target->x - frontX * distance;
+	pos->y = target->y - frontY * distance;
+	pos->z = target->z - frontZ * distance;
 }
 float Camera_TurretFace(float angleToFace, float gunLR, float turnPerFrame)
 {
@@ -739,17 +740,17 @@ float Camera_SyphonBetaOffset(float lineDist, float colDist, float playerToTarge
 	}
 	return newBetaOffset;
 }
-void Camera_FrontFromAngles(float alpha, float beta, float front[3])
+void Camera_FrontFromAngles(float alpha, float beta, CVector *front)
 {
-	front[0] = -(cosf(beta) * cosf(alpha));
-	front[1] = -(sinf(beta) * cosf(alpha));
-	front[2] = sinf(alpha);
+	front->x = -(cosf(beta) * cosf(alpha));
+	front->y = -(sinf(beta) * cosf(alpha));
+	front->z = sinf(alpha);
 }
-void Camera_DebugTarget(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float zScale, float target[3])
+void Camera_DebugTarget(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float zScale, CVector *target)
 {
-	target[0] = sourceX + cosf(alpha) * sinf(beta) * 7.0f;
-	target[1] = sourceY + cosf(alpha) * cosf(beta) * 7.0f;
-	target[2] = sourceZ + sinf(alpha) * zScale;
+	target->x = sourceX + cosf(alpha) * sinf(beta) * 7.0f;
+	target->y = sourceY + cosf(alpha) * cosf(beta) * 7.0f;
+	target->z = sourceZ + sinf(alpha) * zScale;
 }
 float Camera_BetaOfVector(float x, float y)
 {
@@ -871,13 +872,13 @@ float Camera_ShakeStrength(float force, uint32_t startMs, uint32_t nowMs)
 	return strength < 0.0f ? 0.0f : strength > 2.0f ? 2.0f : strength;
 }
 
-void Camera_ShakeOffsets(float strength, int rand, float offsets[3])
+void Camera_ShakeOffsets(float strength, int rand, CVector *offsets)
 {
 	float shakeOffset = strength * 0.1f;
 
-	offsets[0] = shakeOffset * ((rand & 0xF) - 7);
-	offsets[1] = shakeOffset * (((rand & 0xF0) >> 4) - 7);
-	offsets[2] = shakeOffset * (((rand & 0xF00) >> 8) - 7);
+	offsets->x = shakeOffset * ((rand & 0xF) - 7);
+	offsets->y = shakeOffset * (((rand & 0xF0) >> 4) - 7);
+	offsets->z = shakeOffset * (((rand & 0xF00) >> 8) - 7);
 }
 float Camera_LODDistMultiplier(float fov, bool highAltitude, float cameraZ)
 {
@@ -965,111 +966,111 @@ float Camera_WaterLuminance(float red, float green, float blue)
 {
 	return sqrtf(red * red + green * green + blue * blue);
 }
-void Camera_FixedModeUp(const float front[3], const float upOffset[3], float up[3])
+void Camera_FixedModeUp(const CVector *front, const CVector *upOffset, CVector *up)
 {
-	VectorMath3 f = { front[0], front[1], front[2] };
-	VectorMath3 u = { 0.0f + upOffset[0], 0.0f + upOffset[1], 1.0f + upOffset[2] };
+	VectorMath3 f = { front->x, front->y, front->z };
+	VectorMath3 u = { 0.0f + upOffset->x, 0.0f + upOffset->y, 1.0f + upOffset->z };
 	VectorMath3 r;
 
 	VectorMath_Normalise(&u);
 	r = VectorMath_Cross(f, u);
 	VectorMath_Normalise(&r);
 	u = VectorMath_Cross(r, f);
-	up[0] = u.x;
-	up[1] = u.y;
-	up[2] = u.z;
+	up->x = u.x;
+	up->y = u.y;
+	up->z = u.z;
 }
-void Camera_SyphonBasis(float up[3], const float upOffset[3], float front[3])
+void Camera_SyphonBasis(CVector *up, const CVector *upOffset, CVector *front)
 {
-	VectorMath3 u = { up[0], up[1], up[2] };
-	VectorMath3 f = { front[0], front[1], front[2] };
+	VectorMath3 u = { up->x, up->y, up->z };
+	VectorMath3 f = { front->x, front->y, front->z };
 	VectorMath3 left;
 
-	u.x += upOffset[0];
-	u.y += upOffset[1];
-	u.z += upOffset[2];
+	u.x += upOffset->x;
+	u.y += upOffset->y;
+	u.z += upOffset->z;
 	VectorMath_Normalise(&u);
 	left = VectorMath_Cross(u, f);
 	VectorMath_Normalise(&left);
 	f = VectorMath_Cross(left, u);
 	VectorMath_Normalise(&f);
-	up[0] = u.x; up[1] = u.y; up[2] = u.z;
-	front[0] = f.x; front[1] = f.y; front[2] = f.z;
+	up->x = u.x; up->y = u.y; up->z = u.z;
+	front->x = f.x; front->y = f.y; front->z = f.z;
 }
-void Camera_PerpendicularUp(const float front[3], const float up[3], bool normaliseLeft, float outUp[3])
+void Camera_PerpendicularUp(const CVector *front, const CVector *up, bool normaliseLeft, CVector *outUp)
 {
-	VectorMath3 f = { front[0], front[1], front[2] };
-	VectorMath3 u = { up[0], up[1], up[2] };
+	VectorMath3 f = { front->x, front->y, front->z };
+	VectorMath3 u = { up->x, up->y, up->z };
 	VectorMath3 left = VectorMath_Cross(u, f);
 
 	if (normaliseLeft)
 		VectorMath_Normalise(&left);
 	u = VectorMath_Cross(f, left);
 	VectorMath_Normalise(&u);
-	outUp[0] = u.x;
-	outUp[1] = u.y;
-	outUp[2] = u.z;
+	outUp->x = u.x;
+	outUp->y = u.y;
+	outUp->z = u.z;
 }
-void Camera_RightAndUp(const float front[3], const float up[3], bool normaliseUp, float right[3], float outUp[3])
+void Camera_RightAndUp(const CVector *front, const CVector *up, bool normaliseUp, CVector *right, CVector *outUp)
 {
-	VectorMath3 f = { front[0], front[1], front[2] };
-	VectorMath3 u = { up[0], up[1], up[2] };
+	VectorMath3 f = { front->x, front->y, front->z };
+	VectorMath3 u = { up->x, up->y, up->z };
 	VectorMath3 r = VectorMath_Cross(f, u);
 
 	VectorMath_Normalise(&r);
 	u = VectorMath_Cross(r, f);
 	if (normaliseUp)
 		VectorMath_Normalise(&u);
-	right[0] = r.x; right[1] = r.y; right[2] = r.z;
-	outUp[0] = u.x; outUp[1] = u.y; outUp[2] = u.z;
+	right->x = r.x; right->y = r.y; right->z = r.z;
+	outUp->x = u.x; outUp->y = u.y; outUp->z = u.z;
 }
-void Camera_FixedPitchFront(float angle, float front[3])
+void Camera_FixedPitchFront(float angle, CVector *front)
 {
-	front[0] = cosf(0.3f) * sinf(angle);
-	front[1] = cosf(0.3f) * cosf(angle);
-	front[2] = -sinf(0.3f);
+	front->x = cosf(0.3f) * sinf(angle);
+	front->y = cosf(0.3f) * cosf(angle);
+	front->z = -sinf(0.3f);
 }
-void Camera_DeadCamRight(const float forward[3], float right[3])
+void Camera_DeadCamRight(const CVector *forward, CVector *right)
 {
-	VectorMath3 f = { forward[0], forward[1], forward[2] };
+	VectorMath3 f = { forward->x, forward->y, forward->z };
 	VectorMath3 up = { 0.0f, 0.0f, 1.0f };
 	VectorMath3 r = VectorMath_Cross(f, up);
 
 	r.z = 0.0f;
 	VectorMath_Normalise(&r);
-	right[0] = r.x;
-	right[1] = r.y;
-	right[2] = r.z;
+	right->x = r.x;
+	right->y = r.y;
+	right->z = r.z;
 }
 
-void Camera_DeadCamFront(float time, float waftRate, float tiltAmp, const float right[3], float front[3])
+void Camera_DeadCamFront(float time, float waftRate, float tiltAmp, const CVector *right, CVector *front)
 {
 	VectorMath3 f = { 0.0f, 0.0f, -1.0f };
 	float t2 = time < 2000.0f ? time : 2000.0f;
 	float k = cosf(time / waftRate) * tiltAmp * t2 / 2000.0f;
 
-	f.x += k * right[0];
-	f.y += k * right[1];
-	f.z += k * right[2];
+	f.x += k * right->x;
+	f.y += k * right->y;
+	f.z += k * right->z;
 	VectorMath_Normalise(&f);
-	front[0] = f.x;
-	front[1] = f.y;
-	front[2] = f.z;
+	front->x = f.x;
+	front->y = f.y;
+	front->z = f.z;
 }
 
-void Camera_DeadCamWaftOffset(float time, float waftAmplitude, float waftRate, const float right[3], float offset[3])
+void Camera_DeadCamWaftOffset(float time, float waftAmplitude, float waftRate, const CVector *right, CVector *offset)
 {
 	float t1 = 1000.0f < time ? 1000.0f : time;
 	float k = waftAmplitude * t1 / 1000.0f * sinf(time / waftRate);
 
-	offset[0] = k * right[0];
-	offset[1] = k * right[1];
-	offset[2] = k * right[2];
+	offset->x = k * right->x;
+	offset->y = k * right->y;
+	offset->z = k * right->z;
 }
-void Camera_OverShoulderPos(const float cop[3], const float target[3], float rightOfCop, float behindCop, float minFromTarget, float out[3])
+void Camera_OverShoulderPos(const CVector *cop, const CVector *target, float rightOfCop, float behindCop, float minFromTarget, CVector *out)
 {
-	VectorMath3 copCoors = { cop[0], cop[1], cop[2] };
-	VectorMath3 copToTarget = { target[0] - cop[0], target[1] - cop[1], target[2] - cop[2] };
+	VectorMath3 copCoors = { cop->x, cop->y, cop->z };
+	VectorMath3 copToTarget = { target->x - cop->x, target->y - cop->y, target->z - cop->z };
 	VectorMath3 up = { 0.0f, 0.0f, 1.0f };
 	VectorMath3 side = VectorMath_Cross(copToTarget, up);
 	float dist;
@@ -1098,35 +1099,35 @@ void Camera_OverShoulderPos(const float cop[3], const float target[3], float rig
 	copCoors.x -= behindCop * copToTarget.x;
 	copCoors.y -= behindCop * copToTarget.y;
 	copCoors.z -= behindCop * copToTarget.z;
-	copToTarget.x = target[0] - copCoors.x;
-	copToTarget.y = target[1] - copCoors.y;
-	copToTarget.z = target[2] - copCoors.z;
+	copToTarget.x = target->x - copCoors.x;
+	copToTarget.y = target->y - copCoors.y;
+	copToTarget.z = target->z - copCoors.z;
 	dist = sqrtf(copToTarget.x * copToTarget.x + copToTarget.y * copToTarget.y + copToTarget.z * copToTarget.z);
 	if (dist < minFromTarget && dist > 0.0f) {
 		copToTarget.x *= minFromTarget / dist;
 		copToTarget.y *= minFromTarget / dist;
 		copToTarget.z *= minFromTarget / dist;
 	}
-	out[0] = target[0] - copToTarget.x;
-	out[1] = target[1] - copToTarget.y;
-	out[2] = target[2] - copToTarget.z;
+	out->x = target->x - copToTarget.x;
+	out->y = target->y - copToTarget.y;
+	out->z = target->z - copToTarget.z;
 }
-void Camera_AlongGroundPos(const float target[3], const float cop[3], float alongGround, float sideGround, float out[3])
+void Camera_AlongGroundPos(const CVector *target, const CVector *cop, float alongGround, float sideGround, CVector *out)
 {
-	VectorMath3 copToTarget = { target[0] - cop[0], target[1] - cop[1], target[2] - cop[2] };
+	VectorMath3 copToTarget = { target->x - cop->x, target->y - cop->y, target->z - cop->z };
 	VectorMath3 up = { 0.0f, 0.0f, 1.0f };
 	VectorMath3 side;
 
 	copToTarget.z = 0.0f;
 	VectorMath_Normalise(&copToTarget);
-	out[0] = target[0] + alongGround * copToTarget.x;
-	out[1] = target[1] + alongGround * copToTarget.y;
-	out[2] = target[2] + alongGround * copToTarget.z;
+	out->x = target->x + alongGround * copToTarget.x;
+	out->y = target->y + alongGround * copToTarget.y;
+	out->z = target->z + alongGround * copToTarget.z;
 	side = VectorMath_Cross(copToTarget, up);
-	out[0] += sideGround * side.x;
-	out[1] += sideGround * side.y;
-	out[2] += sideGround * side.z;
-	out[2] += 5.0f;
+	out->x += sideGround * side.x;
+	out->y += sideGround * side.y;
+	out->z += sideGround * side.z;
+	out->z += 5.0f;
 }
 int Camera_ArrestVariantIndex(float rnd)
 {
@@ -1136,9 +1137,9 @@ int Camera_ArrestVariantIndex(float rnd)
 	else if (rnd < 4.0f) return 3;
 	return 4;
 }
-void Camera_LampPostFront(const float target[3], const float camSource[3], float rotateDist, float front[3], float up[3])
+void Camera_LampPostFront(const CVector *target, const CVector *camSource, float rotateDist, CVector *front, CVector *up)
 {
-	VectorMath3 toTarget = { target[0] - camSource[0], target[1] - camSource[1], target[2] - camSource[2] };
+	VectorMath3 toTarget = { target->x - camSource->x, target->y - camSource->y, target->z - camSource->z };
 	VectorMath3 f = toTarget;
 	VectorMath3 u = { 0.0f, 0.0f, 1.0f };
 	VectorMath3 right;
@@ -1152,27 +1153,27 @@ void Camera_LampPostFront(const float target[3], const float camSource[3], float
 	f.z = toTarget.z + right.z * rotateDist;
 	f.z = 0.0f;
 	VectorMath_Normalise(&f);
-	front[0] = f.x; front[1] = f.y; front[2] = f.z;
-	up[0] = u.x; up[1] = u.y; up[2] = u.z;
+	front->x = f.x; front->y = f.y; front->z = f.z;
+	up->x = u.x; up->y = u.y; up->z = u.z;
 }
-float Camera_DragDistance(float dist[3], float minDist, float maxDist)
+float Camera_DragDistance(CVector *dist, float minDist, float maxDist)
 {
-	float camDist = sqrtf(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]);
+	float camDist = sqrtf(dist->x * dist->x + dist->y * dist->y + dist->z * dist->z);
 
 	if (camDist == 0.0f) {
-		dist[0] = 1.0f;
-		dist[1] = 1.0f;
-		dist[2] = 0.0f;
+		dist->x = 1.0f;
+		dist->y = 1.0f;
+		dist->z = 0.0f;
 	} else if (camDist < minDist) {
-		dist[0] *= minDist / camDist;
-		dist[1] *= minDist / camDist;
-		dist[2] *= minDist / camDist;
+		dist->x *= minDist / camDist;
+		dist->y *= minDist / camDist;
+		dist->z *= minDist / camDist;
 	} else if (camDist > maxDist) {
-		dist[0] *= maxDist / camDist;
-		dist[1] *= maxDist / camDist;
-		dist[2] *= maxDist / camDist;
+		dist->x *= maxDist / camDist;
+		dist->y *= maxDist / camDist;
+		dist->z *= maxDist / camDist;
 	}
-	return sqrtf(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]);
+	return sqrtf(dist->x * dist->x + dist->y * dist->y + dist->z * dist->z);
 }
 float Camera_TransitionBetaAngle(float transitionBeta)
 {
@@ -1339,26 +1340,26 @@ bool Camera_ScriptDistanceOutOfRange(float distance, float farLimit, float nearL
 {
 	return distance > farLimit || distance < nearLimit;
 }
-void Camera_AheadPosition(const float coors[3], const float speed[3], float ahead, float out[3])
+void Camera_AheadPosition(const CVector *coors, const CVector *speed, float ahead, CVector *out)
 {
-	VectorMath3 v = { speed[0], speed[1], 0.0f };
+	VectorMath3 v = { speed->x, speed->y, 0.0f };
 
 	VectorMath_Normalise(&v);
-	out[0] = coors[0] + ahead * v.x;
-	out[1] = coors[1] + ahead * v.y;
-	out[2] = coors[2] + ahead * v.z;
+	out->x = coors->x + ahead * v.x;
+	out->y = coors->y + ahead * v.y;
+	out->z = coors->z + ahead * v.z;
 }
-void Camera_AheadAndSidePosition(const float coors[3], const float speed[3], float ahead, float side, float out[3])
+void Camera_AheadAndSidePosition(const CVector *coors, const CVector *speed, float ahead, float side, CVector *out)
 {
-	VectorMath3 v = { speed[0], speed[1], 0.0f };
+	VectorMath3 v = { speed->x, speed->y, 0.0f };
 
 	VectorMath_Normalise(&v);
-	out[0] = coors[0] + ahead * v.x;
-	out[1] = coors[1] + ahead * v.y;
-	out[2] = coors[2] + ahead * v.z;
-	out[0] += side * v.y;
-	out[1] += side * -v.x;
-	out[2] += side * 0.0f;
+	out->x = coors->x + ahead * v.x;
+	out->y = coors->y + ahead * v.y;
+	out->z = coors->z + ahead * v.z;
+	out->x += side * v.y;
+	out->y += side * -v.x;
+	out->z += side * 0.0f;
 }
 int Camera_ScriptStartVerdict(float distance, float speedTowardsDir, float farLimit, float nearLimit)
 {
@@ -1393,17 +1394,17 @@ float Camera_RaisedAboveGround(float camZ, float groundZ)
 {
 	return camZ < groundZ ? groundZ + 0.5f : camZ;
 }
-float Camera_TargetForwardOrientation(const float forward[3])
+float Camera_TargetForwardOrientation(const CVector *forward)
 {
-	VectorMath3 v = { forward[0], forward[1], forward[2] };
+	VectorMath3 v = { forward->x, forward->y, forward->z };
 
 	VectorMath_Normalise(&v);
 	return General_GetATanOfXY(v.x, v.y);
 }
-void Camera_SideFront(const float upIn[3], const float forwardIn[3], bool negate, float upOut[3], float frontOut[3])
+void Camera_SideFront(const CVector *upIn, const CVector *forwardIn, bool negate, CVector *upOut, CVector *frontOut)
 {
-	VectorMath3 up = { upIn[0], upIn[1], upIn[2] };
-	VectorMath3 front = { forwardIn[0], forwardIn[1], forwardIn[2] };
+	VectorMath3 up = { upIn->x, upIn->y, upIn->z };
+	VectorMath3 front = { forwardIn->x, forwardIn->y, forwardIn->z };
 
 	// Normalise the up and forward directions
 	VectorMath_Normalise(&up);
@@ -1417,20 +1418,20 @@ void Camera_SideFront(const float upIn[3], const float forwardIn[3], bool negate
 		front.z = -front.z;
 	}
 	VectorMath_Normalise(&front);
-	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
-	frontOut[0] = front.x; frontOut[1] = front.y; frontOut[2] = front.z;
+	upOut->x = up.x; upOut->y = up.y; upOut->z = up.z;
+	frontOut->x = front.x; frontOut->y = front.y; frontOut->z = front.z;
 }
-void Camera_NormalisedDifference(const float a[3], const float b[3], float out[3])
+void Camera_NormalisedDifference(const CVector *a, const CVector *b, CVector *out)
 {
-	VectorMath3 v = { a[0] - b[0], a[1] - b[1], a[2] - b[2] };
+	VectorMath3 v = { a->x - b->x, a->y - b->y, a->z - b->z };
 
 	VectorMath_Normalise(&v);
-	out[0] = v.x; out[1] = v.y; out[2] = v.z;
+	out->x = v.x; out->y = v.y; out->z = v.z;
 }
-void Camera_OrthonormalBasis(const float frontIn[3], const float upIn[3], float frontOut[3], float rightOut[3], float upOut[3])
+void Camera_OrthonormalBasis(const CVector *frontIn, const CVector *upIn, CVector *frontOut, CVector *rightOut, CVector *upOut)
 {
-	VectorMath3 front = { frontIn[0], frontIn[1], frontIn[2] };
-	VectorMath3 up = { upIn[0], upIn[1], upIn[2] };
+	VectorMath3 front = { frontIn->x, frontIn->y, frontIn->z };
+	VectorMath3 up = { upIn->x, upIn->y, upIn->z };
 	VectorMath3 right;
 
 	// Normalise the front and up directions
@@ -1442,13 +1443,13 @@ void Camera_OrthonormalBasis(const float frontIn[3], const float upIn[3], float 
 	VectorMath_Normalise(&right);
 	up = VectorMath_Cross(right, front);
 	VectorMath_Normalise(&up);
-	frontOut[0] = front.x; frontOut[1] = front.y; frontOut[2] = front.z;
-	rightOut[0] = right.x; rightOut[1] = right.y; rightOut[2] = right.z;
-	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
+	frontOut->x = front.x; frontOut->y = front.y; frontOut->z = front.z;
+	rightOut->x = right.x; rightOut->y = right.y; rightOut->z = right.z;
+	upOut->x = up.x; upOut->y = up.y; upOut->z = up.z;
 }
-void Camera_TopDownBasis(const float frontIn[3], float frontOut[3], float rightOut[3], float upOut[3])
+void Camera_TopDownBasis(const CVector *frontIn, CVector *frontOut, CVector *rightOut, CVector *upOut)
 {
-	VectorMath3 front = { frontIn[0], frontIn[1], frontIn[2] };
+	VectorMath3 front = { frontIn->x, frontIn->y, frontIn->z };
 	VectorMath3 right = { -1.0f, 0.0f, 0.0f };
 	VectorMath3 up;
 
@@ -1456,8 +1457,8 @@ void Camera_TopDownBasis(const float frontIn[3], float frontOut[3], float rightO
 	VectorMath_Normalise(&front);
 	up = VectorMath_Cross(front, right);
 	VectorMath_Normalise(&up);
-	frontOut[0] = front.x; frontOut[1] = front.y; frontOut[2] = front.z;
-	rightOut[0] = right.x; rightOut[1] = right.y; rightOut[2] = right.z;
-	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
+	frontOut->x = front.x; frontOut->y = front.y; frontOut->z = front.z;
+	rightOut->x = right.x; rightOut->y = right.y; rightOut->z = right.z;
+	upOut->x = up.x; upOut->y = up.y; upOut->z = up.z;
 }
 //- rouz edit (Claude)

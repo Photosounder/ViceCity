@@ -573,7 +573,7 @@ Initialise3D(void *param)
 		DebugMenuInit();
 		DebugMenuPopulate();
 #endif // !DEBUGMENU
-		return CGame::InitialiseRenderWare();
+		return Game_InitialiseRenderWare();
 	}
 	POP_MEMID();
 
@@ -583,7 +583,7 @@ Initialise3D(void *param)
 static void 
 Terminate3D(void)
 {
-	CGame::ShutdownRenderWare();
+	Game_ShutdownRenderWare();
 #ifdef DEBUGMENU
 	DebugMenuShutdown();
 #endif // !DEBUGMENU
@@ -738,7 +738,7 @@ LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 		Sprite2d_SetRecipNearClip();
 		// Preserve the original operation through the C sprite interface
 		Sprite2d_InitPerFrame();
-		CFont::InitPerFrame();
+		Font_InitPerFrame();
 		DefinedState();
 		RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
 		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
@@ -779,35 +779,35 @@ LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 })(Rect_Make(hpos, top, hpos+length, bottom), CRGBA(255, 150, 225, 255));
 
 			// this is done by the game but is unused
-			CFont::SetBackgroundOff();
-			CFont::SetScale(SCREEN_SCALE_X(2), SCREEN_SCALE_Y(2));
-			CFont::SetPropOn();
-			CFont::SetRightJustifyOn();
-			CFont::SetDropShadowPosition(1);
-			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-			CFont::SetFontStyle(FONT_HEADING);
+			Font_SetBackgroundOff();
+			Font_SetScale(SCREEN_SCALE_X(2), SCREEN_SCALE_Y(2));
+			Font_SetPropOn();
+			Font_SetRightJustifyOn();
+			Font_SetDropShadowPosition(1);
+			Font_SetDropColor(CRGBA(0, 0, 0, 255));
+			Font_SetFontStyle(FONT_HEADING);
 
 #ifdef CHATTYSPLASH
 			// my attempt
 			static wchar tmpstr[80];
 			float yscale = SCREEN_SCALE_Y(0.9f);
 			top -= 45*yscale;
-			CFont::SetScale(SCREEN_SCALE_X(0.75f), yscale);
-			CFont::SetPropOn();
-			CFont::SetRightJustifyOff();
-			CFont::SetFontStyle(FONT_STANDARD);
-			CFont::SetColor(CRGBA(255, 255, 255, 255));
+			Font_SetScale(SCREEN_SCALE_X(0.75f), yscale);
+			Font_SetPropOn();
+			Font_SetRightJustifyOff();
+			Font_SetFontStyle(FONT_STANDARD);
+			Font_SetColor(CRGBA(255, 255, 255, 255));
 			AsciiToUnicode(str1, tmpstr);
-			CFont::PrintString(hpos, top, tmpstr);
+			Font_PrintString(hpos, top, tmpstr);
 			top += 22*yscale;
 			if (str2) {
 				AsciiToUnicode(str2, tmpstr);
-				CFont::PrintString(hpos, top, tmpstr);
+				Font_PrintString(hpos, top, tmpstr);
 			}
 #endif
 		}
 
-		CFont::DrawFonts();
+		Font_DrawFonts();
  		DoRWStuffEndOfFrame();
 	}
 }
@@ -825,7 +825,7 @@ LoadingIslandScreen(const char *levelName)
 	Sprite2d_SetRecipNearClip();
 	// Preserve the original operation through the C sprite interface
 	Sprite2d_InitPerFrame();
-	CFont::InitPerFrame();
+	Font_InitPerFrame();
 	DefinedState();
 	CRGBA col = CRGBA(255, 255, 255, 255);
 	CRGBA col2 = CRGBA(0, 0, 0, 255);
@@ -837,7 +837,7 @@ LoadingIslandScreen(const char *levelName)
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectColours(spriteSelf,&rect,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
 })(splash,Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), col, col, col, col);
-	CFont::DrawFonts();
+	Font_DrawFonts();
 	DoRWStuffEndOfFrame();
 }
 
@@ -969,23 +969,23 @@ void
 PrintMemoryUsage(void)
 {
 // little hack
-if(CPools::GetPtrNodePool() == nil)
+if(Pools_GetPtrNodePool() == nil)
 return;
 
 	// Style taken from LCS, modified for III
 //	CFont::SetFontStyle(FONT_PAGER);
-	CFont::SetFontStyle(FONT_BANK);
-	CFont::SetBackgroundOff();
-	CFont::SetWrapx(640.0f);
+	Font_SetFontStyle(FONT_BANK);
+	Font_SetBackgroundOff();
+	Font_SetWrapx(640.0f);
 //	CFont::SetScale(0.5f, 0.75f);
-	CFont::SetScale(0.4f, 0.75f);
-	CFont::SetCentreOff();
-	CFont::SetCentreSize(640.0f);
-	CFont::SetJustifyOff();
-	CFont::SetPropOn();
-	CFont::SetColor(CRGBA(200, 200, 200, 200));
-	CFont::SetBackGroundOnlyTextOff();
-	CFont::SetDropShadowPosition(0);
+	Font_SetScale(0.4f, 0.75f);
+	Font_SetCentreOff();
+	Font_SetCentreSize(640.0f);
+	Font_SetJustifyOff();
+	Font_SetPropOn();
+	Font_SetColor(CRGBA(200, 200, 200, 200));
+	Font_SetBackGroundOnlyTextOff();
+	Font_SetDropShadowPosition(0);
 
 	float y;
 
@@ -993,181 +993,181 @@ return;
 	y = 24.0f;
 	sprintf(gString, "Total: %d blocks, %d bytes", gMainHeap.m_totalBlocksUsed, gMainHeap.m_totalMemUsed);
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Game: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_GAME), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_GAME));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "World: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_WORLD), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_WORLD));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Render: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_RENDER), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_RENDER));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "PreAlloc: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_PRE_ALLOC), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_PRE_ALLOC));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Default Models: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_DEF_MODELS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_DEF_MODELS));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Textures: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_TEXTURES), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_TEXTURES));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Streaming: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Streamed Models: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_MODELS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_MODELS));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Streamed LODs: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_LODS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_LODS));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Streamed Textures: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_TEXUTRES), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_TEXUTRES));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Streamed Collision: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_COLLISION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_COLLISION));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Streamed Animation: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_ANIMATION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_ANIMATION));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Ped Attr: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_PED_ATTR), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_PED_ATTR));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Animation: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_ANIMATION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_ANIMATION));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Pools: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_POOLS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_POOLS));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Collision: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_COLLISION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_COLLISION));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Game Process: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_GAME_PROCESS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_GAME_PROCESS));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Script: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_SCRIPT), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_SCRIPT));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
 	// Use the complete C heap operation with the original live owner
 	sprintf(gString, "Cars: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_CARS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_CARS));
 	AsciiToUnicode(gString, gUString);
-	CFont::PrintString(24.0f, y, gUString);
+	Font_PrintString(24.0f, y, gUString);
 	y += 12.0f;
 #endif
 
 	y = 132.0f;
 	AsciiToUnicode("Pools usage:", gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "PtrNode: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetPtrNodePool()), CPool_GetSize(CPools::GetPtrNodePool()));
+	sprintf(gString, "PtrNode: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetPtrNodePool()), CPool_GetSize(Pools_GetPtrNodePool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "EntryInfoNode: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetEntryInfoNodePool()), CPool_GetSize(CPools::GetEntryInfoNodePool()));
+	sprintf(gString, "EntryInfoNode: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetEntryInfoNodePool()), CPool_GetSize(Pools_GetEntryInfoNodePool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "Ped: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetPedPool()), CPool_GetSize(CPools::GetPedPool()));
+	sprintf(gString, "Ped: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetPedPool()), CPool_GetSize(Pools_GetPedPool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "Vehicle: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetVehiclePool()), CPool_GetSize(CPools::GetVehiclePool()));
+	sprintf(gString, "Vehicle: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetVehiclePool()), CPool_GetSize(Pools_GetVehiclePool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "Building: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetBuildingPool()), CPool_GetSize(CPools::GetBuildingPool()));
+	sprintf(gString, "Building: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetBuildingPool()), CPool_GetSize(Pools_GetBuildingPool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "Treadable: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetTreadablePool()), CPool_GetSize(CPools::GetTreadablePool()));
+	sprintf(gString, "Treadable: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetTreadablePool()), CPool_GetSize(Pools_GetTreadablePool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "Object: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetObjectPool()), CPool_GetSize(CPools::GetObjectPool()));
+	sprintf(gString, "Object: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetObjectPool()), CPool_GetSize(Pools_GetObjectPool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "Dummy: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetDummyPool()), CPool_GetSize(CPools::GetDummyPool()));
+	sprintf(gString, "Dummy: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetDummyPool()), CPool_GetSize(Pools_GetDummyPool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
 		// Access raw storage through the C store or pool API
-	sprintf(gString, "AudioScriptObjects: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetAudioScriptObjectPool()), CPool_GetSize(CPools::GetAudioScriptObjectPool()));
+	sprintf(gString, "AudioScriptObjects: %d/%d", CPool_GetNoOfUsedSpaces(Pools_GetAudioScriptObjectPool()), CPool_GetSize(Pools_GetAudioScriptObjectPool()));
 		AsciiToUnicode(gString, gUString);
-	CFont::PrintString(400.0f, y, gUString);
+	Font_PrintString(400.0f, y, gUString);
 	y += 12.0f;
 }
 
@@ -1233,22 +1233,22 @@ DisplayGameDebugText()
 		    "%.8s",
 		    g_GIT_SHA1);
 	AsciiToUnicode(verA, ver);
-	CFont::SetScale(SCREEN_SCALE_X(0.5f), SCREEN_SCALE_Y(0.7f));
+	Font_SetScale(SCREEN_SCALE_X(0.5f), SCREEN_SCALE_Y(0.7f));
 #else
 	AsciiToUnicode(version_name, ver);
-	CFont::SetScale(SCREEN_SCALE_X(0.5f), SCREEN_SCALE_Y(0.5f));
+	Font_SetScale(SCREEN_SCALE_X(0.5f), SCREEN_SCALE_Y(0.5f));
 #endif
 
-	CFont::SetPropOn();
-	CFont::SetBackgroundOff();
-	CFont::SetFontStyle(FONT_STANDARD);
-	CFont::SetCentreOff();
-	CFont::SetRightJustifyOff();
-	CFont::SetWrapx(SCREEN_WIDTH);
-	CFont::SetJustifyOff();
-	CFont::SetBackGroundOnlyTextOff();
-	CFont::SetColor(CRGBA(255, 108, 0, 255));
-	CFont::PrintString(SCREEN_SCALE_X(10.0f), SCREEN_SCALE_Y(10.0f), ver);
+	Font_SetPropOn();
+	Font_SetBackgroundOff();
+	Font_SetFontStyle(FONT_STANDARD);
+	Font_SetCentreOff();
+	Font_SetRightJustifyOff();
+	Font_SetWrapx(SCREEN_WIDTH);
+	Font_SetJustifyOff();
+	Font_SetBackGroundOnlyTextOff();
+	Font_SetColor(CRGBA(255, 108, 0, 255));
+	Font_PrintString(SCREEN_SCALE_X(10.0f), SCREEN_SCALE_Y(10.0f), ver);
 	}
 #endif // #ifdef DRAW_GAME_VERSION_TEXT
 
@@ -1292,22 +1292,22 @@ DisplayGameDebugText()
 
 		AsciiToUnicode(str, ustr);
 		
-		CFont::SetPropOn();
-		CFont::SetBackgroundOff();
-		CFont::SetScale(SCREEN_SCALE_X(0.6f), SCREEN_SCALE_Y(0.8f));
-		CFont::SetCentreOff();
-		CFont::SetRightJustifyOff();
-		CFont::SetJustifyOff();
-		CFont::SetBackGroundOnlyTextOff();
-		CFont::SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
-		CFont::SetFontStyle(FONT_STANDARD);
-		CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-		CFont::SetDropShadowPosition(2);
-		CFont::SetColor(CRGBA(0, 0, 0, 255));
-		CFont::PrintString(41.0f, 41.0f, ustr);
+		Font_SetPropOn();
+		Font_SetBackgroundOff();
+		Font_SetScale(SCREEN_SCALE_X(0.6f), SCREEN_SCALE_Y(0.8f));
+		Font_SetCentreOff();
+		Font_SetRightJustifyOff();
+		Font_SetJustifyOff();
+		Font_SetBackGroundOnlyTextOff();
+		Font_SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
+		Font_SetFontStyle(FONT_STANDARD);
+		Font_SetDropColor(CRGBA(0, 0, 0, 255));
+		Font_SetDropShadowPosition(2);
+		Font_SetColor(CRGBA(0, 0, 0, 255));
+		Font_PrintString(41.0f, 41.0f, ustr);
 		
-		CFont::SetColor(CRGBA(205, 205, 0, 255));
-		CFont::PrintString(40.0f, 40.0f, ustr);
+		Font_SetColor(CRGBA(205, 205, 0, 255));
+		Font_PrintString(40.0f, 40.0f, ustr);
 	}
 
 	// custom
@@ -1316,19 +1316,19 @@ DisplayGameDebugText()
 		sprintf(str, "%s", Input_keyboardCheatString); // rouz edit (ChatGPT)
 		AsciiToUnicode(str, ustr);
 
-		CFont::SetPropOn();
-		CFont::SetBackgroundOff();
-		CFont::SetScale(SCREEN_SCALE_X(0.6f), SCREEN_SCALE_Y(0.8f));
-		CFont::SetCentreOn();
-		CFont::SetBackGroundOnlyTextOff();
-		CFont::SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
-		CFont::SetFontStyle(FONT_STANDARD);
+		Font_SetPropOn();
+		Font_SetBackgroundOff();
+		Font_SetScale(SCREEN_SCALE_X(0.6f), SCREEN_SCALE_Y(0.8f));
+		Font_SetCentreOn();
+		Font_SetBackGroundOnlyTextOff();
+		Font_SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
+		Font_SetFontStyle(FONT_STANDARD);
 
-		CFont::SetColor(CRGBA(0, 0, 0, 255));
-		CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH * 0.5f)+2.f, SCREEN_SCALE_FROM_BOTTOM(20.0f)+2.f, ustr);
+		Font_SetColor(CRGBA(0, 0, 0, 255));
+		Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH * 0.5f)+2.f, SCREEN_SCALE_FROM_BOTTOM(20.0f)+2.f, ustr);
 
-		CFont::SetColor(CRGBA(255, 150, 225, 255));
-		CFont::PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH * 0.5f), SCREEN_SCALE_FROM_BOTTOM(20.0f), ustr);
+		Font_SetColor(CRGBA(255, 150, 225, 255));
+		Font_PrintString(SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH * 0.5f), SCREEN_SCALE_FROM_BOTTOM(20.0f), ustr);
 	}
 }
 #endif
@@ -1358,12 +1358,12 @@ MattRenderScene(void)
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
 #endif
-		CWaterLevel::RenderWater();	// actually CMattRenderer::RenderWater
+		WaterLevel_RenderWater();	// actually CMattRenderer::RenderWater
 		// CClock::ms_EnvMapTimeMultiplicator = 1.0f;
 	// cWorldStream::ClearDynamics
 	/// CRenderer::ConstructRenderList();	// before PreRender
 if(gbRenderWorld0)
-	CRenderer::RenderWorld(0);	// roads
+	Renderer_RenderWorld(0);	// roads
 	// CMattRenderer::ResetRenderStates
 	/// CRenderer::PreRender();	// has to be called before BeginUpdate because of cutscene shadows
 	// Avoid building road reflections when world effects are disabled
@@ -1372,21 +1372,21 @@ if(gbRenderWorld0)
 #endif
 		CCoronas::RenderReflections();
 	if(gbRenderWorld1)
-	CRenderer::RenderWorld(1);	// opaque
+	Renderer_RenderWorld(1);	// opaque
 if(gbRenderRoads)
-	CRenderer::RenderRoads();
+	Renderer_RenderRoads();
 
 	// Submit pedestrians only when their software stage is enabled
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderPedsStage.load(std::memory_order_relaxed))
 #endif
-		CRenderer::RenderPeds();
+		Renderer_RenderPeds();
 	
 	// not sure where to put these since LCS has no underwater entities
 if(gbRenderBoats)
-	CRenderer::RenderBoats();
+	Renderer_RenderBoats();
 if(gbRenderFadingInUnderwaterEntities)
-	CRenderer::RenderFadingInUnderwaterEntities();
+	Renderer_RenderFadingInUnderwaterEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Keep transparent water under the same runtime water switch
 	if(gbRenderWater
@@ -1394,19 +1394,19 @@ if(gbRenderFadingInUnderwaterEntities)
 	&& SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed)
 #endif
 )
-	CRenderer::RenderTransparentWater();
+	Renderer_RenderTransparentWater();
 	
 if(gbRenderEverythingBarRoads)
-	CRenderer::RenderEverythingBarRoads();
+	Renderer_RenderEverythingBarRoads();
 	#ifdef REVC_SOFTWARE_POLYGONS
 	// Submit vehicle geometry before the scene framebuffer is uploaded
 	if(gbRenderVehicles && SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
-		CRenderer::RenderSoftwareVehicles();
+		Renderer_RenderSoftwareVehicles();
 	// Submit the transparent world and fading entities before the framebuffer upload
 		if(gbRenderWorld2)
-		CRenderer::RenderWorld(2);
+		Renderer_RenderWorld(2);
 	if(gbRenderFadingInEntities)
-		CRenderer::RenderFadingInEntities();
+		Renderer_RenderFadingInEntities();
 	#endif
 		// seam fixer
 	// moved this:
@@ -1461,23 +1461,23 @@ RenderEffects_new(void)
 		// Enter the C 3D-marker controller with the original arguments
 		Markers3D_Render();	// normally rendered in SpecialFX_Render()
 if(gbRenderWorld2)
-		CRenderer::RenderWorld(2);	// transparent
+		Renderer_RenderWorld(2);	// transparent
 		#ifndef REVC_SOFTWARE_POLYGONS
 if(gbRenderVehicles)
-		CRenderer::RenderVehicles();
+		Renderer_RenderVehicles();
 #endif
 			}else{
 		// flipped these two, seems to give the best result
 if(gbRenderWorld2)
-		CRenderer::RenderWorld(2);	// transparent
+		Renderer_RenderWorld(2);	// transparent
 		#ifndef REVC_SOFTWARE_POLYGONS
 if(gbRenderVehicles)
-		CRenderer::RenderVehicles();
+		Renderer_RenderVehicles();
 #endif
 			}
 	// better render these after transparent world
 if(gbRenderFadingInEntities)
-	CRenderer::RenderFadingInEntities();
+	Renderer_RenderFadingInEntities();
 
 	// actual effects here
 
@@ -1489,7 +1489,7 @@ if(gbRenderFadingInEntities)
 	// Enter the C rubbish algorithm with the original owner expressions
 	Rubbish_Render();
 
-	CGlass::Render();
+	Glass_Render();
 	// CMattRenderer::ResetRenderStates
 	DefinedState();
 	CCoronas::RenderSunReflection();
@@ -1505,14 +1505,14 @@ if(gbRenderFadingInEntities)
 	Ropes_Render();
 	CCoronas::Render();
 	CParticle::Render();
-	CPacManPickups::Render();
+	PacManPickups_Render();
 	// Enter the complete C weapon effect operation
 	WeaponEffects_Render();
 	// Enter the C point-light algorithm with the original owner expressions
 	PointLights_RenderFogEffect();
 	// Enter the C moving-scenery algorithm at the original call point
 	MovingThings_Render();
-	CRenderer::RenderFirstPersonVehicle();
+	Renderer_RenderFirstPersonVehicle();
 	POP_RENDERGROUP();
 }
 #endif
@@ -1611,7 +1611,7 @@ static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 static void RegisterSoftwarePedShadows(void)
 {
 	// Register world-visible pedestrians with the game's current sun-shadow geometry
-	CPedPool *pedPool = CPools::GetPedPool();
+	CPedPool *pedPool = Pools_GetPedPool();
 	if(!pedPool)
 		return;
 
@@ -1652,7 +1652,7 @@ static void RenderSoftwareWorldEffects(void)
 	Skidmarks_Render();
 	// Enter the C rubbish algorithm with the original owner expressions
 	Rubbish_Render();
-	CGlass::Render();
+	Glass_Render();
 	// Restore the standard effect states after glass highlights
 		DefinedState();
 		// Draw sky reflections and rain after deferred transparent world geometry
@@ -1676,14 +1676,14 @@ static void RenderSoftwareWorldEffects(void)
 	// Capture sprite based effects and first-person vehicle geometry on the CPU
 	CCoronas::Render();
 	CParticle::Render();
-	CPacManPickups::Render();
+	PacManPickups_Render();
 	// Enter the complete C weapon effect operation
 	WeaponEffects_Render();
 	// Enter the C point-light algorithm with the original owner expressions
 	PointLights_RenderFogEffect();
 	// Enter the C moving-scenery algorithm at the original call point
 	MovingThings_Render();
-	CRenderer::RenderFirstPersonVehicle();
+	Renderer_RenderFirstPersonVehicle();
 		SoftwarePolygons::EndWorldEffects();
 }
 #endif
@@ -1739,33 +1739,33 @@ RenderScene(void)
 #ifdef REVC_SOFTWARE_POLYGONS
 	}
 #endif
-		CRenderer::RenderRoads();
+		Renderer_RenderRoads();
 	// Avoid building road reflections when world effects are disabled
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed))
 #endif
 		CCoronas::RenderReflections();
-		CRenderer::RenderEverythingBarRoads();
+		Renderer_RenderEverythingBarRoads();
 	#ifdef REVC_SOFTWARE_POLYGONS
 	// Submit vehicles deferred outside the new renderer scene path
 	if(gbRenderVehicles && SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
-		CRenderer::RenderSoftwareVehicles();
+		Renderer_RenderSoftwareVehicles();
 #endif
 		RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Keep water independent from opaque world geometry
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
 #endif
-		CWaterLevel::RenderWater();
-		CRenderer::RenderBoats();
-	CRenderer::RenderFadingInUnderwaterEntities();
+		WaterLevel_RenderWater();
+		Renderer_RenderBoats();
+	Renderer_RenderFadingInUnderwaterEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Skip transparent water when the water stage is disabled
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
 #endif
-		CWaterLevel::RenderTransparentWater();
-		CRenderer::RenderFadingInEntities();
+		WaterLevel_RenderTransparentWater();
+		Renderer_RenderFadingInEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Leave these effects to the software pass after transparent triangles are composited
 	#ifndef REVC_SOFTWARE_POLYGONS
@@ -1790,10 +1790,10 @@ RenderDebugShit(void)
 {
 	// Capture world debug lines alongside the software scene // rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("RenderDebugShit");
-	CTheScripts::RenderTheScriptDebugLines();
+	TheScripts_RenderTheScriptDebugLines();
 #ifndef FINAL
 	if(gbShowCollisionLines)
-		CRenderer::RenderCollisionLines();
+		Renderer_RenderCollisionLines();
 	ThePaths.DisplayPathData();
 	Debug_DrawLines();
 	DefinedState();
@@ -1815,7 +1815,7 @@ RenderEffects(void)
 	}
 #endif
 	PUSH_RENDERGROUP("RenderEffects");
-	CGlass::Render();
+	Glass_Render();
 	// Enter the C water-cannon algorithm with the original owner expressions
 	WaterCannons_Render();
 	// Enter the C special-effects controller with the original arguments
@@ -1832,14 +1832,14 @@ RenderEffects(void)
 	Rubbish_Render();
 	CCoronas::Render();
 	CParticle::Render();
-	CPacManPickups::Render();
+	PacManPickups_Render();
 	// Enter the complete C weapon effect operation
 	WeaponEffects_Render();
 	// Enter the C point-light algorithm with the original owner expressions
 	PointLights_RenderFogEffect();
 	// Enter the C moving-scenery algorithm at the original call point
 	MovingThings_Render();
-	CRenderer::RenderFirstPersonVehicle();
+	Renderer_RenderFirstPersonVehicle();
 	POP_RENDERGROUP();
 }
 
@@ -1861,7 +1861,7 @@ Render2dStuff(void)
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 
 	CReplay::Display();
-	CPickups::RenderPickUpText();
+	Pickups_RenderPickUpText();
 
 	if(TheCamera.m_WideScreenOn
 #ifdef CUTSCENE_BORDERS_SWITCH
@@ -1923,22 +1923,22 @@ Render2dStuff(void)
 	// Enter the complete C console implementation with the original singleton
 	Console_Display(&TheConsole);
 #ifdef GTA_SCENE_EDIT
-	if(CSceneEdit::m_bEditOn)
-		CSceneEdit::Draw();
+	if(SceneEdit_m_bEditOn)
+		SceneEdit_Draw();
 	else
 #endif
-		CHud::Draw();
+		Hud_Draw();
 
 	// Enter the C special-effects controller with the original arguments
 	SpecialFX_Render2DFXs();
 	OnscreenTimer_ProcessForDisplay(&OnscreenTimer_state);
 	Messages_Display();
 	Darkel_DrawMessages();
-	CGarages::PrintMessages();
+	Garages_PrintMessages();
 	CPad::PrintErrorMessage();
-	CFont::DrawFonts();
+	Font_DrawFonts();
 #ifndef MASTER
-	COcclusion::Render();
+	Occlusion_Render();
 #endif
 
 #ifdef DEBUGMENU
@@ -1981,8 +1981,8 @@ Render2dStuffAfterFade(void)
 #ifdef MOBILE_IMPROVEMENTS
 	if (Draw_FadeValue != 0)
 #endif
-	CHud::DrawAfterFade();
-	CFont::DrawFonts();
+	Hud_DrawAfterFade();
+	Font_DrawFonts();
 	// Enter the complete C credits implementation with the original arguments
 	Credits_Render();
 	POP_RENDERGROUP();
@@ -1997,14 +1997,14 @@ Idle(void *arg)
 
 	// Preserve the original operation through the C sprite interface
 	Sprite2d_InitPerFrame();
-	CFont::InitPerFrame();
+	Font_InitPerFrame();
 
 	PUSH_MEMID(MEMID_GAME_PROCESS);
 	// Enter the C point-light algorithm with the original owner expressions
 	PointLights_InitPerFrame();
 
 	tbStartTimer(0, "CGame::Process");
-	CGame::Process();
+	Game_Process();
 	tbEndTimer("CGame::Process");
 	POP_MEMID();
 
@@ -2012,7 +2012,7 @@ Idle(void *arg)
 	DMAudio_Service();
 	tbEndTimer("DMAudio.Service");
 
-	if(CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !Cutscene_IsProcessing()){ // rouz edit (ChatGPT)
+	if(Game_bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !Cutscene_IsProcessing()){ // rouz edit (ChatGPT)
 		WANT_TO_LOAD = false;
 		FrontEndMenuManager.m_bWantToRestart = true;
 		return;
@@ -2043,19 +2043,19 @@ Idle(void *arg)
 
 		tbStartTimer(0, "CnstrRenderList");
 #ifdef PC_WATER
-		CWaterLevel::PreCalcWaterGeometry();
+		WaterLevel_PreCalcWaterGeometry();
 #endif
 #ifdef NEW_RENDERER
 		if(gbNewRenderer){
-			CWorld::AdvanceCurrentScanCode();	// don't think this is even necessary
-			CRenderer::ClearForFrame();
+			World_AdvanceCurrentScanCode();	// don't think this is even necessary
+			Renderer_ClearForFrame();
 		}
 #endif
-		CRenderer::ConstructRenderList();
+		Renderer_ConstructRenderList();
 		tbEndTimer("CnstrRenderList");
 
 		tbStartTimer(0, "PreRender");
-		CRenderer::PreRender();
+		Renderer_PreRender();
 		tbEndTimer("PreRender");
 
 #ifdef FIX_BUGS
@@ -2201,7 +2201,7 @@ FrontendIdle(void)
 	Sprite2d_SetRecipNearClip(); // this should be on InitialiseRenderWare according to PS2 asm. seems like a bug fix
 	// Preserve the original operation through the C sprite interface
 	Sprite2d_InitPerFrame();
-	CFont::InitPerFrame();
+	Font_InitPerFrame();
 	CPad::UpdatePads();
 	FrontEndMenuManager.Process();
 
@@ -2221,7 +2221,7 @@ FrontendIdle(void)
 #endif
 	DoFade();
 	Render2dStuffAfterFade();
-	CFont::DrawFonts();
+	Font_DrawFonts();
 	DoRWStuffEndOfFrame();
 }
 
@@ -2229,7 +2229,7 @@ void
 InitialiseGame(void)
 {
 	LoadingScreen(nil, nil, "loadsc0");
-	CGame::Initialise("DATA\\GTA_VC.DAT");
+	Game_Initialise("DATA\\GTA_VC.DAT");
 }
 
 RsEventStatus
@@ -2239,7 +2239,7 @@ AppEventHandler(RsEvent event, void *param)
 	{
 		case rsINITIALIZE:
 		{
-			CGame::InitialiseOnceBeforeRW();
+			Game_InitialiseOnceBeforeRW();
 			return RsInitialize() ? rsEVENTPROCESSED : rsEVENTERROR;
 		}
 
@@ -2266,7 +2266,7 @@ AppEventHandler(RsEvent event, void *param)
 
 		case rsTERMINATE:
 		{
-			CGame::FinalShutdown();
+			Game_FinalShutdown();
 
 			return rsEVENTPROCESSED;
 		}
@@ -2327,7 +2327,7 @@ TheModelViewer(void)
 	AnimViewer_Update(); // rouz edit (ChatGPT)
 	// Use the complete C lighting owner and its borrowed SDK handles
 	Lights_SetLightsWithTimeOfDayColour(Scene.world);
-	CRenderer::ConstructRenderList();
+	Renderer_ConstructRenderList();
 	DoRWStuffStartOfFrame(TimeCycle_GetSkyTopRed()*0.5f, TimeCycle_GetSkyTopGreen()*0.5f, TimeCycle_GetSkyTopBlue()*0.5f,
 		TimeCycle_GetSkyBottomRed(), TimeCycle_GetSkyBottomGreen(), TimeCycle_GetSkyBottomBlue(),
 		255);
@@ -2352,7 +2352,7 @@ TheModelViewer(void)
 	Sprite2d_SetRecipNearClip(); // X
 	// Preserve the original operation through the C sprite interface
 	Sprite2d_InitPerFrame(); // X
-	CFont::InitPerFrame(); // X
+	Font_InitPerFrame(); // X
 	DefinedState();
 	CVisibilityPlugins::InitAlphaEntityList();
 	AnimViewer_Render(); // rouz edit (ChatGPT)
@@ -2373,7 +2373,7 @@ void TheGame(void)
 
 	Timer_Initialise();
 
-	CGame::Initialise("DATA\\GTA3.DAT");
+	Game_Initialise("DATA\\GTA3.DAT");
 
 	Const char *splash = GetRandomSplashScreen(); // inlined here
 
@@ -2396,7 +2396,7 @@ void TheGame(void)
 			Text_Load(&TheText);
 		}
 
-		CGame::currLevel = TheMemoryCard.GetLevelToLoad();
+		Game_currLevel = TheMemoryCard.GetLevelToLoad();
 	}
 #else
 	//TODO
@@ -2406,7 +2406,7 @@ void TheGame(void)
 	{
 		if (FOUND_GAME_TO_LOAD)
 		{
-			Const char *splash1 = GetLevelSplashScreen(CGame::currLevel);
+			Const char *splash1 = GetLevelSplashScreen(Game_currLevel);
 			LoadSplash(splash1);
 		}
 
@@ -2418,17 +2418,17 @@ void TheGame(void)
 		{
 			// Preserve the original operation through the C sprite interface
 			Sprite2d_InitPerFrame();
-			CFont::InitPerFrame();
+			Font_InitPerFrame();
 
 			PUSH_MEMID(MEMID_GAME_PROCESS)
 			// Enter the C point-light algorithm with the original owner expressions
 			PointLights_InitPerFrame();
-			CGame::Process();
+			Game_Process();
 			POP_MEMID();
 
 			DMAudio_Service();
 
-			if (CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !Cutscene_IsProcessing()) // rouz edit (ChatGPT)
+			if (Game_bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !Cutscene_IsProcessing()) // rouz edit (ChatGPT)
 			{
 				WANT_TO_LOAD = false;
 				FrontEndMenuManager.m_bWantToRestart = true;
@@ -2443,11 +2443,11 @@ void TheGame(void)
 
 			PUSH_MEMID(MEMID_RENDER);
 
-			CRenderer::ConstructRenderList();
+			Renderer_ConstructRenderList();
 
 			if ((!FrontEndMenuManager.m_bMenuActive || FrontEndMenuManager.m_bRenderGameInMenu == true) && TheCamera.GetScreenFadeStatus() != FADE_2 )
 			{
-				CRenderer::PreRender();
+				Renderer_PreRender();
 				// TODO(MIAMI): something ps2all specific
 
 #ifdef FIX_BUGS
@@ -2516,7 +2516,7 @@ void TheGame(void)
 		CPad::ResetCheats();
 		CPad::StopPadsShaking();
 		DMAudio_ChangeMusicMode(MUSICMODE_DISABLE);
-		CGame::ShutDownForRestart();
+		Game_ShutDownForRestart();
 		Timer_Stop();
 
 		if (FrontEndMenuManager.m_bWantToRestart || FOUND_GAME_TO_LOAD)
@@ -2527,7 +2527,7 @@ void TheGame(void)
 				WANT_TO_LOAD = true;
 			}
 
-			CGame::InitialiseWhenRestarting();
+			Game_InitialiseWhenRestarting();
 			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			FrontEndMenuManager.m_bWantToRestart = false;
 
@@ -2633,9 +2633,9 @@ void SystemInit()
 #endif
 	CPad::GetPad(0)->Mode = 0;
 	
-	CGame::frenchGame = false;
-	CGame::germanGame = false;
-	CGame::nastyGame = true;
+	Game_frenchGame = false;
+	Game_germanGame = false;
+	Game_nastyGame = true;
 	FrontEndMenuManager.m_PrefsAllowNastyGame = true;
 	
 #ifdef GTA_PS2
@@ -2647,15 +2647,15 @@ void SystemInit()
 		FrontEndMenuManager.m_PrefsLanguage = LANGUAGE_SPANISH;
 	else if ( lang  == SCE_GERMAN_LANGUAGE )
 	{
-		CGame::germanGame = true;
-		CGame::nastyGame = false;
+		Game_germanGame = true;
+		Game_nastyGame = false;
 		FrontEndMenuManager.m_PrefsAllowNastyGame = false;
 		FrontEndMenuManager.m_PrefsLanguage = LANGUAGE_GERMAN;
 	}
 	else if ( lang  == SCE_FRENCH_LANGUAGE )
 	{
-		CGame::frenchGame = true;
-		CGame::nastyGame = false;
+		Game_frenchGame = true;
+		Game_nastyGame = false;
 		FrontEndMenuManager.m_PrefsAllowNastyGame = false;
 		FrontEndMenuManager.m_PrefsLanguage = LANGUAGE_FRENCH;
 	}
@@ -2932,7 +2932,7 @@ main(int argc, char *argv[])
 		Text_Unload(&TheText);
 		Text_Load(&TheText);
 		
-		CFont::Initialise();
+		Font_Initialise();
 		
 		FrontEndMenuManager.DrawMemoryCardStartUpMenus();
 	}else if(r == CMemoryCard::ERR_OPENNOENTRY)
@@ -2948,12 +2948,12 @@ main(int argc, char *argv[])
 	frameCount = 0;
 	while(frameCount < 100);
 
-	CGame::InitialiseOnceAfterRW();
+	Game_InitialiseOnceAfterRW();
 
 	TheGame();
 
 #if 0	// maybe ifndef FINAL or MASTER?
-	CGame::ShutDown();
+	Game_ShutDown();
 	
 	RwEngineStop();
 	RwEngineClose();
@@ -3045,14 +3045,14 @@ void revc_pos_track()
 
 	// Unrelated: show objects
 	col = make_colour(0.1, 0.2, 0.4, 1.);
-	if (CPools::GetObjectPool())
+	if (Pools_GetObjectPool())
 	{
 				// Access raw storage through the C store or pool API
-		int pool_size = CPool_GetSize(CPools::GetObjectPool());
+		int pool_size = CPool_GetSize(Pools_GetObjectPool());
 				for (i=0; i < pool_size; i++)
 		{
 						// Access raw storage through the C store or pool API
-			CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+			CObject *obj = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), i));
 						if (obj)
 			{
 				pos = CVector_to_xyz(obj->GetPosition());
@@ -3064,14 +3064,14 @@ void revc_pos_track()
 
 	// Unrelated: show peds
 	col = make_colour(0.4, 0.2, 0.1, 1.);
-	if (CPools::GetPedPool())
+	if (Pools_GetPedPool())
 	{
 				// Access raw storage through the C store or pool API
-		int pool_size = CPool_GetSize(CPools::GetPedPool());
+		int pool_size = CPool_GetSize(Pools_GetPedPool());
 				for (i=0; i < pool_size; i++)
 		{
 						// Access raw storage through the C store or pool API
-			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			CPed *ped = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), i));
 						if (ped)
 			{
 				pos = CVector_to_xyz(ped->GetPosition());
@@ -3084,14 +3084,14 @@ void revc_pos_track()
 //return;
 	// Unrelated: show buildings
 	col = make_colour(0.1, 0.1, 0.1, 1.);
-	if (CPools::GetBuildingPool())
+	if (Pools_GetBuildingPool())
 	{
 				// Access raw storage through the C store or pool API
-		int pool_size = CPool_GetSize(CPools::GetBuildingPool());
+		int pool_size = CPool_GetSize(Pools_GetBuildingPool());
 				for (i=0; i < pool_size; i++)
 		{
 						// Access raw storage through the C store or pool API
-			CBuilding *building = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+			CBuilding *building = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 						if (building)
 			{
 				pos = CVector_to_xyz(building->GetPosition());
@@ -3775,41 +3775,41 @@ void move_everything(xyz_t new_offset)
 	int i;
 	//if (((CEntity *) p)->m_modelIndex == 2424)
 
-	if (CPools::GetBuildingPool())
+	if (Pools_GetBuildingPool())
 				// Access raw storage through the C store or pool API
-		for (i=0; i < CPool_GetSize(CPools::GetBuildingPool()); i++)
+		for (i=0; i < CPool_GetSize(Pools_GetBuildingPool()); i++)
 			// Access raw storage through the C store or pool API
-			move_entity(((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i)), new_offset, 0);
+			move_entity(((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i)), new_offset, 0);
 		
-	if (CPools::GetObjectPool())
+	if (Pools_GetObjectPool())
 				// Access raw storage through the C store or pool API
-		for (i=0; i < CPool_GetSize(CPools::GetObjectPool()); i++)
+		for (i=0; i < CPool_GetSize(Pools_GetObjectPool()); i++)
 			// Access raw storage through the C store or pool API
-			move_entity(((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i)), new_offset, 0);
+			move_entity(((CObject*)CPool_GetSlot(Pools_GetObjectPool(), i)), new_offset, 0);
 		
-	if (CPools::GetTreadablePool())
+	if (Pools_GetTreadablePool())
 				// Access raw storage through the C store or pool API
-		for (i=0; i < CPool_GetSize(CPools::GetTreadablePool()); i++)
+		for (i=0; i < CPool_GetSize(Pools_GetTreadablePool()); i++)
 			// Access raw storage through the C store or pool API
-			move_entity(((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i)), new_offset, 0);
+			move_entity(((CTreadable*)CPool_GetSlot(Pools_GetTreadablePool(), i)), new_offset, 0);
 		
-	if (CPools::GetDummyPool())
+	if (Pools_GetDummyPool())
 				// Access raw storage through the C store or pool API
-		for (i=0; i < CPool_GetSize(CPools::GetDummyPool()); i++)
+		for (i=0; i < CPool_GetSize(Pools_GetDummyPool()); i++)
 			// Access raw storage through the C store or pool API
-			move_entity(((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i)), new_offset, 0);
+			move_entity(((CDummy*)CPool_GetSlot(Pools_GetDummyPool(), i)), new_offset, 0);
 		
-	if (CPools::GetPedPool())
+	if (Pools_GetPedPool())
 				// Access raw storage through the C store or pool API
-		for (i=0; i < CPool_GetSize(CPools::GetPedPool()); i++)
+		for (i=0; i < CPool_GetSize(Pools_GetPedPool()); i++)
 			// Access raw storage through the C store or pool API
-			move_entity(((CPed*)CPool_GetSlot(CPools::GetPedPool(), i)), new_offset, 1);
+			move_entity(((CPed*)CPool_GetSlot(Pools_GetPedPool(), i)), new_offset, 1);
 		
-	if (CPools::GetVehiclePool())
+	if (Pools_GetVehiclePool())
 				// Access raw storage through the C store or pool API
-		for (i=0; i < CPool_GetSize(CPools::GetVehiclePool()); i++)
+		for (i=0; i < CPool_GetSize(Pools_GetVehiclePool()); i++)
 			// Access raw storage through the C store or pool API
-			move_entity(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)), new_offset, 1);
+			move_entity(((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i)), new_offset, 1);
 		
 	rouz.world_offset = new_offset;
 }
@@ -3833,23 +3833,23 @@ void rouz_update()
 	if (rouz.screwy_gravity || rouz.status_physics)
 	{
 				// Access raw storage through the C store or pool API
-		int veh_count = CPool_GetSize(CPools::GetVehiclePool());
+		int veh_count = CPool_GetSize(Pools_GetVehiclePool());
 		
 		for (i = 0; i < veh_count; i++)
 		{
 						// Access raw storage through the C store or pool API
-			CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			CVehicle *veh = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 						if (veh)
 				if (veh->GetStatus() == STATUS_SIMPLE)
 					veh->SetStatus(STATUS_PHYSICS);
 		}
 
 				// Access raw storage through the C store or pool API
-		int ped_count = CPool_GetSize(CPools::GetPedPool());
+		int ped_count = CPool_GetSize(Pools_GetPedPool());
 				for (i = 0; i < ped_count; i++)
 		{
 						// Access raw storage through the C store or pool API
-			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			CPed *ped = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), i));
 						if (ped)
 			{
 				ped->bPedPhysics = 1;
@@ -3862,11 +3862,11 @@ void rouz_update()
 	// Count driver peds
 	rouz.driver_ped_count = 0;
 		// Access raw storage through the C store or pool API
-	int ped_count = CPool_GetSize(CPools::GetPedPool());
+	int ped_count = CPool_GetSize(Pools_GetPedPool());
 		for (i=0; i < ped_count; i++)
 	{
 				// Access raw storage through the C store or pool API
-		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		CPed *ped = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), i));
 				if (ped)
 			if (ped->InVehicle() && !ped->bCarPassenger && ped != FindPlayerPed())
 				rouz.driver_ped_count++;
@@ -3952,7 +3952,7 @@ void command_warp_player_from_car_to_coord(CPlayerPed *ped, CVector pos, CVector
 	ped->SetMoveSpeed(speed);
 	ped->bIsFrozen = 0;
 	ped->ApplyMoveSpeed();
-	CTheScripts::ClearSpaceForMissionEntity(pos, ped);
+	TheScripts_ClearSpaceForMissionEntity(pos, ped);
 }
 
 void update_kb_flag(int *state, int input)

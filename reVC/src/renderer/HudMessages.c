@@ -14,7 +14,7 @@ void Hud_CopyMessage(uint16_t *dst, const uint16_t *src, int32_t cap)
 	dst[i] = 0;
 }
 
-bool Hud_SetBigMessage(uint16_t *big, uint16_t *last, const uint16_t *message, bool trackChanges)
+bool Hud_StoreBigMessage(uint16_t *big, uint16_t *last, const uint16_t *message, bool trackChanges)
 {
 	int32_t i;
 	bool changed = false;

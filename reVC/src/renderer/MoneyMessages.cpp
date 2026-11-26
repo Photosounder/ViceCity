@@ -18,28 +18,28 @@ float MoneyMessages_BackendScreenHeight(void)
 void MoneyMessages_BackendFontScale(float x,float y)
 {
     // Set the original font scale after the original C calculations
-    CFont::SetScale(x,y);
+    Font_SetScale(x,y);
 }
 void MoneyMessages_BackendFontCentreSize(float value)
 {
     // Retain the original full-screen centre size
-    CFont::SetCentreSize(value);
+    Font_SetCentreSize(value);
 }
 void MoneyMessages_BackendFontColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Retain the original color construction and alpha narrowing
-    CFont::SetColor(CRGBA(r,g,b,a));
+    Font_SetColor(CRGBA(r,g,b,a));
 }
 void MoneyMessages_BackendPrintString(float x,float y,uint16_t *text)
 {
     // Enter the exact original mutable Unicode print overload
-    CFont::PrintString(x,y,text);
+    Font_PrintString(x,y,text);
 }
 bool MoneyMessages_BackendJapanese(void)
 {
     // Preserve the original otherwise-unused locale expression
     #ifdef MORE_LANGUAGES
-    return CFont::IsJapanese();
+    return Font_IsJapanese();
 #else
     return false;
 #endif
@@ -47,27 +47,27 @@ bool MoneyMessages_BackendJapanese(void)
 void MoneyMessages_BackendFontPropOn(void)
 {
     // Retain the original typed font PropOn operation
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 void MoneyMessages_BackendFontBackgroundOff(void)
 {
     // Retain the original typed font BackgroundOff operation
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 void MoneyMessages_BackendFontCentreOn(void)
 {
     // Retain the original typed font CentreOn operation
-    CFont::SetCentreOn();
+    Font_SetCentreOn();
 }
 void MoneyMessages_BackendFontJustifyOff(void)
 {
     // Retain the original typed font JustifyOff operation
-    CFont::SetJustifyOff();
+    Font_SetJustifyOff();
 }
 void MoneyMessages_BackendFontBackGroundOnlyTextOff(void)
 {
     // Retain the original typed font BackGroundOnlyTextOff operation
-    CFont::SetBackGroundOnlyTextOff();
+    Font_SetBackGroundOnlyTextOff();
 }
 
 MoneyMessageVector MoneyMessages_FromVector(CVector position)

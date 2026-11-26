@@ -24,15 +24,15 @@ DisplayWarningControllerMsg()
     Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
 })(Rect_Make(X(20.0f), Y(140.0f), X(620.0f), Y(328.0)), CRGBA(64, 16, 16, 224)); // CRect(20.0f, 160.0f, 620.0f, 374.857117f)
 		
-		CFont::SetFontStyle(FONT_BANK);
-		CFont::SetBackgroundOff();
-		CFont::SetScale(X(0.84f), Y(1.26f)); // 1.440000
-		CFont::SetPropOn();
-		CFont::SetCentreOff();
-		CFont::SetJustifyOn();
-		CFont::SetRightJustifyOff();
-		CFont::SetBackGroundOnlyTextOn();
-		CFont::SetWrapx(SCRW-X(40.0f)); // 600.0f
+		Font_SetFontStyle(FONT_BANK);
+		Font_SetBackgroundOff();
+		Font_SetScale(X(0.84f), Y(1.26f)); // 1.440000
+		Font_SetPropOn();
+		Font_SetCentreOff();
+		Font_SetJustifyOn();
+		Font_SetRightJustifyOff();
+		Font_SetBackGroundOnlyTextOn();
+		Font_SetWrapx(SCRW-X(40.0f)); // 600.0f
 		
 		CPlaceableShText text;
 		text.SetPosition(X(60.0f), Y(180.0f), false); // 205.714294
@@ -42,7 +42,7 @@ DisplayWarningControllerMsg()
 		text.SetAlpha(255);
 		text.DrawShWrap(0.0f, 0.0f, X(600.0f+SHADOW_VECTOR.x), YF(600.0f)); //TODO check
 		
-		CFont::DrawFonts();
+		Font_DrawFonts();
 	}
 	else if ( Input_obsoleteControllerMessage ) // rouz edit (ChatGPT)
 	{
@@ -50,15 +50,15 @@ DisplayWarningControllerMsg()
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
 })(Rect_Make(X(20.0f), Y(140.0f), X(620.0f), Y(328.0)), CRGBA(64, 16, 16, 224)); // CRect(20.0f, 160.0f, 620.0f, 374.857117f)
-		CFont::SetFontStyle(FONT_BANK);
-		CFont::SetBackgroundOff();
-		CFont::SetScale(X(0.84f), Y(1.26f)); // 1.440000
-		CFont::SetPropOn();
-		CFont::SetCentreOff();
-		CFont::SetJustifyOn();
-		CFont::SetRightJustifyOff();
-		CFont::SetBackGroundOnlyTextOn();
-		CFont::SetWrapx(SCRW-X(40.0f)); // 600.0f
+		Font_SetFontStyle(FONT_BANK);
+		Font_SetBackgroundOff();
+		Font_SetScale(X(0.84f), Y(1.26f)); // 1.440000
+		Font_SetPropOn();
+		Font_SetCentreOff();
+		Font_SetJustifyOn();
+		Font_SetRightJustifyOff();
+		Font_SetBackGroundOnlyTextOn();
+		Font_SetWrapx(SCRW-X(40.0f)); // 600.0f
 		
 		CPlaceableShText text;
 		text.SetPosition(X(60.0f), Y(180.0f), false); // 205.714294
@@ -68,7 +68,7 @@ DisplayWarningControllerMsg()
 		text.SetAlpha(255);
 		text.DrawShWrap(0.0f, 0.0f, X(600.0f+SHADOW_VECTOR.x), YF(600.0f)); //TODO check
 		
-		CFont::DrawFonts();
+		Font_DrawFonts();
 	}
 	
 }
@@ -126,16 +126,16 @@ DisplayMemoryCardAccessMsg(wchar *msg, CRGBA const &color)
     Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
 })(Rect_Make(X(70.0f), Y(100.0f), X(570.0f), Y(270.0f)), color);
 	
-	CFont::SetFontStyle(FONT_BANK);
-	CFont::SetBackgroundOff();
-	CFont::SetScale(X(MEMCARD_ACCESS_MSG_SIZE_X), Y(MEMCARD_ACCESS_MSG_SIZE_Y));
-	CFont::SetPropOn();
-	CFont::SetJustifyOn();
-	CFont::SetRightJustifyOff();
-	CFont::SetBackGroundOnlyTextOn();
-	CFont::SetWrapx(SCRW-X(90.0f)); // 550.0f
-	CFont::SetCentreOn();
-	CFont::SetCentreSize(SCRW-X(180.0f)); // 460.0f
+	Font_SetFontStyle(FONT_BANK);
+	Font_SetBackgroundOff();
+	Font_SetScale(X(MEMCARD_ACCESS_MSG_SIZE_X), Y(MEMCARD_ACCESS_MSG_SIZE_Y));
+	Font_SetPropOn();
+	Font_SetJustifyOn();
+	Font_SetRightJustifyOff();
+	Font_SetBackGroundOnlyTextOn();
+	Font_SetWrapx(SCRW-X(90.0f)); // 550.0f
+	Font_SetCentreOn();
+	Font_SetCentreSize(SCRW-X(180.0f)); // 460.0f
 	
 	CPlaceableShText text;
 	
@@ -147,7 +147,7 @@ DisplayMemoryCardAccessMsg(wchar *msg, CRGBA const &color)
 	text.SetAlpha(255);
 	text.Draw(0.0f, 0.0f);
 	
-	CFont::DrawFonts();
+	Font_DrawFonts();
 	DoRWStuffEndOfFrame();
 }
 

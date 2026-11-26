@@ -308,26 +308,26 @@ CMemoryCard::RestoreForStartLoad(void)
 		return RES_FAILED;
 	
 	uint8 *pBuf = buf + sizeof(uint32) + sizeof(uint32);
-	ReadDataFromBufferPointer(pBuf, CGame::currLevel);
+	ReadDataFromBufferPointer(pBuf, Game_currLevel);
 	ReadDataFromBufferPointer(pBuf, TheCamera.GetMatrix().GetPosition().x);
 	ReadDataFromBufferPointer(pBuf, TheCamera.GetMatrix().GetPosition().y);
 	ReadDataFromBufferPointer(pBuf, TheCamera.GetMatrix().GetPosition().z);
 	
-	if ( CGame::currLevel != LEVEL_INDUSTRIAL )
-		CStreaming::RemoveBigBuildings(LEVEL_INDUSTRIAL);
+	if ( Game_currLevel != LEVEL_INDUSTRIAL )
+		Streaming_RemoveBigBuildings(LEVEL_INDUSTRIAL);
 	
-	if ( CGame::currLevel != LEVEL_COMMERCIAL )
-		CStreaming::RemoveBigBuildings(LEVEL_COMMERCIAL);
+	if ( Game_currLevel != LEVEL_COMMERCIAL )
+		Streaming_RemoveBigBuildings(LEVEL_COMMERCIAL);
 	
-	if ( CGame::currLevel != LEVEL_SUBURBAN )
-		CStreaming::RemoveBigBuildings(LEVEL_SUBURBAN);
+	if ( Game_currLevel != LEVEL_SUBURBAN )
+		Streaming_RemoveBigBuildings(LEVEL_SUBURBAN);
 	
-	CStreaming::RemoveIslandsNotUsed(CGame::currLevel);
-	CCollision::SortOutCollisionAfterLoad();
-	CStreaming::RequestBigBuildings(CGame::currLevel);
-	CStreaming::LoadAllRequestedModels(false);
-	CStreaming::HaveAllBigBuildingsLoaded(CGame::currLevel);
-	CGame::TidyUpMemory(true, false);
+	Streaming_RemoveIslandsNotUsed(Game_currLevel);
+	Collision_SortOutCollisionAfterLoad();
+	Streaming_RequestBigBuildings(Game_currLevel);
+	Streaming_LoadAllRequestedModels(false);
+	CStreaming::HaveAllBigBuildingsLoaded(Game_currLevel);
+	Game_TidyUpMemory(true, false);
 	
 	CloseMemCardFile(file);
 	
@@ -378,7 +378,7 @@ CMemoryCard::LoadSavedGame(void)
 	LoadSaveDataBlock();
 	
 	ReadDataFromBufferPointer(buf, saveSize);
-	ReadDataFromBufferPointer(buf, CGame::currLevel);
+	ReadDataFromBufferPointer(buf, Game_currLevel);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().x);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().y);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().z);
@@ -444,16 +444,16 @@ CMemoryCard::LoadSavedGame(void)
 	
 
 	printf("Loading Scripts \n");
-	ReadDataFromBlock(CTheScripts::LoadAllScripts);
+	ReadDataFromBlock(TheScripts_LoadAllScripts);
 	
 	printf("Loading PedPool \n");
-	ReadDataFromBlock(CPools::LoadPedPool);
+	ReadDataFromBlock(Pools_LoadPedPool);
 	
 	printf("Loading Garages \n");
-	ReadDataFromBlock(CGarages::Load);
+	ReadDataFromBlock(Garages_Load);
 	
 	printf("Loading Vehicles \n");
-	ReadDataFromBlock(CPools::LoadVehiclePool);
+	ReadDataFromBlock(Pools_LoadVehiclePool);
 	
 	LoadSaveDataBlock();
 	
@@ -461,18 +461,18 @@ CMemoryCard::LoadSavedGame(void)
 	CObject::DeleteAllTempObjects();
 	
 	printf("Loading Objects \n");
-	ReadDataFromBlock(CPools::LoadObjectPool);
+	ReadDataFromBlock(Pools_LoadObjectPool);
 	
 	printf("Loading Paths \n");
 	ReadDataFromBlock(ThePaths.Load);
 	
 	printf("Loading Cranes \n");
-	ReadDataFromBlock(CCranes::Load);
+	ReadDataFromBlock(Cranes_Load);
 	
 	LoadSaveDataBlock();
 	
 	printf("Loading Pickups \n");
-	ReadDataFromBlock(CPickups::Load);
+	ReadDataFromBlock(Pickups_Load);
 	
 	printf("Loading Phoneinfo \n");
 	ReadDataFromBlock(gPhoneInfo.Load);
@@ -481,7 +481,7 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBlock(Restart_LoadAllRestartPoints); // rouz edit (ChatGPT)
 	
 	printf("Loading Radar Blips \n");
-	ReadDataFromBlock(CRadar::LoadAllRadarBlips);
+	ReadDataFromBlock(Radar_LoadAllRadarBlips);
 	
 	printf("Loading Zones \n");
 	ReadDataFromBlock(Zones_LoadAllZones);
@@ -490,7 +490,7 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBlock(Gangs_LoadAllGangData);
 	
 	printf("Loading Car Generators \n");
-	ReadDataFromBlock(CTheCarGenerators::LoadAllCarGenerators);
+	ReadDataFromBlock(TheCarGenerators_LoadAllCarGenerators);
 	
 	printf("Loading Particles \n");
 	ReadDataFromBlock(CParticleObject::LoadParticle);
@@ -499,13 +499,13 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBlock(AudioScriptObject_LoadAll);
 	
 	printf("Loading Player Info \n");
-	ReadDataFromBlock(CWorld::Players[CWorld::PlayerInFocus].LoadPlayerInfo);
+	ReadDataFromBlock(World_Players[World_PlayerInFocus].LoadPlayerInfo);
 	
 	printf("Loading Stats \n");
 	ReadDataFromBlock(Stats_LoadStats);
 	
 	printf("Loading Streaming Stuff \n");
-	ReadDataFromBlock(CStreaming::MemoryCardLoad);
+	ReadDataFromBlock(Streaming_MemoryCardLoad);
 	
 	printf("Loading PedType Stuff \n");
 	ReadDataFromBlock(PedType_Load);
@@ -530,7 +530,7 @@ CMemoryCard::LoadSavedGame(void)
 	JustLoadedDontFadeInYet = true;
 	StillToFadeOut = true;
 	
-	CTheScripts::Process();
+	TheScripts_Process();
 	
 	printf("Game sucessfully loaded \n");
 	
@@ -1654,10 +1654,10 @@ CMemoryCard::SaveGame(void)
 	
 	CheckSum = 0;
 	
-	CGameLogic::PassTime(360);
+	GameLogic_PassTime(360);
 	CPlayerPed *ped = FindPlayerPed();
 	ped->m_fCurrentStamina = ped->m_fMaxStamina;
-	CGame::TidyUpMemory(true, false);
+	Game_TidyUpMemory(true, false);
 	
 	saveSize = SAVE_FILE_SIZE;
 	int32 minfree = 198;
@@ -1719,7 +1719,7 @@ CMemoryCard::SaveGame(void)
 	}
 	
 	WriteDataToBufferPointer(buf, saveSize);
-	WriteDataToBufferPointer(buf, CGame::currLevel);
+	WriteDataToBufferPointer(buf, Game_currLevel);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().x);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().y);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().z);
@@ -1784,16 +1784,16 @@ CMemoryCard::SaveGame(void)
 			CopySizeAndPreparePointer(presize, buf, postsize, reserved, size);\
 		} while (0)
 	
-	WriteSaveDataBlock(CTheScripts::SaveAllScripts);
+	WriteSaveDataBlock(TheScripts_SaveAllScripts);
 	printf("Script Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CPools::SavePedPool);
+	WriteSaveDataBlock(Pools_SavePedPool);
 	printf("PedPool Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CGarages::Save);
+	WriteSaveDataBlock(Garages_Save);
 	printf("Garage Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CPools::SaveVehiclePool);
+	WriteSaveDataBlock(Pools_SaveVehiclePool);
 	printf("Vehicle Save Size %d, \n", size);
 	
 	DoClassSaveRoutine(file, work_buff, buf - work_buff);
@@ -1805,13 +1805,13 @@ CMemoryCard::SaveGame(void)
 	buf = work_buff;
 	reserved = 0;
 	
-	WriteSaveDataBlock(CPools::SaveObjectPool);
+	WriteSaveDataBlock(Pools_SaveObjectPool);
 	printf("Object Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(ThePaths.Save);
 	printf("The Paths Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CCranes::Save);
+	WriteSaveDataBlock(Cranes_Save);
 	printf("Cranes Save Size %d, \n", size);
 	
 	DoClassSaveRoutine(file, work_buff, buf - work_buff);
@@ -1823,7 +1823,7 @@ CMemoryCard::SaveGame(void)
 	buf = work_buff;
 	reserved = 0;
 	
-	WriteSaveDataBlock(CPickups::Save);
+	WriteSaveDataBlock(Pickups_Save);
 	printf("Pick Ups Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(gPhoneInfo.Save);
@@ -1832,7 +1832,7 @@ CMemoryCard::SaveGame(void)
 	WriteSaveDataBlock(Restart_SaveAllRestartPoints); // rouz edit (ChatGPT)
 	printf("RestartPoints Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CRadar::SaveAllRadarBlips);
+	WriteSaveDataBlock(Radar_SaveAllRadarBlips);
 	printf("Radar Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(Zones_SaveAllZones);
@@ -1841,7 +1841,7 @@ CMemoryCard::SaveGame(void)
 	WriteSaveDataBlock(Gangs_SaveAllGangData);
 	printf("Gangs Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CTheCarGenerators::SaveAllCarGenerators);
+	WriteSaveDataBlock(TheCarGenerators_SaveAllCarGenerators);
 	printf("Car Gens Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(CParticleObject::SaveParticle);
@@ -1850,13 +1850,13 @@ CMemoryCard::SaveGame(void)
 	WriteSaveDataBlock(AudioScriptObject_SaveAll);
 	printf("Audio Script Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CWorld::Players[CWorld::PlayerInFocus].SavePlayerInfo);
+	WriteSaveDataBlock(World_Players[World_PlayerInFocus].SavePlayerInfo);
 	printf("Player Info Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(Stats_SaveStats);
 	printf("Stats Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CStreaming::MemoryCardSave);
+	WriteSaveDataBlock(Streaming_MemoryCardSave);
 	printf("Streaming Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(PedType_Save);
@@ -3029,9 +3029,9 @@ CMemoryCard::SaveSlot(int32 slotID)
 	
 	Timer_Stop();
 	Streaming_FlushRequestList(); // rouz edit (ChatGPT)
-	CStreaming::DeleteRwObjectsAfterDeath(FindPlayerPed()->GetPosition());
-	CStreaming::RemoveUnusedModelsInLoadedList();
-	CGame::DrasticTidyUpMemory(false);
+	Streaming_DeleteRwObjectsAfterDeath(FindPlayerPed()->GetPosition());
+	Streaming_RemoveUnusedModelsInLoadedList();
+	Game_DrasticTidyUpMemory(false);
 	Timer_Update();
 }
 
@@ -3047,7 +3047,7 @@ CMemoryCard::DeleteSlot(int32 slotID)
 void
 CMemoryCard::LoadSlotToBuffer(int32 slotID)
 {
-	CStreaming::DeleteAllRwObjects();
+	Streaming_DeleteAllRwObjects();
 	
 	strcpy(LoadFileName, UnicodeToAsciiForMemoryCard(SlotFileName[slotID]));
 	

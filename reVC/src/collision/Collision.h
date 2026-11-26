@@ -16,48 +16,65 @@
 #define MAX_COLLISION_POINTS 32
 #endif
 
-class CCollision
-{
-public:
-	static eLevelName ms_collisionInMemory;
-	//+ rouz edit (ChatGPT)
-	static CLinkList ms_colModelCache;
-	//- rouz edit (ChatGPT)
-
-	static void Init(void);
-	static void Shutdown(void);
-	static void Update(void);
-	static void LoadCollisionWhenINeedIt(bool changeLevel);
-	static void SortOutCollisionAfterLoad(void);
-	static void LoadCollisionScreen(eLevelName level);
-	static void DrawColModel(const CMatrix &mat, const CColModel &colModel);
-	static void DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, int32 id);
-
-	static void CalculateTrianglePlanes(CColModel *model);
-	static void RemoveTrianglePlanes(CColModel *model);
-
-	// all these return true if there's a collision
-	static bool TestSphereSphere(const CSphere &s1, const CSphere &s2);
-	static bool TestSphereBox(const CSphere &sph, const CBox &box);
-	static bool TestLineBox(const CColLine &line, const CBox &box);
-	static bool TestVerticalLineBox(const CColLine &line, const CBox &box);
-	static bool TestLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
-	static bool TestLineSphere(const CColLine &line, const CColSphere &sph);
-	static bool TestSphereTriangle(const CColSphere &sphere, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
-	static bool TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, bool ignoreSeeThrough, bool ignoreShootThrough);
-
-	static bool ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &mindistsq);
-	static bool ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &mindistsq);
-	static bool ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist);
-	static bool ProcessVerticalLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly);
-	static bool ProcessLineTriangle(const CColLine &line , const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly = nil);
-	static bool ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist);
-	static bool ProcessSphereTriangle(const CColSphere &sph, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindistsq);
-	static bool ProcessLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough);
-	static bool ProcessVerticalLine(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CStoredCollPoly *poly);
-	static int32 ProcessColModels(const CMatrix &matrixA, CColModel &modelA, const CMatrix &matrixB, CColModel &modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists);
-
-	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
-	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest);
-};
+//+ rouz edit (Claude)
+// Formerly the static class CCollision, now C globals and functions shared with C
+#ifdef __cplusplus
+class CBox;
+class CColBox;
+class CColLine;
+class CColSphere;
+class CColTriangle;
+class CColTrianglePlane;
+class CSphere;
+class CStoredCollPoly;
+#else
+typedef struct CBox CBox;
+typedef struct CColBox CColBox;
+typedef struct CColLine CColLine;
+typedef struct CColSphere CColSphere;
+typedef struct CColTriangle CColTriangle;
+typedef struct CColTrianglePlane CColTrianglePlane;
+typedef struct CSphere CSphere;
+typedef struct CStoredCollPoly CStoredCollPoly;
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern eLevelName Collision_ms_collisionInMemory;
+void Collision_Init(void);
+void Collision_Shutdown(void);
+void Collision_Update(void);
+void Collision_LoadCollisionWhenINeedIt(bool changeLevel);
+void Collision_SortOutCollisionAfterLoad(void);
+void Collision_LoadCollisionScreen(eLevelName level);
+void Collision_CalculateTrianglePlanes(CColModel *model);
+void Collision_RemoveTrianglePlanes(CColModel *model);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CLinkList Collision_ms_colModelCache;
+void Collision_DrawColModel(const CMatrix &mat, const CColModel &colModel);
+void Collision_DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, int32 id);
+bool Collision_TestSphereSphere(const CSphere &s1, const CSphere &s2);
+bool Collision_TestSphereBox(const CSphere &sph, const CBox &box);
+bool Collision_TestLineBox(const CColLine &line, const CBox &box);
+bool Collision_TestVerticalLineBox(const CColLine &line, const CBox &box);
+bool Collision_TestLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
+bool Collision_TestLineSphere(const CColLine &line, const CColSphere &sph);
+bool Collision_TestSphereTriangle(const CColSphere &sphere, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane);
+bool Collision_TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, bool ignoreSeeThrough, bool ignoreShootThrough);
+bool Collision_ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &mindistsq);
+bool Collision_ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &mindistsq);
+bool Collision_ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist);
+bool Collision_ProcessVerticalLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly);
+bool Collision_ProcessLineTriangle(const CColLine &line , const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly = nil);
+bool Collision_ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist);
+bool Collision_ProcessSphereTriangle(const CColSphere &sph, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindistsq);
+bool Collision_ProcessLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough);
+bool Collision_ProcessVerticalLine(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CStoredCollPoly *poly);
+int32 Collision_ProcessColModels(const CMatrix &matrixA, CColModel &modelA, const CMatrix &matrixB, CColModel &modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists);
+float Collision_DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
+float Collision_DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest);
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)

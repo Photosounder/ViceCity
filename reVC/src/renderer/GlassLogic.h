@@ -10,7 +10,7 @@ extern "C" {
 // Moves a falling glass pane by one time step, car glass falls slower, the turn is applied to the three axes of the pane
 void Glass_StepFallingPane(bool carGlass, float timeStep, VectorMath3 *pos, VectorMath3 *moveSpeed, VectorMath3 *right, VectorMath3 *forward, VectorMath3 *up, VectorMath3 turn);
 // Brightness of a glass pane from its normal and the forward vector of the camera rendering it, from 20 to 255
-int32_t Glass_CalcAlphaWithNormal(VectorMath3 normal, VectorMath3 cameraForward);
+int32_t GlassLogic_CalcAlphaWithNormal(VectorMath3 normal, VectorMath3 cameraForward);
 // Grey level of the highlight of a falling pane, it fades in over half a second from its start time, car glass is never darker than 64
 uint8_t Glass_HiLightColor(uint8_t alpha, uint32_t now, uint32_t startTime, bool carGlass);
 // Grey level of the cracks of a shattered pane, full up to 30 units from the camera and fading out after that

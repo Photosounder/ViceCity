@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include <stdint.h>
 #include "config.h"
@@ -72,7 +73,7 @@ bool General_AnyAbsAtLeast3(float a, float b, float c, float limit);
 // Absolute value of the difference between two values
 float General_AbsDiff(float a, float b);
 // Normalised direction of a vector flattened onto the ground (its z set to zero)
-void General_NormalisedHorizontal(const float v[3], float out[3]);
+void General_NormalisedHorizontal(const CVector *v, CVector *out);
 #ifdef __cplusplus
 }
 #endif

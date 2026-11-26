@@ -101,11 +101,11 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		ScriptParams[0] = pPed->GetWeapon(ScriptParams[1] - 1).m_eWeaponType;
 		ScriptParams[1] = pPed->GetWeapon(ScriptParams[1] - 1).m_nAmmoTotal;
-		ScriptParams[2] = CPickups::ModelForWeapon((eWeaponType)ScriptParams[0]);
+		ScriptParams[2] = Pickups_ModelForWeapon((eWeaponType)ScriptParams[0]);
 		StoreParameters(&m_nIp, 3);
 		return 0;
 	}
@@ -132,7 +132,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		float speed = *(float*)&ScriptParams[1] / GAME_SPEED_TO_CARAI_SPEED;
 		pVehicle->SetMoveSpeed(pVehicle->GetForward() * speed);
@@ -142,22 +142,22 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	}
 	case COMMAND_SET_AREA_VISIBLE:
 		CollectParameters(&m_nIp, 1);
-		CGame::currArea = ScriptParams[0];
-		CStreaming::RemoveBuildingsNotInArea(ScriptParams[0]); 
+		Game_currArea = ScriptParams[0];
+		Streaming_RemoveBuildingsNotInArea(ScriptParams[0]); 
 		return 0;
 	case COMMAND_SET_CUTSCENE_ANIM_TO_LOOP:
 	{
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		CCutsceneMgr::SetCutsceneAnimToLoop(key);
+		CutsceneMgr_SetCutsceneAnimToLoop(key);
 		return 0;
 	}
 	case COMMAND_MARK_CAR_AS_CONVOY_CAR:
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->bPartOfConvoy = ScriptParams[1];
 		return 0;
@@ -165,13 +165,13 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_RESET_HAVOC_CAUSED_BY_PLAYER:
 	{
 		CollectParameters(&m_nIp, 1);
-		CWorld::Players[ScriptParams[0]].m_nHavocLevel = 0;
+		World_Players[ScriptParams[0]].m_nHavocLevel = 0;
 		return 0;
 	}
 	case COMMAND_GET_HAVOC_CAUSED_BY_PLAYER:
 	{
 		CollectParameters(&m_nIp, 1);
-		ScriptParams[0] = CWorld::Players[ScriptParams[0]].m_nHavocLevel;
+		ScriptParams[0] = World_Players[ScriptParams[0]].m_nHavocLevel;
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -190,10 +190,10 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 				// Access raw storage through the C store or pool API
-		CPed* pTargetPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+		CPed* pTargetPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[1]));
 				script_assert(pTargetPed);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_GOTO_CHAR_ON_FOOT_WALKING, pTargetPed);
@@ -204,7 +204,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 4);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		CVector result = Multiply3x3(pPed->GetMatrix(), *(CVector*)&ScriptParams[1]) + pPed->GetPosition();
 		*(CVector*)&ScriptParams[0] = result;
@@ -215,7 +215,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		bool result = false;
 		if (pPed->bHasBeenPhotographed) {
@@ -229,10 +229,10 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 				// Access raw storage through the C store or pool API
-		CPed* pTargetPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+		CPed* pTargetPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[1]));
 				script_assert(pTargetPed);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_AIM_GUN_AT, pTargetPed);
@@ -248,7 +248,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_IS_PLAYER_IN_FLYING_VEHICLE:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
+		CPed* pPed = World_Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
 		UpdateCompareFlag(pPed->bInVehicle && (pPed->m_pMyVehicle->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI || pPed->m_pMyVehicle->GetVehicleAppearance() == VEHICLE_APPEARANCE_PLANE));
 		return 0;
@@ -262,10 +262,10 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CollectParameters(&m_nIp, 4);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		CRadar::GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		int id = CRadar::SetShortRangeCoordBlip(BLIP_COORD, pos, 5, BLIP_DISPLAY_BOTH);
-		CRadar::SetBlipSprite(id, ScriptParams[3]);
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y);
+		Radar_GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
+		int id = Radar_SetShortRangeCoordBlip(BLIP_COORD, pos, 5, BLIP_DISPLAY_BOTH);
+		Radar_SetBlipSprite(id, ScriptParams[3]);
 		ScriptParams[0] = id;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -279,7 +279,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pHeli && pHeli->IsCar() && pHeli->IsRealHeli());
 		float fAngle = DEGTORAD(*(float*)&ScriptParams[1] - 90.0f);
 		// Delegate the angle wrapping to the C implementation
@@ -292,7 +292,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pHeli && pHeli->IsCar() && pHeli->IsRealHeli());
 		pHeli->ClearHeliOrientation();
 		return 0;
@@ -301,7 +301,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 5);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pPlane = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pPlane = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pPlane && pPlane->IsCar() && pPlane->IsRealPlane());
 		pPlane->TellPlaneToGoToCoors(*(float*)&ScriptParams[1], *(float*)&ScriptParams[2], *(float*)&ScriptParams[3], ScriptParams[4]);
 		return 0;
@@ -311,7 +311,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CollectParameters(&m_nIp, 4);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y);
 		*(CVector*)&ScriptParams[0] = ThePaths.FindNodeCoorsForScript(ThePaths.FindNthNodeClosestToCoors(pos, 0, 999999.9f, true, true, ScriptParams[3] - 1));
 		StoreParameters(&m_nIp, 3);
 		return 0;
@@ -322,7 +322,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CollectParameters(&m_nIp, 9);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y);
 		CCoronas::RegisterCorona((uintptr)this + m_nIp, ScriptParams[6], ScriptParams[7], ScriptParams[8], 255, pos, *(float*)&ScriptParams[3],
 			150.0f, ScriptParams[4], ScriptParams[5], 1, 0, 0, 0.0f, false, 0.2f);
 		return 0;
@@ -337,7 +337,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bIsFrozen = ScriptParams[1];
 		return 0;
@@ -346,7 +346,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bDrownsInWater = ScriptParams[1];
 		return 0;
@@ -355,7 +355,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		pObject->bUseCollisionRecords = ScriptParams[1];
 		return 0;
@@ -364,14 +364,14 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		UpdateCompareFlag(pObject->m_nCollisionRecords != 0);
 		return 0;
 	}
 	case COMMAND_REMOVE_RC_BUGGY:
 	{
-		CWorld::Players[CWorld::PlayerInFocus].BlowUpRCBuggy(false);
+		World_Players[World_PlayerInFocus].BlowUpRCBuggy(false);
 		return 0;
 	}
 	//case COMMAND_HAS_PHOTOGRAPH_BEEN_TAKEN:
@@ -379,7 +379,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		ScriptParams[0] = pPed->m_fArmour;
 		StoreParameters(&m_nIp, 1);
@@ -390,7 +390,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->bHeliMinimumTilt = ScriptParams[1];
 		return 0;
@@ -399,7 +399,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->AutoPilot.m_nSwitchDistance = ScriptParams[1];
 		return 0;
@@ -408,7 +408,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pCar&& pCar->IsCar());
 		pCar->PopBoot();
 		return 0;
@@ -431,7 +431,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CVector2D pos;
 		pos.x = *(float*)&ScriptParams[0];
 		pos.y = *(float*)&ScriptParams[1];
-		CColStore::RequestCollision(pos);
+		ColStore_RequestCollision(pos);
 		return 0;
 	}
 	case COMMAND_LOCATE_OBJECT_2D:
@@ -442,7 +442,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		UpdateCompareFlag(pObject->bIsInWater);
 		return 0;
@@ -456,7 +456,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 3);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		if (ScriptParams[1]) {
 			pPed->bCrouchWhenShooting = true;
@@ -475,7 +475,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		int16 boatDensities[CARCLASS_NUM_BOAT_CLASSES] = { 0 };
 		int i;
 
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, label);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, label);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		CollectParameters(&m_nIp, 12);
 		for (i = 0; i < CARCLASS_NUM_CAR_CLASSES; i++)
@@ -496,7 +496,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_REQUEST_ANIMATION:
 	{
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Use the complete C animation manager at the original call boundary
 		Streaming_RequestAnim(AnimManager_GetAnimationBlockIndex(key), STREAMFLAGS_SCRIPTOWNED); // rouz edit (ChatGPT)
@@ -505,7 +505,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_HAS_ANIMATION_LOADED:
 	{
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Use the complete C animation manager at the original call boundary
 		UpdateCompareFlag(AnimManager_GetAnimationBlockByName(key)->isLoaded);
@@ -514,7 +514,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_REMOVE_ANIMATION:
 	{
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Use the complete C animation manager at the original call boundary
 		Streaming_RemoveAnim(AnimManager_GetAnimationBlockIndex(key)); // rouz edit (ChatGPT)
@@ -524,7 +524,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		UpdateCompareFlag(pPed->bIsStaticWaitingForCollision);
 		return 0;
@@ -533,7 +533,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		UpdateCompareFlag(pVehicle->bIsStaticWaitingForCollision);
 		return 0;
@@ -542,7 +542,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		UpdateCompareFlag(pObject->bIsStaticWaitingForCollision);
 		return 0;
@@ -551,7 +551,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				pPed->PedShuffle();
 		return 0;
 	}
@@ -559,8 +559,8 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 8);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[1]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[1]));
 				pPed->AttachPedToEntity(pObject, *(CVector*)&ScriptParams[2], ScriptParams[5], DEGTORAD(ScriptParams[6]), (eWeaponType)ScriptParams[7]);
 		return 0;
 	}
@@ -568,7 +568,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 3);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bIsPlayerFriend = ScriptParams[2];
 		return 0;
@@ -577,11 +577,11 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_DISPLAY_NTH_ONSCREEN_COUNTER_WITH_STRING:
 	{
 		char onscreen_str[12];
-		script_assert(CTheScripts::ScriptSpace[m_nIp++] == ARGUMENT_GLOBALVAR);
-		uint16 var = CTheScripts::Read2BytesFromScript(&m_nIp);
+		script_assert(TheScripts_ScriptSpace[m_nIp++] == ARGUMENT_GLOBALVAR);
+		uint16 var = TheScripts_Read2BytesFromScript(&m_nIp);
 		CollectParameters(&m_nIp, 2);
-		wchar* text = Text_Get(&TheText,(char*)&CTheScripts::ScriptSpace[m_nIp]); // ???
-		strncpy(onscreen_str, (char*)&CTheScripts::ScriptSpace[m_nIp], KEY_LENGTH_IN_SCRIPT);
+		wchar* text = Text_Get(&TheText,(char*)&TheScripts_ScriptSpace[m_nIp]); // ???
+		strncpy(onscreen_str, (char*)&TheScripts_ScriptSpace[m_nIp], KEY_LENGTH_IN_SCRIPT);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		OnscreenTimer_AddCounter(&OnscreenTimer_state,var, ScriptParams[0], onscreen_str, ScriptParams[1] - 1);
 		return 0;
@@ -611,7 +611,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_GET_WHEELIE_STATS:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+		CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 		ScriptParams[0] = pPlayerInfo->m_nLastTimeCarSpentOnTwoWheels;
 		*(float*)&ScriptParams[1] = pPlayerInfo->m_nLastDistanceCarTravelledOnTwoWheels;
 		ScriptParams[2] = pPlayerInfo->m_nLastTimeSpentOnWheelie;
@@ -632,7 +632,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				if (pVehicle->IsBike()) {
 			if (ScriptParams[1] == 2)
 				ScriptParams[1] = 0;
@@ -649,7 +649,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		UpdateCompareFlag(pPed->m_prevObjective == OBJECTIVE_NONE && pPed->m_objective == OBJECTIVE_NONE);
 		return 0;
@@ -658,11 +658,11 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 		char key[12];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		for (int i = 0; i < KEY_LENGTH_IN_SCRIPT; i++)
 			key[i] = tolower(key[i]);
-		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
+		CPed* pPed = World_Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
 		UpdateCompareFlag(strcmp(key, ((CBaseModelInfo*)ModelRegistry_Get(pPed->GetModelIndex()))->GetModelName()) == 0); // rouz edit (ChatGPT)
 		return 0;
@@ -670,7 +670,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_SET_PLAYER_CAN_DO_DRIVE_BY:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+		CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 		pPlayerInfo->m_bDriveByAllowed = ScriptParams[1];
 		return 0;
 	}
@@ -678,12 +678,12 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 3);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		CVector pos;
 		pos.x = *(float*)&ScriptParams[1];
 		pos.y = *(float*)&ScriptParams[2];
-		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
+		pos.z = World_FindGroundZForCoord(pos.x, pos.y);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_SPRINT_TO_AREA, pos);
 		return 0;
@@ -713,7 +713,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pCar&& pCar->IsCar());
 		pCar->CloseAllDoors();
 		return 0;
@@ -738,7 +738,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pCar && pCar->IsCar());
 		pCar->PopBootUsingPhysics();
 		return 0;
@@ -748,7 +748,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		UpdateCompareFlag(pPed->m_objective == OBJECTIVE_LEAVE_CAR_AND_DIE);
 		return 0;
@@ -757,10 +757,10 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 				// Access raw storage through the C store or pool API
-		pObject->m_pCollidingEntity = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		pObject->m_pCollidingEntity = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[1]));
 				return 0;
 	}
 	//case COMMAND_GET_MAX_WANTED_LEVEL:
@@ -768,16 +768,16 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	{
 		CollectParameters(&m_nIp, 5);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
-		UpdateCompareFlag(CWorld::IsWanderPathClear(pPed->GetPosition(), *(CVector*)&ScriptParams[0], *(float*)&ScriptParams[3], 4));
+		UpdateCompareFlag(World_IsWanderPathClear(pPed->GetPosition(), *(CVector*)&ScriptParams[0], *(float*)&ScriptParams[3], 4));
 		return 0;
 	}
 	//case COMMAND_PRINT_HELP_WITH_NUMBER:
 	case COMMAND_PRINT_HELP_FOREVER:
 	{
-		wchar* text = CTheScripts::GetTextByKeyFromScript(&m_nIp);
-		CHud::SetHelpMessage(text, false, true);
+		wchar* text = TheScripts_GetTextByKeyFromScript(&m_nIp);
+		Hud_SetHelpMessage(text, false, true);
 		return 0;
 	}
 	//case COMMAND_PRINT_HELP_FOREVER_WITH_NUMBER:
@@ -794,7 +794,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 3);
 				// Access raw storage through the C store or pool API
-		CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pTarget = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pTarget);
 		uint8 flag = 1 << (uint8)ScriptParams[1];
 		if (ScriptParams[2])
@@ -812,13 +812,13 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 3);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y) + PICKUP_PLACEMENT_OFFSET;
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y) + PICKUP_PLACEMENT_OFFSET;
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Text_Get(&TheText,key);
-		CPickups::GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		ScriptParams[0] = CPickups::GenerateNewOne(pos, MI_PICKUP_PROPERTY, PICKUP_PROPERTY_LOCKED, 0, 0, false, key);
+		Pickups_GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
+		ScriptParams[0] = Pickups_GenerateNewOne(pos, MI_PICKUP_PROPERTY, PICKUP_PROPERTY_LOCKED, 0, 0, false, key);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -827,13 +827,13 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 4);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y) + PICKUP_PLACEMENT_OFFSET;
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y) + PICKUP_PLACEMENT_OFFSET;
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Text_Get(&TheText,key);
-		CPickups::GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		ScriptParams[0] = CPickups::GenerateNewOne(pos, MI_PICKUP_PROPERTY_FORSALE, PICKUP_PROPERTY_FORSALE, ScriptParams[3], 0, false, key);
+		Pickups_GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
+		ScriptParams[0] = Pickups_GenerateNewOne(pos, MI_PICKUP_PROPERTY_FORSALE, PICKUP_PROPERTY_FORSALE, ScriptParams[3], 0, false, key);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -841,7 +841,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->bIsFrozen = ScriptParams[1];
 		pVehicle->bInfiniteMass = ScriptParams[1];
@@ -851,8 +851,8 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
-		CPed* pTestedPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
+		CPed* pTestedPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[1]));
 				bool result = false;
 		if (pPed) {
 			if (pPed->m_lastDamEntity) {
@@ -876,13 +876,13 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				UpdateCompareFlag(pPed && pPed->bIsDrowning);
 		return 0;
 	}
 	case COMMAND_DISABLE_CUTSCENE_SHADOWS:
 	{
-		CCutsceneMgr::DisableCutsceneShadows();
+		CutsceneMgr_DisableCutsceneShadows();
 		return 0;
 	}
 	case COMMAND_HAS_GLASS_BEEN_SHATTERED_NEARBY:
@@ -890,7 +890,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 3);
 		
 		bool shattered = false;
-		if ( CGlass::HasGlassBeenShatteredAtCoors(*(float*)&ScriptParams[0], *(float*)&ScriptParams[1], *(float*)&ScriptParams[2]) )
+		if ( Glass_HasGlassBeenShatteredAtCoors(*(float*)&ScriptParams[0], *(float*)&ScriptParams[1], *(float*)&ScriptParams[2]) )
 			shattered = true;
 		
 		UpdateCompareFlag(shattered);
@@ -900,28 +900,28 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 3);
 				// Access raw storage through the C store or pool API
-		CCutsceneMgr::AttachObjectToBone(((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0])), ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[1])), ScriptParams[2]);
+		CutsceneMgr_AttachObjectToBone(((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0])), ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[1])), ScriptParams[2]);
 				return 0;
 	}
 	case COMMAND_ATTACH_CUTSCENE_OBJECT_TO_COMPONENT:
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CObject *obj1 = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
-		CObject *obj2 = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[1]));
+		CObject *obj1 = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
+		CObject *obj2 = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[1]));
 		
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 
-		CCutsceneMgr::AttachObjectToFrame(obj1, obj2, key);
+		CutsceneMgr_AttachObjectToFrame(obj1, obj2, key);
 		return 0;
 	}
 	case COMMAND_SET_CHAR_STAY_IN_CAR_WHEN_JACKED:
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bStayInCarOnJack = ScriptParams[1];
 		return 0;
@@ -940,7 +940,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				if (ScriptParams[1])
 			pPed->SetAnswerMobile();
 		else
@@ -950,7 +950,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_SET_PLAYER_DRUNKENNESS:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+		CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 		pPlayerInfo->m_pPed->m_nDrunkenness = ScriptParams[1];
 		pPlayerInfo->m_pPed->m_nFadeDrunkenness = 0;
 		if (pPlayerInfo->m_pPed->m_nDrunkenness == 0)
@@ -989,7 +989,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bDontFight = !ScriptParams[1];
 		return 0;
@@ -998,7 +998,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->ClearWaitState();
 		return 0;
@@ -1008,14 +1008,14 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 5);
 		int handle = -1;
 				// Access raw storage through the C store or pool API
-		uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		uint32 i = CPool_GetSize(Pools_GetVehiclePool());
 				float infX = *(float*)&ScriptParams[0];
 		float infY = *(float*)&ScriptParams[1];
 		float supX = *(float*)&ScriptParams[2];
 		float supY = *(float*)&ScriptParams[3];
 		while (i--) {
 						// Access raw storage through the C store or pool API
-			CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 						if (!pVehicle)
 				continue;
 			if (pVehicle->GetVehicleAppearance() != VEHICLE_APPEARANCE_CAR && pVehicle->GetVehicleAppearance() != VEHICLE_APPEARANCE_BIKE)
@@ -1027,7 +1027,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 			if (!pVehicle->IsWithinArea(infX, infY, supX, supY))
 				continue;
 						// Access raw storage through the C store or pool API
-			handle = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+			handle = CPool_GetIndex(Pools_GetVehiclePool(), pVehicle);
 					}
 		ScriptParams[0] = handle;
 		StoreParameters(&m_nIp, 1);
@@ -1037,7 +1037,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->bTyresDontBurst = !ScriptParams[1];
 		return 0;
@@ -1045,7 +1045,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_SET_PLAYER_AUTO_AIM:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
+		CPed* pPed = World_Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
 		pPed->bDoomAim = ScriptParams[1];
 		return 0;
@@ -1054,7 +1054,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CVehicle *pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle *pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				if ((*Timer_GetTimeInMilliseconds()) > pVehicle->m_nGunFiringTime + 150) {
 			CWeapon gun(WEAPONTYPE_HELICANNON, 5000);
 			CVector worldGunPos = (pVehicle->GetMatrix() * vecHunterGunPos) + ((*Timer_GetTimeStep()) * pVehicle->m_vecMoveSpeed);
@@ -1079,16 +1079,16 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		return 0;
 	case COMMAND_REMOVE_EVERYTHING_FOR_HUGE_CUTSCENE:
 	{
-		CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver();
+		CutsceneMgr_RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver();
 		return 0;
 	}
 	case COMMAND_IS_PLAYER_TOUCHING_VEHICLE:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
+		CPed* pPed = World_Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[1]));
 				CPhysical* pTestedEntity = pPed;
 		if (pPed->bInVehicle && pPed->m_pMyVehicle)
 			pTestedEntity = pPed->m_pMyVehicle;
@@ -1099,14 +1099,14 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_CHECK_FOR_PED_MODEL_AROUND_PLAYER:
 	{
 		CollectParameters(&m_nIp, 6);
-		CVector d1 = CWorld::Players[ScriptParams[0]].GetPos() - *(CVector*)&ScriptParams[1];
-		CVector d2 = CWorld::Players[ScriptParams[0]].GetPos() + *(CVector*)&ScriptParams[1];
+		CVector d1 = World_Players[ScriptParams[0]].GetPos() - *(CVector*)&ScriptParams[1];
+		CVector d2 = World_Players[ScriptParams[0]].GetPos() + *(CVector*)&ScriptParams[1];
 				// Access raw storage through the C store or pool API
-		int i = CPool_GetSize(CPools::GetPedPool());
+		int i = CPool_GetSize(Pools_GetPedPool());
 				bool result = false;
 		while (i--) {
 						// Access raw storage through the C store or pool API
-			CPed* pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			CPed* pPed = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), i));
 						if (!pPed)
 				continue;
 			if (ScriptParams[4] != pPed->GetModelIndex() && ScriptParams[5] != pPed->GetModelIndex())
@@ -1121,7 +1121,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		if (pPed->GetPedState() == PED_FOLLOW_PATH) {
 			pPed->RestorePreviousState();
@@ -1133,7 +1133,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bCanBeShotInVehicle = ScriptParams[1];
 		return 0;
@@ -1142,13 +1142,13 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CCutsceneMgr::AttachObjectToParent(((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0])), ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1])));
+		CutsceneMgr_AttachObjectToParent(((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0])), ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[1])));
 				return 0;
 	}
 	case COMMAND_LOAD_MISSION_TEXT:
 	{
 		char key[8];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		Text_LoadMissionText(&TheText,key);
 		return 0;
@@ -1164,7 +1164,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				if (pPed)
 			pPed->m_lastDamEntity = nil;
 		else
@@ -1176,7 +1176,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		pObject->bIsFrozen = ScriptParams[1];
 		pObject->bInfiniteMass = ScriptParams[1];
@@ -1185,13 +1185,13 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_SET_PLAYER_HAS_MET_DEBBIE_HARRY:
 	{
 		CollectParameters(&m_nIp, 1);
-		CTheScripts::bPlayerHasMetDebbieHarry = ScriptParams[0];
+		TheScripts_bPlayerHasMetDebbieHarry = ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_SET_RIOT_INTENSITY:
 	{
 		CollectParameters(&m_nIp, 1);
-		CTheScripts::RiotIntensity = ScriptParams[0];
+		TheScripts_RiotIntensity = ScriptParams[0];
 		return 0;
 	}
 	//case COMMAND_IS_CAR_IN_ANGLED_AREA_2D:
@@ -1200,13 +1200,13 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_SET_UP_TAXI_SHORTCUT:
 	{
 		CollectParameters(&m_nIp, 8);
-		CGameLogic::SetUpShortCut(
+		GameLogic_SetUpShortCut(
 			*(CVector*)&ScriptParams[0], *(float*)&ScriptParams[3],
 			*(CVector*)&ScriptParams[4], *(float*)&ScriptParams[7]);
 		return 0;
 	}
 	case COMMAND_CLEAR_TAXI_SHORTCUT:
-		CGameLogic::ClearShortCut();
+		GameLogic_ClearShortCut();
 		return 0;
 	//case COMMAND_SET_CHAR_OBJ_GOTO_CAR_ON_FOOT:
 	//case COMMAND_GET_CLOSEST_WATER_NODE:
@@ -1219,9 +1219,9 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 4);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y) + PICKUP_PLACEMENT_OFFSET;
-		CPickups::GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		ScriptParams[0] = CPickups::GenerateNewOne(pos, MI_PICKUP_CLOTHES, PICKUP_ON_STREET, ScriptParams[3]);
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y) + PICKUP_PLACEMENT_OFFSET;
+		Pickups_GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
+		ScriptParams[0] = Pickups_GenerateNewOne(pos, MI_PICKUP_CLOTHES, PICKUP_ON_STREET, ScriptParams[3]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -1229,14 +1229,14 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_MAKE_PLAYER_FIRE_PROOF:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+		CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 		pPlayerInfo->m_bFireproof = ScriptParams[1];
 		return 0;
 	}
 	case COMMAND_INCREASE_PLAYER_MAX_HEALTH:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+		CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 		pPlayerInfo->m_nMaxHealth += ScriptParams[1];
 		pPlayerInfo->m_pPed->m_fHealth = pPlayerInfo->m_nMaxHealth;
 		return 0;
@@ -1244,7 +1244,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_INCREASE_PLAYER_MAX_ARMOUR:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
+		CPlayerInfo* pPlayerInfo = &World_Players[ScriptParams[0]];
 		pPlayerInfo->m_nMaxArmour += ScriptParams[1];
 		pPlayerInfo->m_pPed->m_fArmour = pPlayerInfo->m_nMaxArmour;
 		return 0;
@@ -1253,8 +1253,8 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
-				CPed* pPed = CPopulation::AddPedInCar(pVehicle, true);
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
+				CPed* pPed = Population_AddPedInCar(pVehicle, true);
 		pPed->CharCreatedBy = MISSION_CHAR;
 		pPed->bRespondsToThreats = false;
 		pPed->bAllowMedicsToReviveMe = false;
@@ -1276,18 +1276,18 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
 		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
-		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), pPed);
+		ScriptParams[0] = CPool_GetIndex(Pools_GetPedPool(), pPed);
 				StoreParameters(&m_nIp, 1);
 		if (m_bIsMissionScript)
-			CTheScripts::MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_CHAR);
+			TheScripts_MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_CHAR);
 		return 0;
 	}
 	case COMMAND_CREATE_RANDOM_CHAR_AS_PASSENGER:
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
-				CPed* pPed = CPopulation::AddPedInCar(pVehicle, false);
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
+				CPed* pPed = Population_AddPedInCar(pVehicle, false);
 		pPed->CharCreatedBy = MISSION_CHAR;
 		pPed->bRespondsToThreats = false;
 		pPed->bAllowMedicsToReviveMe = false;
@@ -1308,17 +1308,17 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		pPed->bInVehicle = true;
 		pPed->SetPedState(PED_DRIVING);
 				// Access raw storage through the C store or pool API
-		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), pPed);
+		ScriptParams[0] = CPool_GetIndex(Pools_GetPedPool(), pPed);
 				StoreParameters(&m_nIp, 1);
 		if (m_bIsMissionScript)
-			CTheScripts::MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_CHAR);
+			TheScripts_MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_CHAR);
 		return 0;
 	}
 	case COMMAND_SET_CHAR_IGNORE_THREATS_BEHIND_OBJECTS:
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bIgnoreThreatsBehindObjects = ScriptParams[1];
 		return 0;
@@ -1326,7 +1326,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_ENSURE_PLAYER_HAS_DRIVE_BY_WEAPON:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
+		CPed* pPed = World_Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
 		if (pPed->bInVehicle) {
 			if (pPed->GetWeapon(WEAPONSLOT_SUBMACHINEGUN).m_eWeaponType) {
@@ -1346,7 +1346,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pHeli && pHeli->IsCar() && pHeli->IsRealHeli());
 		pHeli->bHeliDestroyed = true;
 		return 0;
@@ -1361,7 +1361,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		CObject* pObject = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		pObject->m_area = ScriptParams[1];
 		return 0;
@@ -1371,7 +1371,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bNeverEverTargetThisPed = ScriptParams[1];
 		return 0;
@@ -1379,21 +1379,21 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_LOAD_UNCOMPRESSED_ANIM:
 	{
 		char key[KEY_LENGTH_IN_SCRIPT];
-		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
+		TheScripts_ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		CCutsceneMgr::LoadAnimationUncompressed(key);
+		CutsceneMgr_LoadAnimationUncompressed(key);
 		return 0;
 	}
 	case COMMAND_WAS_CUTSCENE_SKIPPED:
 	{
-		UpdateCompareFlag(CCutsceneMgr::WasCutsceneSkipped());
+		UpdateCompareFlag(CutsceneMgr_WasCutsceneSkipped());
 		return 0;
 	}
 	case COMMAND_SET_CHAR_CROUCH_WHEN_THREATENED:
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		pPed->bCrouchWhenScared = true;
 		return 0;
@@ -1402,7 +1402,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		UpdateCompareFlag(pPed->bInVehicle && pPed->m_pMyVehicle &&
 			pPed->m_pMyVehicle->IsLawEnforcementVehicle() &&
@@ -1412,7 +1412,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_DOES_CHAR_EXIST:
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		UpdateCompareFlag(((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0])) != 0);
+		UpdateCompareFlag(((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0])) != 0);
 				return 0;
 	//case COMMAND_DOES_VEHICLE_EXIST:
 	//case COMMAND_ADD_SHORT_RANGE_BLIP_FOR_CONTACT_POINT:
@@ -1421,10 +1421,10 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 4);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		CRadar::GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		int id = CRadar::SetShortRangeCoordBlip(BLIP_COORD, pos, 2, BLIP_DISPLAY_BOTH);
-		CRadar::SetBlipSprite(id, ScriptParams[3]);
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y);
+		Radar_GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
+		int id = Radar_SetShortRangeCoordBlip(BLIP_COORD, pos, 2, BLIP_DISPLAY_BOTH);
+		Radar_SetBlipSprite(id, ScriptParams[3]);
 		ScriptParams[0] = id;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -1433,7 +1433,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		UpdateCompareFlag(pPed->m_nWaitState == WAITSTATE_STUCK);
 		return 0;
@@ -1448,7 +1448,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		CPed* pPed = ((CPed*)CPool_GetAt(Pools_GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		if (ScriptParams[1]) {
 			pPed->bKindaStayInSamePlace = true;
@@ -1465,15 +1465,15 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		if (ScriptParams[1]) {
 			pVehicle->bIsFrozen = true;
 			pVehicle->bInfiniteMass = true;
 			if (m_bIsMissionScript) {
-				CWorld::Remove(pVehicle);
+				World_Remove(pVehicle);
 				pVehicle->bIsStaticWaitingForCollision = true;
-				CWorld::Add(pVehicle);
+				World_Add(pVehicle);
 			}
 		}
 		else {

@@ -57,13 +57,10 @@
 static void
 BikeSurfaceWheelAxes(CVector &wheelFwd, CVector &wheelRight, const CVector &normal)
 {
-	float fwdIn[3] = { wheelFwd.x, wheelFwd.y, wheelFwd.z };
-	float nIn[3] = { normal.x, normal.y, normal.z };
-	float fwdOut[3], rightOut[3];
+	CVector fwdOut;
 
-	Automobile_SurfaceWheelAxes(fwdIn, nIn, fwdOut, rightOut);
-	wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
-	wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+	Automobile_SurfaceWheelAxes(&wheelFwd, &normal, &fwdOut, &wheelRight);
+	wheelFwd = CVector(fwdOut.x, fwdOut.y, fwdOut.z);
 }
 
 const uint32 CBike::nSaveStructSize =
@@ -338,9 +335,9 @@ CBike::ProcessControl(void)
 		break;
 
 	case STATUS_SIMPLE:
-		CCarAI::UpdateCarAI(this);
+		CarAI_UpdateCarAI(this);
 		CPhysical::ProcessControl();
-		CCarCtrl::UpdateCarOnRails(this);
+		CarCtrl_UpdateCarOnRails(this);
 
 		m_nWheelsOnGround = 2;
 		m_nDriveWheelsOnGroundPrev = m_nDriveWheelsOnGround;
@@ -361,8 +358,8 @@ CBike::ProcessControl(void)
 		return;
 
 	case STATUS_PHYSICS:
-		CCarAI::UpdateCarAI(this);
-		CCarCtrl::SteerAICarWithPhysics(this);
+		CarAI_UpdateCarAI(this);
+		CarCtrl_SteerAICarWithPhysics(this);
 		PlayHornIfNecessary();
 
 		bBalancedByRider = true;
@@ -516,7 +513,7 @@ CBike::ProcessControl(void)
 			m_nStaticFrames++;
 
 			if(m_nStaticFrames > 10 || makeStatic)
-				if(!CCarCtrl::MapCouldMoveInThisArea(GetPosition().x, GetPosition().y)){
+				if(!CarCtrl_MapCouldMoveInThisArea(GetPosition().x, GetPosition().y)){
 					if(!makeStatic || m_nStaticFrames > 10)
 						m_nStaticFrames = 10;
 
@@ -533,7 +530,7 @@ CBike::ProcessControl(void)
 	for(i = 0; i < 4; i++)
 		if(m_aGroundPhysical[i]){
 			bRestingOnPhysical = true;
-			if(!CWorld::bForceProcessControl && m_aGroundPhysical[i]->bIsInSafePosition){
+			if(!World_bForceProcessControl && m_aGroundPhysical[i]->bIsInSafePosition){
 				bWasPostponed = true;
 				return;
 			}
@@ -1147,7 +1144,7 @@ CBike::ProcessControl(void)
 	bAudioChangingGear = false;
 
 	if(!bWarnedPeds)
-		CCarCtrl::ScanForPedDanger(this);
+		CarCtrl_ScanForPedDanger(this);
 
 	if(bInfiniteMass){
 		m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
@@ -1204,7 +1201,7 @@ CBike::ProcessControl(void)
 void
 CBike::Teleport(CVector pos)
 {
-	CWorld::Remove(this);
+	World_Remove(this);
 
 	SetPosition(pos);
 	SetOrientation(0.0f, 0.0f, 0.0f);
@@ -1213,7 +1210,7 @@ CBike::Teleport(CVector pos)
 
 	ResetSuspension();
 
-	CWorld::Add(this);
+	World_Add(this);
 }
 
 void
@@ -1695,7 +1692,7 @@ CBike::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 	   GetModelIndex() == MI_DODO && ent->IsVehicle())
 		colModel->numLines = 0;
 
-	int numCollisions = CCollision::ProcessColModels(GetMatrix(), *colModel,
+	int numCollisions = Collision_ProcessColModels(GetMatrix(), *colModel,
 		ent->GetMatrix(), *ent->GetColModel(),
 		colpoints,
 		m_aWheelColPoints, m_aSuspensionSpringRatio);
@@ -2241,8 +2238,8 @@ CBike::BlowUpCar(CEntity *culprit)
 #ifdef FIX_BUGS
 	// taken from CAutomobile. maybe tweak values?
 	if(culprit == FindPlayerPed() || culprit == FindPlayerVehicle()){
-		CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 20;
-		CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention += 10.0f;
+		World_Players[World_PlayerInFocus].m_nHavocLevel += 20;
+		World_Players[World_PlayerInFocus].m_fMediaAttention += 10.0f;
 		Stats_PropertyDestroyed += General_GetRandomNumber()%6000 + 4000;
 	}
 #endif
@@ -2320,7 +2317,7 @@ CBike::BurstTyre(uint8 wheel, bool applyForces)
 
 		if(GetStatus() == STATUS_SIMPLE){
 			SetStatus(STATUS_PHYSICS);
-			CCarCtrl::SwitchVehicleToRealPhysics(this);
+			CarCtrl_SwitchVehicleToRealPhysics(this);
 		}
 
 		if(applyForces){
@@ -2393,16 +2390,16 @@ CBike::IsRoomForPedToLeaveCar(uint32 component, CVector *doorOffset)
 	// Delegate the scale of the vector to the C implementation
 	CVector pedPos = seatPos + dist*VehicleLogic_ExitCheckScale(length);
 
-	if(!CWorld::GetIsLineOfSightClear(seatPos, pedPos, true, false, false, true, false, false))
+	if(!World_GetIsLineOfSightClear(seatPos, pedPos, true, false, false, true, false, false))
 		return false;
-	if(CWorld::TestSphereAgainstWorld(doorPos, 0.6f, this, true, true, false, true, false, false))
+	if(World_TestSphereAgainstWorld(doorPos, 0.6f, this, true, true, false, true, false, false))
 		return false;
-	if(CWorld::ProcessVerticalLine(doorPos, 1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
+	if(World_ProcessVerticalLine(doorPos, 1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
 		// Delegate the test for the ceiling to the C implementation
 		if(VehicleLogic_ExitBlockedAbove(colpoint.point.z, doorPos.z))
 			return false;
 	float upperZ = colpoint.point.z;
-	if(!CWorld::ProcessVerticalLine(doorPos, -1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
+	if(!World_ProcessVerticalLine(doorPos, -1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
 		return false;
 	// Delegate the test for the ground to the C implementation
 	if(VehicleLogic_ExitBlockedBelow(upperZ, colpoint.point.z))
@@ -2438,7 +2435,7 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 			bool pedNotMission = ped->CharCreatedBy != MISSION_CHAR;
 			bool bikeNotMission = pedNotMission && ped->m_pMyVehicle->VehicleCreatedBy != MISSION_VEHICLE;
 			bool playerGoesForBike = temperAboveFear && bikeNotMission && FindPlayerPed()->m_carInObjective == ped->m_pMyVehicle;
-			switch(Bike_KnockOffRiderObjective(temperAboveFear, pedNotMission, bikeNotMission, playerGoesForBike, !CTheScripts::IsPlayerOnAMission())){
+			switch(Bike_KnockOffRiderObjective(temperAboveFear, pedNotMission, bikeNotMission, playerGoesForBike, !TheScripts_IsPlayerOnAMission())){
 			case BIKE_KNOCKOFF_ENTER_AS_DRIVER:
 				ped->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, ped->m_pMyVehicle);
 				break;
@@ -2540,7 +2537,7 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
 		CVector splashPos = ped->GetPosition() + 2.2f*ped->m_vecMoveSpeed;
 		float waterZ = 0.0f;
-		if(CWaterLevel::GetWaterLevel(splashPos, &waterZ, false))
+		if(WaterLevel_GetWaterLevel(splashPos, &waterZ, false))
 			splashPos.z = waterZ;
 		CParticleObject::AddObject(POBJECT_PED_WATER_SPLASH, splashPos, CVector(0.0f, 0.0f, 0.1f),
 			0.0f, 200, color, true);
@@ -2603,17 +2600,17 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		ped->bIsStanding = false;
 	}
 
-	CEntity *ent = CWorld::TestSphereAgainstWorld(ped->GetPosition()+CVector(0.0f, 0.0, 0.5f), 0.4f, nil, true, false, false, false, false, false);
+	CEntity *ent = World_TestSphereAgainstWorld(ped->GetPosition()+CVector(0.0f, 0.0, 0.5f), 0.4f, nil, true, false, false, false, false, false);
 	if(ent == nil)
-		ent = CWorld::TestSphereAgainstWorld(ped->GetPosition()+CVector(0.0f, 0.0, 0.8f), 0.4f, nil, true, false, false, false, false, false);
+		ent = World_TestSphereAgainstWorld(ped->GetPosition()+CVector(0.0f, 0.0, 0.8f), 0.4f, nil, true, false, false, false, false, false);
 	if(ent == nil)
-		ent = CWorld::TestSphereAgainstWorld(ped->GetPosition()+(*Timer_GetTimeStep())*ped->m_vecMoveSpeed+CVector(0.0f, 0.0, 0.5f), 0.4f, nil, true, false, false, false, false, false);
+		ent = World_TestSphereAgainstWorld(ped->GetPosition()+(*Timer_GetTimeStep())*ped->m_vecMoveSpeed+CVector(0.0f, 0.0, 0.5f), 0.4f, nil, true, false, false, false, false, false);
 	if(ent == nil)
-		ent = CWorld::TestSphereAgainstWorld(ped->GetPosition()+(*Timer_GetTimeStep())*ped->m_vecMoveSpeed+CVector(0.0f, 0.0, 0.8f), 0.4f, nil, true, false, false, false, false, false);
+		ent = World_TestSphereAgainstWorld(ped->GetPosition()+(*Timer_GetTimeStep())*ped->m_vecMoveSpeed+CVector(0.0f, 0.0, 0.8f), 0.4f, nil, true, false, false, false, false, false);
 	if(ent){
 		CColPoint point;
 		ent = nil;
-		if(CWorld::ProcessVerticalLine(ped->GetPosition(), ped->GetPosition().z-2.0f, point, ent, true, false, false, false, false, false, nil)){
+		if(World_ProcessVerticalLine(ped->GetPosition(), ped->GetPosition().z-2.0f, point, ent, true, false, false, false, false, false, nil)){
 			if(ped->m_pMyVehicle == nil){
 				ped->m_pMyVehicle = this;
 				ped->PositionPedOutOfCollision();
@@ -2626,7 +2623,7 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		ped->bKnockedOffBike = true;
 		ped->bHeadStuckInCollision = true;
 	}else if(weapon == WEAPONTYPE_RAMMEDBYCAR){
-		if(CWorld::TestSphereAgainstWorld(ped->GetPosition()+CVector(0.0f, 0.0, 1.3f), 0.6f, nil, true, false, false, false, false, false) == nil)
+		if(World_TestSphereAgainstWorld(ped->GetPosition()+CVector(0.0f, 0.0, 1.3f), 0.6f, nil, true, false, false, false, false, false) == nil)
 			ped->GetMatrix().Translate(CVector(0.0f, 0.0f, 0.5f));
 	}
 	ped->m_pMyVehicle = nil;
@@ -2737,9 +2734,7 @@ CBike::SetupSuspensionLines(void)
 	// Delegate the radius of the vehicle to the C implementation
 	CVector radiusMin = CollisionVector_ToNative(colModel->boundingBox.min);
 	CVector radiusMax = CollisionVector_ToNative(colModel->boundingBox.max);
-	const float radiusMinC[3] = { radiusMin.x, radiusMin.y, radiusMin.z };
-	const float radiusMaxC[3] = { radiusMax.x, radiusMax.y, radiusMax.z };
-	float radius = VehicleLogic_BoundingRadius(radiusMinC, radiusMaxC);
+	float radius = VehicleLogic_BoundingRadius(&radiusMin, &radiusMax);
 	if(colModel->boundingSphere.radius < radius)
 		colModel->boundingSphere.radius = radius;
 

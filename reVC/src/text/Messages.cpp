@@ -15,7 +15,7 @@ bool Messages_BackendJapanese(void)
 {
     // Read the native locale at each original text comparison or substitution
 #ifdef MORE_LANGUAGES
-    return CFont::IsJapanese();
+    return Font_IsJapanese();
 #else
     return false;
 #endif
@@ -33,16 +33,16 @@ void Messages_BackendCommandKeys(uint16_t action,uint16_t *output,uint16_t lengt
 void Messages_BackendSetBigMessage(uint16_t *message,uint16_t style)
 {
     // Publish the complete original UTF-16 display buffer and style through the HUD owner
-    CHud::SetBigMessage(message,style);
+    Hud_SetBigMessage(message,style);
 }
 void Messages_BackendSetMessage(uint16_t *message)
 {
     // Publish the complete original brief display buffer through the HUD owner
-    CHud::SetMessage(message);
+    Hud_SetMessage(message);
 }
 void Messages_BackendClearHud(void)
 {
     // Invoke the original full HUD reset between the ordered message and pager clears
-    CHud::GetRidOfAllHudMessages();
+    Hud_GetRidOfAllHudMessages();
 }
 //- rouz edit (ChatGPT)

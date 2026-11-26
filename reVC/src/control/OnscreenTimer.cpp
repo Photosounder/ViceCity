@@ -9,13 +9,13 @@
 int32_t *OnscreenTimer_BackendVariable(int32_t offset)
 {
     // Return the actual script variable pointer at the original lookup point
-    return CTheScripts::GetPointerToScriptVariable(offset);
+    return TheScripts_GetPointerToScriptVariable(offset);
 }
 
 bool OnscreenTimer_BackendDrawHud(void)
 {
     // Read the live HUD visibility flag without resetting retained display state
-    return CHud::m_Wants_To_Draw_Hud;
+    return Hud_m_Wants_To_Draw_Hud;
 }
 bool OnscreenTimer_BackendWidescreen(void)
 {

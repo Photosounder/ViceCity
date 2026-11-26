@@ -139,7 +139,7 @@ RubbishVector2 Rubbish_BackendBounds(CVehicle *veh)
 float Rubbish_BackendGround(float x, float y, float z, bool *found)
 {
 	// Enter the original ground query with its original output pointer
-	return CWorld::FindGroundZFor3DCoord(x, y, z, found);
+	return World_FindGroundZFor3DCoord(x, y, z, found);
 }
 float Rubbish_BackendWind(void)
 {

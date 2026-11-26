@@ -4,7 +4,7 @@
 
 #define GAME_SPEED_TO_CARAI_SPEED 60.0f
 
-float CarAI_FindSwitchDistanceFar(uint8_t switchDistance, bool isLawEnforcer)
+float CarAILogic_FindSwitchDistanceFar(uint8_t switchDistance, bool isLawEnforcer)
 {
 	// Police cars switch far out, others a little beyond the close distance
 	if (isLawEnforcer)
@@ -12,7 +12,7 @@ float CarAI_FindSwitchDistanceFar(uint8_t switchDistance, bool isLawEnforcer)
 	return (float)switchDistance + 5.0f;
 }
 
-uint8_t CarAI_FindPoliceCarMissionForWantedLevel(int wantedLevel, CarAIRandomFn random)
+uint8_t CarAILogic_FindPoliceCarMissionForWantedLevel(int wantedLevel, CarAIRandomFn random)
 {
 	// The more stars the more likely police ram instead of block
 	switch (wantedLevel) {
@@ -27,7 +27,7 @@ uint8_t CarAI_FindPoliceCarMissionForWantedLevel(int wantedLevel, CarAIRandomFn 
 	}
 }
 
-uint8_t CarAI_FindPoliceBoatMissionForWantedLevel(int wantedLevel)
+uint8_t CarAILogic_FindPoliceBoatMissionForWantedLevel(int wantedLevel)
 {
 	// Boats block at low levels and attack above
 	switch (wantedLevel) {
@@ -42,7 +42,7 @@ uint8_t CarAI_FindPoliceBoatMissionForWantedLevel(int wantedLevel)
 	}
 }
 
-int32_t CarAI_FindPoliceCarSpeedForWantedLevel(int wantedLevel, float maxVelocity, CarAIRandomRangeFn randomRange)
+int32_t CarAILogic_FindPoliceCarSpeedForWantedLevel(int wantedLevel, float maxVelocity, CarAIRandomRangeFn randomRange)
 {
 	// Fixed speeds at low levels, then a multiple of the top speed of the car
 	switch (wantedLevel) {
@@ -57,7 +57,7 @@ int32_t CarAI_FindPoliceCarSpeedForWantedLevel(int wantedLevel, float maxVelocit
 	}
 }
 
-int CarAI_MellowOutChaseSpeed(int wantedLevel, int cruiseSpeed, float distanceToPlayer, bool playerInVehicle, float playerSpeed)
+int CarAILogic_MellowOutChaseSpeed(int wantedLevel, int cruiseSpeed, float distanceToPlayer, bool playerInVehicle, float playerSpeed)
 {
 	// Slow down when close to the player, with a different table for each of the first two levels
 	if (wantedLevel == 1) {
@@ -102,7 +102,7 @@ int CarAI_MellowOutChaseSpeed(int wantedLevel, int cruiseSpeed, float distanceTo
 	return cruiseSpeed;
 }
 
-int CarAI_MellowOutChaseSpeedBoat(int wantedLevel, int cruiseSpeed)
+int CarAILogic_MellowOutChaseSpeedBoat(int wantedLevel, int cruiseSpeed)
 {
 	// One speed per level
 	switch (wantedLevel) {

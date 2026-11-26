@@ -4,7 +4,15 @@
 extern "C" {
 #endif
 
+//+ rouz edit (Claude)
+// In C a VectorMath3 is the shared CVector struct, in C++ a plain struct of the same three floats so it can be returned by value from these C functions
+#ifdef __cplusplus
 typedef struct VectorMath3 {float x,y,z;} VectorMath3;
+#else
+#include "Vector.h"
+typedef CVector VectorMath3;
+#endif
+//- rouz edit (Claude)
 
 // Matrices are the row-major float[4][4] layout of CMatrix (right, forward, up, position rows)
 void VectorMath_Normalise(VectorMath3 *v);

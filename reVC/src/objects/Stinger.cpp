@@ -53,7 +53,7 @@ CStinger::Init(CPed *pPed)
 	for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
 //+ rouz edit (ChatGPT)
 		// Allocate a stinger segment from the object pool without invoking C++ new.
-		CObjectPool *objectPool = CPools::GetObjectPool();
+		CObjectPool *objectPool = Pools_GetObjectPool();
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
 		pSpikes[i] = (CStingerSegment*)((CObject*)CPool_New(objectPool));
@@ -71,7 +71,7 @@ CStinger::Init(CPed *pPed)
 					// Access raw storage through the C store or pool API
 					int32 handle = CPool_GetIndex(objectPool, existing);
 					//- rouz edit (ChatGPT)
-					CWorld::Remove(existing);
+					World_Remove(existing);
 					existing->~CObject();
 					//+ rouz edit (ChatGPT)
 					// Access raw storage through the C store or pool API
@@ -124,13 +124,13 @@ CStinger::Remove()
 
 #ifdef FIX_BUGS
 		if (spikeSegment) {
-			CWorld::Remove(spikeSegment);
+			World_Remove(spikeSegment);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the stinger segment without invoking C++ delete.
 			spikeSegment->~CStingerSegment();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), spikeSegment);
+			CPool_Delete(Pools_GetObjectPool(), spikeSegment);
 			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			pSpikes[i] = nil;
@@ -144,7 +144,7 @@ CStinger::Remove()
 			spikeSegment->~CStingerSegment();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), spikeSegment);
+			CPool_Delete(Pools_GetObjectPool(), spikeSegment);
 			//- rouz edit (ChatGPT)
 		}
 //- rouz edit (ChatGPT)
@@ -186,7 +186,7 @@ CStinger::CheckForBurstTyres()
 	int16 numObjects;
 	CEntity entity;
 
-	CWorld::FindObjectsInRange((lastPos + firstPos) / 2.0f,
+	World_FindObjectsInRange((lastPos + firstPos) / 2.0f,
 		dist, true, &numObjects, 15, (CEntity**)vehsInRange,
 		false, true, false, false, false);
 
@@ -252,7 +252,7 @@ CStinger::Process()
 		{
 			m_nSpikeState = STINGERSTATE_DEPLOYING;
 			for (int i = 0; i < NUM_STINGER_SEGMENTS; i++)
-				CWorld::Add(pSpikes[i]);
+				World_Add(pSpikes[i]);
 			pOwner->SetIdle();
 		}
 		break;
@@ -279,11 +279,11 @@ CStinger::Process()
 			CVector pos3d = m_vPos;
 			CColPoint colPoint;
 			CEntity *pEntity;
-			if (CWorld::ProcessVerticalLine(CVector(pos3d.x, pos3d.y, pos3d.z - 10.0f), pos3d.z, colPoint, pEntity, true, false, false, false, true, false, nil))
+			if (World_ProcessVerticalLine(CVector(pos3d.x, pos3d.y, pos3d.z - 10.0f), pos3d.z, colPoint, pEntity, true, false, false, false, true, false, nil))
 				pos3d.z = colPoint.point.z + 0.15f;
 
 			for (int spike = 0; spike < NUM_STINGER_SEGMENTS; spike++) {
-				if (CWorld::TestSphereAgainstWorld(pos3d + CVector(pos2d.x, pos2d.y, 0.6f), 0.3f, nil, true, false, false, true, false, false))
+				if (World_TestSphereAgainstWorld(pos3d + CVector(pos2d.x, pos2d.y, 0.6f), 0.3f, nil, true, false, false, true, false, false))
 					pos2d = CVector2D(0.0f, 0.0f);
 
 				if (spike % 2 == 0) {

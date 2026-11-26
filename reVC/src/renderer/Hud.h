@@ -41,94 +41,96 @@ enum eSprites
 	NUM_HUD_SPRITES = 69,
 };
 
-class CHud
-{
-public:
-	static Sprite2d Sprites[NUM_HUD_SPRITES];
-	static wchar m_HelpMessage[HELP_MSG_LENGTH];
-	static wchar m_LastHelpMessage[HELP_MSG_LENGTH];
-	static uint32 m_HelpMessageState;
-	static uint32 m_HelpMessageTimer;
-	static int32 m_HelpMessageFadeTimer;
-	static wchar m_HelpMessageToPrint[HELP_MSG_LENGTH];
-	static float m_HelpMessageDisplayTime;
-	static bool m_HelpMessageDisplayForever;
-	static bool	m_HelpMessageQuick;
-	static uint32 m_ZoneState;
-	static int32 m_ZoneFadeTimer;
-	static uint32 m_ZoneNameTimer;
-	static wchar *m_pZoneName;
-	static wchar *m_pLastZoneName;
-	static wchar *m_ZoneToPrint;
-	static wchar *m_VehicleName;
-	static wchar *m_pLastVehicleName;
-	static wchar *m_pVehicleNameToPrint;
-	static uint32 m_VehicleState;
-	static int32 m_VehicleFadeTimer;
-	static uint32 m_VehicleNameTimer;
-	static wchar m_Message[256];
-	static wchar m_PagerMessage[256];
-	static bool m_Wants_To_Draw_Hud;
-	static bool m_Wants_To_Draw_3dMarkers;
-	static wchar m_BigMessage[6][128];
-	static int16 m_ItemToFlash;
-	static bool m_HideRadar;
-	static int32 m_ClockState;
-
-	// These aren't really in CHud
-	static float BigMessageInUse[6];
-	static float BigMessageAlpha[6];
-	static float BigMessageX[6];
-	static float OddJob2OffTimer;
-	static bool CounterOnLastFrame[NUMONSCREENCOUNTERS];
-	static float OddJob2XOffset;
-	static uint16 CounterFlashTimer[NUMONSCREENCOUNTERS];
-	static uint16 OddJob2Timer;
-	static bool TimerOnLastFrame;
-	static int16 OddJob2On;
-	static uint16 TimerFlashTimer;
-	static int16 PagerSoundPlayed;
-	static int32 SpriteBrightness;
-	static float PagerXOffset;
-	static int16 PagerTimer;
-	static int16 PagerOn;
-
-	static uint32 m_WantedFadeTimer;
-	static uint32 m_WantedState;
-	static uint32 m_WantedTimer;
-	static uint32 m_EnergyLostFadeTimer;
-	static uint32 m_EnergyLostState;
-	static uint32 m_EnergyLostTimer;
-	static uint32 m_DisplayScoreFadeTimer;
-	static uint32 m_DisplayScoreState;
-	static uint32 m_DisplayScoreTimer;
-	static uint32 m_WeaponFadeTimer;
-	static uint32 m_WeaponState;
-	static uint32 m_WeaponTimer;
-
-	static uint32 m_LastDisplayScore;
-	static uint32 m_LastWanted;
-	static uint32 m_LastWeapon;
-	static uint32 m_LastTimeEnergyLost;
-
-public:
-	static void Draw();
-	static void DrawAfterFade();
-	static void GetRidOfAllHudMessages();
-#ifdef RELOADABLES
-	static void ReloadTXD();
+//+ rouz edit (Claude)
+// Formerly the static class CHud, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
 #endif
-	static void Initialise();
-	static void ReInitialise();
-	static void SetBigMessage(wchar *message, uint16 style);
-	static void SetHelpMessage(wchar *message, bool quick, bool displayForever = false);
-	static bool IsHelpMessageBeingDisplayed(void);
-	static void SetMessage(wchar *message);
-	static void SetPagerMessage(wchar *message);
-	static void SetVehicleName(wchar *name);
-	static void SetZoneName(wchar *name);
-	static void Shutdown();
-	static float DrawFadeState(DRAW_FADE_STATE, int);
-	static void ResetWastedText(void);
-};
+extern Sprite2d Hud_Sprites[NUM_HUD_SPRITES];
+extern wchar Hud_m_HelpMessage[HELP_MSG_LENGTH];
+extern wchar Hud_m_LastHelpMessage[HELP_MSG_LENGTH];
+extern uint32 Hud_m_HelpMessageState;
+extern uint32 Hud_m_HelpMessageTimer;
+extern int32 Hud_m_HelpMessageFadeTimer;
+extern wchar Hud_m_HelpMessageToPrint[HELP_MSG_LENGTH];
+extern float Hud_m_HelpMessageDisplayTime;
+extern bool Hud_m_HelpMessageDisplayForever;
+extern bool Hud_m_HelpMessageQuick;
+extern uint32 Hud_m_ZoneState;
+extern int32 Hud_m_ZoneFadeTimer;
+extern uint32 Hud_m_ZoneNameTimer;
+extern wchar * Hud_m_pZoneName;
+extern wchar * Hud_m_pLastZoneName;
+extern wchar * Hud_m_ZoneToPrint;
+extern wchar * Hud_m_VehicleName;
+extern wchar * Hud_m_pLastVehicleName;
+extern wchar * Hud_m_pVehicleNameToPrint;
+extern uint32 Hud_m_VehicleState;
+extern int32 Hud_m_VehicleFadeTimer;
+extern uint32 Hud_m_VehicleNameTimer;
+extern wchar Hud_m_Message[256];
+extern wchar Hud_m_PagerMessage[256];
+extern bool Hud_m_Wants_To_Draw_Hud;
+extern bool Hud_m_Wants_To_Draw_3dMarkers;
+extern wchar Hud_m_BigMessage[6][128];
+extern int16 Hud_m_ItemToFlash;
+extern bool Hud_m_HideRadar;
+extern int32 Hud_m_ClockState;
+extern float Hud_BigMessageInUse[6];
+extern float Hud_BigMessageAlpha[6];
+extern float Hud_BigMessageX[6];
+extern float Hud_OddJob2OffTimer;
+extern bool Hud_CounterOnLastFrame[NUMONSCREENCOUNTERS];
+extern float Hud_OddJob2XOffset;
+extern uint16 Hud_CounterFlashTimer[NUMONSCREENCOUNTERS];
+extern uint16 Hud_OddJob2Timer;
+extern bool Hud_TimerOnLastFrame;
+extern int16 Hud_OddJob2On;
+extern uint16 Hud_TimerFlashTimer;
+extern int16 Hud_PagerSoundPlayed;
+extern int32 Hud_SpriteBrightness;
+extern float Hud_PagerXOffset;
+extern int16 Hud_PagerTimer;
+extern int16 Hud_PagerOn;
+extern uint32 Hud_m_WantedFadeTimer;
+extern uint32 Hud_m_WantedState;
+extern uint32 Hud_m_WantedTimer;
+extern uint32 Hud_m_EnergyLostFadeTimer;
+extern uint32 Hud_m_EnergyLostState;
+extern uint32 Hud_m_EnergyLostTimer;
+extern uint32 Hud_m_DisplayScoreFadeTimer;
+extern uint32 Hud_m_DisplayScoreState;
+extern uint32 Hud_m_DisplayScoreTimer;
+extern uint32 Hud_m_WeaponFadeTimer;
+extern uint32 Hud_m_WeaponState;
+extern uint32 Hud_m_WeaponTimer;
+extern uint32 Hud_m_LastDisplayScore;
+extern uint32 Hud_m_LastWanted;
+extern uint32 Hud_m_LastWeapon;
+extern uint32 Hud_m_LastTimeEnergyLost;
+void Hud_Draw();
+void Hud_DrawAfterFade();
+void Hud_GetRidOfAllHudMessages();
+#ifdef RELOADABLES
+void Hud_ReloadTXD();
+#endif
+void Hud_Initialise();
+void Hud_ReInitialise();
+void Hud_SetBigMessage(wchar *message, uint16 style);
+bool Hud_IsHelpMessageBeingDisplayed(void);
+void Hud_SetMessage(wchar *message);
+void Hud_SetPagerMessage(wchar *message);
+void Hud_SetVehicleName(wchar *name);
+void Hud_SetZoneName(wchar *name);
+void Hud_Shutdown();
+float Hud_DrawFadeState(DRAW_FADE_STATE, int);
+void Hud_ResetWastedText(void);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+#ifdef RELOADABLES
+#endif
+void Hud_SetHelpMessage(wchar *message, bool quick, bool displayForever = false);
+#endif
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)

@@ -33,12 +33,23 @@ public:
 	virtual void AddDBG(const char *path) = 0;
 };
 
-class CTweakVars
-{
-public:
-	static void Add(CTweakVar *var);
-	static void AddDBG(const char *path);
-};
+//+ rouz edit (Claude)
+// Formerly the static class CTweakVars, now C globals and functions shared with C
+#ifdef __cplusplus
+class CTweakVar;
+#else
+typedef struct CTweakVar CTweakVar;
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+void TweakVars_Add(CTweakVar *var);
+void TweakVars_AddDBG(const char *path);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+#endif
+//- rouz edit (Claude)
 
 class CTweakFunc : public CTweakVar
 {
@@ -48,7 +59,7 @@ public:
 	CTweakFunc(void (*pFunc)(), const char *strName, const char *strPath) :
 		m_pPath(strPath), m_pVarName(strName), m_pFunc(pFunc)
 	{
-		CTweakVars::Add(this);
+		TweakVars_Add(this);
 	}
 	
 	void AddDBG(const char *path);
@@ -62,7 +73,7 @@ public:
 	CTweakBool(bool *pBool, const char *strName, const char *strPath) :
 		m_pPath(strPath), m_pVarName(strName), m_pBoolVar(pBool)
 	{
-		CTweakVars::Add(this);
+		TweakVars_Add(this);
 	}
 	
 	void AddDBG(const char *path);
@@ -81,7 +92,7 @@ public:
 	    : m_pPath(strPath), m_pVarName(strName), m_pIntVar(pInt), m_nMin(nMin), m_nMax(nMax),
 	      m_aStr(aStr)
 	{
-		CTweakVars::Add(this);
+		TweakVars_Add(this);
 	}
 
 	void AddDBG(const char *path);
@@ -100,7 +111,7 @@ public:
 		      m_nLoawerBound(nLower), m_nUpperBound(nUpper), m_nStep(nStep)                \
                                                                                                    \
 		{                                                                                  \
-			CTweakVars::Add(this);                                                     \
+			TweakVars_Add(this);                                                     \
 		}                                                                                  \
                                                                                                    \
 		void AddDBG(const char *path);                                                     \

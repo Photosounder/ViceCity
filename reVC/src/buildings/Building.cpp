@@ -14,7 +14,7 @@ CBuilding::ReplaceWithNewModel(int32 id)
 	m_modelIndex = id;
 
 	if(bIsBIGBuilding)
-		if(m_level == LEVEL_GENERIC || m_level == CGame::currLevel)
+		if(m_level == LEVEL_GENERIC || m_level == Game_currLevel)
 			Streaming_RequestModel(id, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 }
 
@@ -26,33 +26,33 @@ IsBuildingPointerValid(CBuilding* pBuilding)
 	if (pBuilding->GetIsATreadable()) {
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetTreadablePool(), (CTreadable*)pBuilding);
+		int index = CPool_GetJustIndex_NoFreeAssert(Pools_GetTreadablePool(), (CTreadable*)pBuilding);
 		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		return index >= 0 && index < CPool_GetSize(CPools::GetTreadablePool());
+		return index >= 0 && index < CPool_GetSize(Pools_GetTreadablePool());
 		//- rouz edit (ChatGPT)
 #else
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		return index >= 0 && index <= CPool_GetSize(CPools::GetTreadablePool());
+		return index >= 0 && index <= CPool_GetSize(Pools_GetTreadablePool());
 		//- rouz edit (ChatGPT)
 #endif
 	} else {
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), pBuilding);
+		int index = CPool_GetJustIndex_NoFreeAssert(Pools_GetBuildingPool(), pBuilding);
 		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		return index >= 0 && index < CPool_GetSize(CPools::GetBuildingPool());
+		return index >= 0 && index < CPool_GetSize(Pools_GetBuildingPool());
 		//- rouz edit (ChatGPT)
 #else
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		return index >= 0 && index <= CPool_GetSize(CPools::GetBuildingPool());
+		return index >= 0 && index <= CPool_GetSize(Pools_GetBuildingPool());
 		//- rouz edit (ChatGPT)
 #endif
 	}

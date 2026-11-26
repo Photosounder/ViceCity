@@ -328,7 +328,7 @@ CVisibilityPlugins::RenderFadingEntities(CSortedLinkList *list)
 			POP_RENDERGROUP();
 			e->bImBeingRendered = false;
 		}else
-			CRenderer::RenderOneNonRoad(e);
+			Renderer_RenderOneNonRoad(e);
 
 		if(mi->GetModelType() == MITYPE_SIMPLE && mi->m_noZwrite)
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
@@ -745,8 +745,8 @@ CVisibilityPlugins::RenderVehicleTailRotorAlphaCB(RpAtomic *atomic)
 RpAtomic*
 CVisibilityPlugins::RenderPlayerCB(RpAtomic *atomic)
 {
-	if(CWorld::Players[0].m_pSkinTexture)
-		RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), SetTextureCB, CWorld::Players[0].m_pSkinTexture);
+	if(World_Players[0].m_pSkinTexture)
+		RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), SetTextureCB, World_Players[0].m_pSkinTexture);
 	RENDERCALLBACK(atomic);
 	return atomic;
 }
@@ -795,11 +795,11 @@ CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix *atomicMat, RwMatrix 
 	// Vehicle right is the x axis (RwMatrix.right)
 
 	// Delegate the dot product with the camera vector to the C implementation
-	const float atomicPos[3] = { RwMatrixGetPos(atomicMat)->x, RwMatrixGetPos(atomicMat)->y, RwMatrixGetPos(atomicMat)->z };
-	const float cameraPos[3] = { ms_pCameraPosn->x, ms_pCameraPosn->y, ms_pCameraPosn->z };
-	const float clumpForward[3] = { RwMatrixGetUp(clumpMat)->x, RwMatrixGetUp(clumpMat)->y, RwMatrixGetUp(clumpMat)->z };
-	const float clumpRight[3] = { RwMatrixGetRight(clumpMat)->x, RwMatrixGetRight(clumpMat)->y, RwMatrixGetRight(clumpMat)->z };
-	return Visibility_DotWithCameraVector(atomicPos, cameraPos, clumpForward, clumpRight, flags);
+	const CVector atomicPos(RwMatrixGetPos(atomicMat)->x, RwMatrixGetPos(atomicMat)->y, RwMatrixGetPos(atomicMat)->z);
+	const CVector cameraPos(ms_pCameraPosn->x, ms_pCameraPosn->y, ms_pCameraPosn->z);
+	const CVector clumpForward(RwMatrixGetUp(clumpMat)->x, RwMatrixGetUp(clumpMat)->y, RwMatrixGetUp(clumpMat)->z);
+	const CVector clumpRight(RwMatrixGetRight(clumpMat)->x, RwMatrixGetRight(clumpMat)->y, RwMatrixGetRight(clumpMat)->z);
+	return Visibility_DotWithCameraVector(&atomicPos, &cameraPos, &clumpForward, &clumpRight, flags);
 }
 
 /* These are all unused */

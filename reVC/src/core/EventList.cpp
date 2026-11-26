@@ -28,19 +28,19 @@ void Events_BackendError(const char *message)
 int32_t Events_BackendPedRef(CEntity *entity)
 {
     // Access the original typed native primitive only at its original C policy access point
-    return CPools::GetPedRef((CPed*)entity);
+    return Pools_GetPedRef((CPed*)entity);
 }
 
 int32_t Events_BackendVehicleRef(CEntity *entity)
 {
     // Access the original typed native primitive only at its original C policy access point
-    return CPools::GetVehicleRef((CVehicle*)entity);
+    return Pools_GetVehicleRef((CVehicle*)entity);
 }
 
 int32_t Events_BackendObjectRef(CEntity *entity)
 {
     // Access the original typed native primitive only at its original C policy access point
-    return CPools::GetObjectRef((CObject*)entity);
+    return Pools_GetObjectRef((CObject*)entity);
 }
 
 CPed * Events_BackendPedFromEntity(CEntity *entity)
@@ -94,7 +94,7 @@ bool Events_BackendDyingOrDead(CPed *ped)
 int32_t * Events_BackendMoney(void)
 {
     // Access the original typed native primitive only at its original C policy access point
-    return &CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
+    return &World_Players[World_PlayerInFocus].m_nMoney;
 }
 
 EventsVector Events_BackendPlayerCoors(void)
@@ -118,7 +118,7 @@ int32_t Events_BackendPolicePresence(EventsVector position,float radius)
 bool Events_BackendGermanGame(void)
 {
     // Access the original typed native primitive only at its original C policy access point
-    return CGame::germanGame;
+    return Game_germanGame;
 }
 
 void Events_BackendCrime(enum eCrimeType type,EventsVector position,uint32_t id,bool copsDontCare)

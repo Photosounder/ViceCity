@@ -7,11 +7,11 @@
 extern "C" {
 #endif
 // Pickup table helpers, the table has count entries
-bool Pickups_TestForPickupsInBubble(const CPickupData *pickups, int count, float x, float y, float z, float range);
+bool PickupLogic_TestForPickupsInBubble(const CPickupData *pickups, int count, float x, float y, float z, float range);
 bool Pickups_TryToMerge(CPickupData *pickups, int count, float x, float y, float z, uint8_t type, int16_t modelIndex, uint32_t quantity);
-bool Pickups_IsPickUpPickedUp(int32_t *collected, int count, int32_t pickupId);
-void Pickups_PassTime(CPickupData *pickups, int count, uint32_t time);
-int32_t Pickups_GetActualPickupIndex(const CPickupData *pickups, int32_t index);
+bool PickupLogic_IsPickUpPickedUp(int32_t *collected, int count, int32_t pickupId);
+void PickupLogic_PassTime(CPickupData *pickups, int count, uint32_t time);
+int32_t PickupLogic_GetActualPickupIndex(const CPickupData *pickups, int32_t index);
 // Pickups to get rid of around a point: money and timed pickups within the radius, in table order
 int Pickups_SelectUnnecessary(const CPickupData *pickups, int count, float x, float y, float z, float radius, int *out, int maxOut);
 // Sine of the phase of the pulse of a pickup, from the time in milliseconds plus the address of the pickup and the mask that gives the period (0x7FF is about 2 seconds)

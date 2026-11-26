@@ -38,7 +38,7 @@ void Glass_StepFallingPane(bool carGlass, float timeStep, VectorMath3 *pos, Vect
 	up->x += c.x; up->y += c.y; up->z += c.z;
 }
 
-int32_t Glass_CalcAlphaWithNormal(VectorMath3 normal, VectorMath3 cameraForward)
+int32_t GlassLogic_CalcAlphaWithNormal(VectorMath3 normal, VectorMath3 cameraForward)
 {
 	// Mirror the forward vector around the normal and compare it to a fixed light direction
 	float fwdDir = 2.0f * Dot(normal, cameraForward);

@@ -101,7 +101,7 @@ bool Ropes_BackendSwatLoaded(void)
 CCopPed *Ropes_BackendAddSwat(RopesVector pos)
 {
 	// Retain the original population call and actual derived-pointer conversion
-	return (CCopPed *)CPopulation::AddPed(PEDTYPE_COP, COP_HELI_SWAT, CVector(pos.x, pos.y, pos.z));
+	return (CCopPed *)Population_AddPed(PEDTYPE_COP, COP_HELI_SWAT, CVector(pos.x, pos.y, pos.z));
 }
 void Ropes_BackendDisableCollision(CCopPed *ped)
 {

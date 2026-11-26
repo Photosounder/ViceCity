@@ -39,10 +39,10 @@ void ModelRegistry_BackendLogStores(void)
 void ModelRegistry_BackendSetBuiltinCollision(void *model,int kind)
 {
     // Assign the matching original temporary collision model
-    CColModel *models[]={&CTempColModels::ms_colModelDoor1,&CTempColModels::ms_colModelBumper1,
-        &CTempColModels::ms_colModelPanel1,&CTempColModels::ms_colModelBonnet1,
-        &CTempColModels::ms_colModelBoot1,&CTempColModels::ms_colModelWheel1,
-        &CTempColModels::ms_colModelBodyPart1,&CTempColModels::ms_colModelBodyPart2};
+    CColModel *models[]={&TempColModels_ms_colModelDoor1,&TempColModels_ms_colModelBumper1,
+        &TempColModels_ms_colModelPanel1,&TempColModels_ms_colModelBonnet1,
+        &TempColModels_ms_colModelBoot1,&TempColModels_ms_colModelWheel1,
+        &TempColModels_ms_colModelBodyPart1,&TempColModels_ms_colModelBodyPart2};
     ((CSimpleModelInfo*)model)->SetColModel(models[kind]);
 }
 

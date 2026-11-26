@@ -80,84 +80,84 @@ CRGBA ODDJOB_COLOR(0, 207, 133, 255);
 CRGBA ODDJOB2_COLOR(97, 194, 247, 255);
 CRGBA MISSIONTITLE_COLOR(220, 172, 2, 255);
 
-wchar CHud::m_HelpMessage[HELP_MSG_LENGTH];
-wchar CHud::m_LastHelpMessage[HELP_MSG_LENGTH];
-uint32 CHud::m_HelpMessageState;
-uint32 CHud::m_HelpMessageTimer;
-int32 CHud::m_HelpMessageFadeTimer;
-wchar CHud::m_HelpMessageToPrint[HELP_MSG_LENGTH];
-float CHud::m_HelpMessageDisplayTime;
-bool CHud::m_HelpMessageDisplayForever;
-bool CHud::m_HelpMessageQuick;
-uint32 CHud::m_ZoneState;
-int32 CHud::m_ZoneFadeTimer;
-uint32 CHud::m_ZoneNameTimer;
-wchar *CHud::m_pZoneName;
-wchar *CHud::m_pLastZoneName;
-wchar *CHud::m_ZoneToPrint;
-uint32 CHud::m_VehicleState;
-int32 CHud::m_VehicleFadeTimer;
-uint32 CHud::m_VehicleNameTimer;
-wchar *CHud::m_VehicleName;
-wchar *CHud::m_pLastVehicleName;
-wchar *CHud::m_pVehicleNameToPrint;
-wchar CHud::m_Message[256];
-wchar CHud::m_PagerMessage[256];
-bool CHud::m_Wants_To_Draw_Hud;
-bool CHud::m_Wants_To_Draw_3dMarkers;
-wchar CHud::m_BigMessage[6][128];
-int16 CHud::m_ItemToFlash;
-bool CHud::m_HideRadar;
-int32 CHud::m_ClockState;
+wchar Hud_m_HelpMessage[HELP_MSG_LENGTH];
+wchar Hud_m_LastHelpMessage[HELP_MSG_LENGTH];
+uint32 Hud_m_HelpMessageState;
+uint32 Hud_m_HelpMessageTimer;
+int32 Hud_m_HelpMessageFadeTimer;
+wchar Hud_m_HelpMessageToPrint[HELP_MSG_LENGTH];
+float Hud_m_HelpMessageDisplayTime;
+bool Hud_m_HelpMessageDisplayForever;
+bool Hud_m_HelpMessageQuick;
+uint32 Hud_m_ZoneState;
+int32 Hud_m_ZoneFadeTimer;
+uint32 Hud_m_ZoneNameTimer;
+wchar *Hud_m_pZoneName;
+wchar *Hud_m_pLastZoneName;
+wchar *Hud_m_ZoneToPrint;
+uint32 Hud_m_VehicleState;
+int32 Hud_m_VehicleFadeTimer;
+uint32 Hud_m_VehicleNameTimer;
+wchar *Hud_m_VehicleName;
+wchar *Hud_m_pLastVehicleName;
+wchar *Hud_m_pVehicleNameToPrint;
+wchar Hud_m_Message[256];
+wchar Hud_m_PagerMessage[256];
+bool Hud_m_Wants_To_Draw_Hud;
+bool Hud_m_Wants_To_Draw_3dMarkers;
+wchar Hud_m_BigMessage[6][128];
+int16 Hud_m_ItemToFlash;
+bool Hud_m_HideRadar;
+int32 Hud_m_ClockState;
 
 // These aren't really in CHud
-float CHud::BigMessageInUse[6];
-float CHud::BigMessageAlpha[6];
-float CHud::BigMessageX[6];
-float CHud::OddJob2OffTimer;
-bool CHud::CounterOnLastFrame[NUMONSCREENCOUNTERS];
-float CHud::OddJob2XOffset;
-uint16 CHud::CounterFlashTimer[NUMONSCREENCOUNTERS];
-uint16 CHud::OddJob2Timer;
-bool CHud::TimerOnLastFrame;
-int16 CHud::OddJob2On;
-uint16 CHud::TimerFlashTimer;
-int16 CHud::PagerSoundPlayed;
-int32 CHud::SpriteBrightness;
-float CHud::PagerXOffset;
-int16 CHud::PagerTimer;
-int16 CHud::PagerOn;
+float Hud_BigMessageInUse[6];
+float Hud_BigMessageAlpha[6];
+float Hud_BigMessageX[6];
+float Hud_OddJob2OffTimer;
+bool Hud_CounterOnLastFrame[NUMONSCREENCOUNTERS];
+float Hud_OddJob2XOffset;
+uint16 Hud_CounterFlashTimer[NUMONSCREENCOUNTERS];
+uint16 Hud_OddJob2Timer;
+bool Hud_TimerOnLastFrame;
+int16 Hud_OddJob2On;
+uint16 Hud_TimerFlashTimer;
+int16 Hud_PagerSoundPlayed;
+int32 Hud_SpriteBrightness;
+float Hud_PagerXOffset;
+int16 Hud_PagerTimer;
+int16 Hud_PagerOn;
 
 wchar *prevChaseString;
 
-uint32 CHud::m_WantedFadeTimer;
-uint32 CHud::m_WantedState;
-uint32 CHud::m_WantedTimer;
-uint32 CHud::m_EnergyLostFadeTimer;
-uint32 CHud::m_EnergyLostState;
-uint32 CHud::m_EnergyLostTimer;
-uint32 CHud::m_DisplayScoreFadeTimer;
-uint32 CHud::m_DisplayScoreState;
-uint32 CHud::m_DisplayScoreTimer;
-uint32 CHud::m_WeaponFadeTimer;
-uint32 CHud::m_WeaponState;
-uint32 CHud::m_WeaponTimer;
+uint32 Hud_m_WantedFadeTimer;
+uint32 Hud_m_WantedState;
+uint32 Hud_m_WantedTimer;
+uint32 Hud_m_EnergyLostFadeTimer;
+uint32 Hud_m_EnergyLostState;
+uint32 Hud_m_EnergyLostTimer;
+uint32 Hud_m_DisplayScoreFadeTimer;
+uint32 Hud_m_DisplayScoreState;
+uint32 Hud_m_DisplayScoreTimer;
+uint32 Hud_m_WeaponFadeTimer;
+uint32 Hud_m_WeaponState;
+uint32 Hud_m_WeaponTimer;
 
-uint32 CHud::m_LastDisplayScore;
-uint32 CHud::m_LastWanted;
-uint32 CHud::m_LastWeapon;
-uint32 CHud::m_LastTimeEnergyLost;
+uint32 Hud_m_LastDisplayScore;
+uint32 Hud_m_LastWanted;
+uint32 Hud_m_LastWeapon;
+uint32 Hud_m_LastTimeEnergyLost;
 
-Sprite2d CHud::Sprites[NUM_HUD_SPRITES];
+Sprite2d Hud_Sprites[NUM_HUD_SPRITES];
 static void Sprite2d_Exit_CHud_Sprites(void)
 {
     // Destroy this original object group in its former reverse array order
-    Sprite2d_DeinitArray(CHud::Sprites,(size_t)(NUM_HUD_SPRITES));
+    Sprite2d_DeinitArray(Hud_Sprites,(size_t)(NUM_HUD_SPRITES));
 }
 static int Sprite2d_Start_CHud_Sprites(void)
 {
     // Initialize at the original definition boundary and retain its exit registration position
-    Sprite2d_InitArray(CHud::Sprites,(size_t)(NUM_HUD_SPRITES));atexit(Sprite2d_Exit_CHud_Sprites);return 0;
+    Sprite2d_InitArray(Hud_Sprites,(size_t)(NUM_HUD_SPRITES));atexit(Sprite2d_Exit_CHud_Sprites);return 0;
 }
 static const int Sprite2d_Started_CHud_Sprites=Sprite2d_Start_CHud_Sprites();
 
@@ -243,7 +243,7 @@ RwTexture *gpLaserSightTex;
 RwTexture *gpLaserDotTex;
 RwTexture *gpViewFinderTex;
 
-void CHud::Draw()
+void Hud_Draw()
 {
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
@@ -251,12 +251,12 @@ void CHud::Draw()
 
 	// disable hud via second controller
 	if (CPad::GetPad(1)->GetStartJustDown())
-		m_Wants_To_Draw_Hud = !m_Wants_To_Draw_Hud;
+		Hud_m_Wants_To_Draw_Hud = !Hud_m_Wants_To_Draw_Hud;
 
 	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
-	if (m_Wants_To_Draw_Hud && !TheCamera.m_WideScreenOn) {
+	if (Hud_m_Wants_To_Draw_Hud && !TheCamera.m_WideScreenOn) {
 		// unused statics in here
 		bool DrawCrossHair = false;
 		bool CrossHairHidesHud = false;
@@ -275,12 +275,12 @@ void CHud::Draw()
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void *)rwFILTERLINEAR);
 
 			// Delegate the next brightness to the C implementation
-			SpriteBrightness = Hud_NextSpriteBrightness(SpriteBrightness);
+			Hud_SpriteBrightness = Hud_NextSpriteBrightness(Hud_SpriteBrightness);
 
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 
 			// Delegate the pulse of the crosshair to the C implementation
-			float fMultBright = Hud_CrosshairPulse((*Timer_GetTimeInMilliseconds()), SpriteBrightness);
+			float fMultBright = Hud_CrosshairPulse((*Timer_GetTimeInMilliseconds()), Hud_SpriteBrightness);
 			CRect rect;
 			// Initialize rectangle bounds at the former local constructor boundary
 			Rect_Init(&rect);
@@ -299,7 +299,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 				else {
@@ -311,7 +311,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 			} else {
@@ -325,7 +325,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 				else if (Mode == CCam::MODE_1STPERSON_RUNABOUT) {
@@ -337,7 +337,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 				else if (Mode == CCam::MODE_ROCKETLAUNCHER || Mode == CCam::MODE_ROCKETLAUNCHER_RUNABOUT) {
@@ -375,7 +375,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.01f, 0.01f,  1.0f, 0.0f,  0.01f, 1.0f,  1.0f, 1.0f);
 
 					rect.left = SCREEN_WIDTH/2;
@@ -385,7 +385,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.99f, 0.0f,  0.01f, 0.01f,  0.99f, 1.0f,  0.01f, 1.0f);
 
 					rect.left = SCREEN_WIDTH/2 - xOffset;
@@ -395,7 +395,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.01f, 0.99f,  1.0f, 0.99f,  0.01f, 0.01f,  1.0f, 0.01f);
 
 					rect.left = SCREEN_WIDTH/2;
@@ -405,7 +405,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
+})(&(Hud_Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.99f, 0.99f,  0.01f, 0.99f,  0.99f, 0.01f,  0.01f, 0.01f);
 
 					CVector dotPos;
@@ -439,7 +439,7 @@ void CHud::Draw()
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 		}
 		else {
-			SpriteBrightness = 0;
+			Hud_SpriteBrightness = 0;
 		}
 
 		if (CrossHairHidesHud)
@@ -454,45 +454,45 @@ void CHud::Draw()
 		char sTemp[16];
 		float alpha;
 
-		if (m_LastDisplayScore == CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney) {
-			alpha = DrawFadeState(HUD_SCORE_FADING, 0);
+		if (Hud_m_LastDisplayScore == World_Players[World_PlayerInFocus].m_nVisibleMoney) {
+			alpha = Hud_DrawFadeState(HUD_SCORE_FADING, 0);
 		} else {
-			alpha = DrawFadeState(HUD_SCORE_FADING, 1);
-			m_LastDisplayScore = CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney;
+			alpha = Hud_DrawFadeState(HUD_SCORE_FADING, 1);
+			Hud_m_LastDisplayScore = World_Players[World_PlayerInFocus].m_nVisibleMoney;
 		}
-		if (m_DisplayScoreState != FADED_OUT) {
-			sprintf(sTemp, "$%08d", CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney);
+		if (Hud_m_DisplayScoreState != FADED_OUT) {
+			sprintf(sTemp, "$%08d", World_Players[World_PlayerInFocus].m_nVisibleMoney);
 			AsciiToUnicode(sTemp, sPrint);
 
-			CFont::SetPropOff();
-			CFont::SetBackgroundOff();
-			CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-			CFont::SetCentreOff();
-			CFont::SetRightJustifyOn();
-			CFont::SetRightJustifyWrap(0.0f);
-			CFont::SetBackGroundOnlyTextOff();
-			CFont::SetFontStyle(FONT_HEADING);
-			CFont::SetPropOff();
-			CFont::SetDropShadowPosition(2);
-			CFont::SetDropColor(CRGBA(0, 0, 0, alpha));
+			Font_SetPropOff();
+			Font_SetBackgroundOff();
+			Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+			Font_SetCentreOff();
+			Font_SetRightJustifyOn();
+			Font_SetRightJustifyWrap(0.0f);
+			Font_SetBackGroundOnlyTextOff();
+			Font_SetFontStyle(FONT_HEADING);
+			Font_SetPropOff();
+			Font_SetDropShadowPosition(2);
+			Font_SetDropColor(CRGBA(0, 0, 0, alpha));
 			MONEY_COLOR.a = alpha;
-			CFont::SetColor(MONEY_COLOR);
+			Font_SetColor(MONEY_COLOR);
 
 			if (FrontEndMenuManager.m_PrefsShowHud) {
-				CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(43.0f), sPrint);
+				Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(43.0f), sPrint);
 			}
 		}
 
 		/*
 			DrawAmmo
 		*/
-		if (m_LastWeapon == playerPed->GetWeapon()->m_eWeaponType) {
-			alpha = CHud::DrawFadeState(HUD_WEAPON_FADING, 0);
+		if (Hud_m_LastWeapon == playerPed->GetWeapon()->m_eWeaponType) {
+			alpha = Hud_DrawFadeState(HUD_WEAPON_FADING, 0);
 		} else {
-			alpha = CHud::DrawFadeState(HUD_WEAPON_FADING, 1);
-			m_LastWeapon = playerPed->GetWeapon()->m_eWeaponType;
+			alpha = Hud_DrawFadeState(HUD_WEAPON_FADING, 1);
+			Hud_m_LastWeapon = playerPed->GetWeapon()->m_eWeaponType;
 		}
-		if (m_WeaponState != FADED_OUT) {
+		if (Hud_m_WeaponState != FADED_OUT) {
 			CWeapon *weapon = playerPed->GetWeapon();
 			int32 AmmoAmount = WeaponInfo_GetWeaponInfo((eWeaponType)WeaponType)->m_nAmountofAmmunition;
 			int32 AmmoInClip = weapon->m_nAmmoInClip;
@@ -513,7 +513,7 @@ void CHud::Draw()
 						([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
-})(&(Sprites[WeaponType]),
+})(&(Hud_Sprites[WeaponType]),
 							Rect_Make(SCREEN_SCALE_FROM_RIGHT(99.0f), SCREEN_SCALE_Y(27.0f), SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(91.0f)),
 							CRGBA(255, 255, 255, alpha),
 							0.015f, 0.015f,
@@ -561,23 +561,23 @@ void CHud::Draw()
 					}
 				}
 
-				CFont::SetBackgroundOff();
-				CFont::SetScale(SCREEN_SCALE_X(0.5f), SCREEN_SCALE_Y(0.8f));
-				CFont::SetJustifyOff();
-				CFont::SetCentreOn();
-				CFont::SetCentreSize(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
-				CFont::SetPropOn();
-				CFont::SetDropShadowPosition(0);
-				CFont::SetFontStyle(FONT_STANDARD);
+				Font_SetBackgroundOff();
+				Font_SetScale(SCREEN_SCALE_X(0.5f), SCREEN_SCALE_Y(0.8f));
+				Font_SetJustifyOff();
+				Font_SetCentreOn();
+				Font_SetCentreSize(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
+				Font_SetPropOn();
+				Font_SetDropShadowPosition(0);
+				Font_SetFontStyle(FONT_STANDARD);
 
 				if (Min(9999, TotalAmmo - AmmoInClip) != 9999 && !Darkel_FrenzyOnGoing() && weaponInfo->m_nWeaponSlot > 1 && weapon->m_eWeaponType != WEAPONTYPE_DETONATOR) {
-					CFont::SetDropShadowPosition(2);
-					CFont::SetDropColor(CRGBA(0, 0, 0, alpha));
+					Font_SetDropShadowPosition(2);
+					Font_SetDropColor(CRGBA(0, 0, 0, alpha));
 					AMMO_COLOR.a = alpha;
-					CFont::SetColor(AMMO_COLOR);
+					Font_SetColor(AMMO_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud)
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(66.0f), SCREEN_SCALE_Y(90.0f), sPrint);
-					CFont::SetDropShadowPosition(0);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(66.0f), SCREEN_SCALE_Y(90.0f), sPrint);
+					Font_SetDropShadowPosition(0);
 				}
 			}
 		}
@@ -585,27 +585,27 @@ void CHud::Draw()
 		/*
 			DrawHealth
 		*/
-		if ( m_LastTimeEnergyLost == CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss ) {
-			CHud::DrawFadeState(HUD_ENERGY_FADING, 0);
+		if ( Hud_m_LastTimeEnergyLost == World_Players[World_PlayerInFocus].m_nTimeLastHealthLoss ) {
+			Hud_DrawFadeState(HUD_ENERGY_FADING, 0);
 		} else {
-			CHud::DrawFadeState(HUD_ENERGY_FADING, 1);
-			m_LastTimeEnergyLost = CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss;
+			Hud_DrawFadeState(HUD_ENERGY_FADING, 1);
+			Hud_m_LastTimeEnergyLost = World_Players[World_PlayerInFocus].m_nTimeLastHealthLoss;
 		}
 
-		if (m_EnergyLostState != FADED_OUT) {
-			CFont::SetBackgroundOff();
-			CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-			CFont::SetJustifyOff();
-			CFont::SetCentreOff();
-			CFont::SetRightJustifyWrap(0.0f);
-			CFont::SetRightJustifyOn();
-			CFont::SetPropOff();
-			CFont::SetFontStyle(FONT_HEADING);
-			CFont::SetDropShadowPosition(2);
-			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
+		if (Hud_m_EnergyLostState != FADED_OUT) {
+			Font_SetBackgroundOff();
+			Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+			Font_SetJustifyOff();
+			Font_SetCentreOff();
+			Font_SetRightJustifyWrap(0.0f);
+			Font_SetRightJustifyOn();
+			Font_SetPropOff();
+			Font_SetFontStyle(FONT_HEADING);
+			Font_SetDropShadowPosition(2);
+			Font_SetDropColor(CRGBA(0, 0, 0, 255));
 
 			// Delegate the blinking tests to the C implementation
-			if (Hud_ShowHealth(m_ItemToFlash == ITEM_HEALTH, FRAMECOUNTER, playerPed->m_fHealth)) {
+			if (Hud_ShowHealth(Hud_m_ItemToFlash == ITEM_HEALTH, FRAMECOUNTER, playerPed->m_fHealth)) {
 				{
 
 					AsciiToUnicode("{", sPrintIcon);
@@ -616,13 +616,13 @@ void CHud::Draw()
 #endif
 					AsciiToUnicode(sTemp, sPrint);
 
-					CFont::SetColor(HEALTH_COLOR);
+					Font_SetColor(HEALTH_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (Hud_ShowLossIcon(CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss, (*Timer_GetTimeInMilliseconds()), FRAMECOUNTER)) {
+						if (Hud_ShowLossIcon(World_Players[World_PlayerInFocus].m_nTimeLastHealthLoss, (*Timer_GetTimeInMilliseconds()), FRAMECOUNTER)) {
 							// CFont::SetColor(HEALTH_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
 					}
 				}
@@ -631,8 +631,8 @@ void CHud::Draw()
 			/*
 				DrawArmour
 			*/
-			if (Hud_ShowArmour(m_ItemToFlash == ITEM_ARMOUR, FRAMECOUNTER)) {
-				CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+			if (Hud_ShowArmour(Hud_m_ItemToFlash == ITEM_ARMOUR, FRAMECOUNTER)) {
+				Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
 				if (playerPed->m_fArmour > 1.0f) {
 					AsciiToUnicode("<", sPrintIcon);
 #ifdef FIX_BUGS
@@ -642,14 +642,14 @@ void CHud::Draw()
 #endif
 					AsciiToUnicode(sTemp, sPrint);
 
-					CFont::SetColor(ARMOUR_COLOR);
+					Font_SetColor(ARMOUR_COLOR);
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (Hud_ShowLossIcon(CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss, (*Timer_GetTimeInMilliseconds()), FRAMECOUNTER)) {
+						if (Hud_ShowLossIcon(World_Players[World_PlayerInFocus].m_nTimeLastArmourLoss, (*Timer_GetTimeInMilliseconds()), FRAMECOUNTER)) {
 							// CFont::SetColor(ARMOUR_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
+							Font_PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
 					}
 				}
@@ -659,21 +659,21 @@ void CHud::Draw()
 		/*
 			DrawWantedLevel
 		*/
-		if (m_LastWanted == Wanted_GetWantedLevel(playerPed->m_pWanted)) {
-			alpha = DrawFadeState(HUD_WANTED_FADING, 0);
+		if (Hud_m_LastWanted == Wanted_GetWantedLevel(playerPed->m_pWanted)) {
+			alpha = Hud_DrawFadeState(HUD_WANTED_FADING, 0);
 		} else {
-			alpha = DrawFadeState(HUD_WANTED_FADING, 1);
-			m_LastWanted = Wanted_GetWantedLevel(playerPed->m_pWanted);
+			alpha = Hud_DrawFadeState(HUD_WANTED_FADING, 1);
+			Hud_m_LastWanted = Wanted_GetWantedLevel(playerPed->m_pWanted);
 		}
 
-		if (m_WantedState != FADED_OUT) {
-			CFont::SetBackgroundOff();
-			CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-			CFont::SetJustifyOff();
-			CFont::SetCentreOff();
-			CFont::SetRightJustifyOn();
-			CFont::SetPropOn();
-			CFont::SetFontStyle(FONT_STANDARD);
+		if (Hud_m_WantedState != FADED_OUT) {
+			Font_SetBackgroundOff();
+			Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+			Font_SetJustifyOff();
+			Font_SetCentreOff();
+			Font_SetRightJustifyOn();
+			Font_SetPropOn();
+			Font_SetFontStyle(FONT_STANDARD);
 
 			AsciiToUnicode(">", sPrintIcon);
 
@@ -684,18 +684,18 @@ void CHud::Draw()
 							+ 2000 || FRAMECOUNTER & 4)) {
 
 						WANTED_COLOR.a = alpha;
-						CFont::SetColor(WANTED_COLOR);
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
+						Font_SetColor(WANTED_COLOR);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
 
 					} else if (playerPed->m_pWanted->m_nMinWantedLevel > i && FRAMECOUNTER & 4) {
 						WANTED_COLOR_FLASH.a = alpha;
-						CFont::SetColor(WANTED_COLOR_FLASH);
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
+						Font_SetColor(WANTED_COLOR_FLASH);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
 
 					} else if (Wanted_GetWantedLevel(playerPed->m_pWanted) <= i) {
 						NOTWANTED_COLOR.a = alpha;
-						CFont::SetColor(NOTWANTED_COLOR);
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
+						Font_SetColor(NOTWANTED_COLOR);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
 					}
 				}
 			}
@@ -703,9 +703,9 @@ void CHud::Draw()
 
 		static int32 nMediaLevelCounter = 0;
 		if (Stats_ShowChaseStatOnScreen != 0) {
-			float fCurAttentionLevel = CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention;
+			float fCurAttentionLevel = World_Players[World_PlayerInFocus].m_fMediaAttention;
 			if (0.7f * Stats_HighestChaseValue > fCurAttentionLevel
-				|| fCurAttentionLevel <= 40.0f || CTheScripts::IsPlayerOnAMission()) {
+				|| fCurAttentionLevel <= 40.0f || TheScripts_IsPlayerOnAMission()) {
 				nMediaLevelCounter = 0;
 			}
 			else {
@@ -716,24 +716,24 @@ void CHud::Draw()
 					sprintf(gString, "%s %d" "-%d-", UnicodeToAscii(Text_Get(&TheText,"CHSE")), (int32)fCurAttentionLevel, (int32)Stats_HighestChaseValue);
 				}
 				AsciiToUnicode(gString, gUString);
-				CFont::SetBackgroundOff();
-				CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-				CFont::SetCentreOff();
-				CFont::SetRightJustifyOn();
-				CFont::SetRightJustifyWrap(0.0f);
-				CFont::SetBackGroundOnlyTextOff();
-				CFont::SetFontStyle(FONT_HEADING);
-				CFont::SetPropOff();
-				CFont::SetDropShadowPosition(2);
-				CFont::SetDropColor(CRGBA(0, 0, 0, 255));
+				Font_SetBackgroundOff();
+				Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+				Font_SetCentreOff();
+				Font_SetRightJustifyOn();
+				Font_SetRightJustifyWrap(0.0f);
+				Font_SetBackGroundOnlyTextOff();
+				Font_SetFontStyle(FONT_HEADING);
+				Font_SetPropOff();
+				Font_SetDropShadowPosition(2);
+				Font_SetDropColor(CRGBA(0, 0, 0, 255));
 
 				CRGBA colour;
 				if ((*Timer_GetTimeInMilliseconds()) & 0x200)
 					colour = CRGBA(204, 0, 185, 180);
 				else
 					colour = CRGBA(178, 0, 162, 180);
-				CFont::SetColor(colour);
-				CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(113.0f), gUString);
+				Font_SetColor(colour);
+				Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(113.0f), gUString);
 				
 				if (Stats_FindChaseString(fCurAttentionLevel) != prevChaseString) {
 					prevChaseString = Stats_FindChaseString(fCurAttentionLevel);
@@ -743,7 +743,7 @@ void CHud::Draw()
 				if (nMediaLevelCounter != 0) {
 					nMediaLevelCounter--;
 					UnicodeMakeUpperCase(gUString, Stats_FindChaseString(fCurAttentionLevel));
-					CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(138.0f), gUString);
+					Font_PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(138.0f), gUString);
 				}
 			}
 		}
@@ -751,52 +751,52 @@ void CHud::Draw()
 		/*
 			DrawZoneName
 		*/
-		if (m_pZoneName) {
+		if (Hud_m_pZoneName) {
 
-			if (m_pZoneName != m_pLastZoneName) {
+			if (Hud_m_pZoneName != Hud_m_pLastZoneName) {
 				// Delegate to the C implementation
-				if (Hud_ZoneNameChanged(&m_ZoneState, &m_ZoneNameTimer, &m_ZoneFadeTimer, &m_VehicleState))
-					m_ZoneToPrint = m_pZoneName;
-				m_pLastZoneName = m_pZoneName;
+				if (Hud_ZoneNameChanged(&Hud_m_ZoneState, &Hud_m_ZoneNameTimer, &Hud_m_ZoneFadeTimer, &Hud_m_VehicleState))
+					Hud_m_ZoneToPrint = Hud_m_pZoneName;
+				Hud_m_pLastZoneName = Hud_m_pZoneName;
 			}
 
 			float fZoneAlpha = 255.0f;
-			if (m_ZoneState) {
+			if (Hud_m_ZoneState) {
 				// Delegate to the C implementation
 				bool restoreZonePrint;
-				fZoneAlpha = Hud_ZoneNameFadeStep(&m_ZoneState, &m_ZoneFadeTimer, m_ZoneNameTimer, Timer_GetTimeStepInMilliseconds(), &restoreZonePrint);
+				fZoneAlpha = Hud_ZoneNameFadeStep(&Hud_m_ZoneState, &Hud_m_ZoneFadeTimer, Hud_m_ZoneNameTimer, Timer_GetTimeStepInMilliseconds(), &restoreZonePrint);
 				if (restoreZonePrint)
-					m_ZoneToPrint = m_pLastZoneName;
+					Hud_m_ZoneToPrint = Hud_m_pLastZoneName;
 
-				if (!m_Message[0] && BigMessageInUse[1] == 0.0f && BigMessageInUse[2] == 0.0f) {
+				if (!Hud_m_Message[0] && Hud_BigMessageInUse[1] == 0.0f && Hud_BigMessageInUse[2] == 0.0f) {
 
-					m_ZoneNameTimer += Timer_GetTimeStepInMilliseconds();
-					CFont::SetJustifyOff();
-					CFont::SetPropOn();
-					CFont::SetBackgroundOff();
+					Hud_m_ZoneNameTimer += Timer_GetTimeStepInMilliseconds();
+					Font_SetJustifyOff();
+					Font_SetPropOn();
+					Font_SetBackgroundOff();
 
 					if (FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_SPANISH)
-						CFont::SetScale(SCREEN_SCALE_X(1.7f * 0.8f), SCREEN_SCALE_Y(1.8f));
+						Font_SetScale(SCREEN_SCALE_X(1.7f * 0.8f), SCREEN_SCALE_Y(1.8f));
 					else
-						CFont::SetScale(SCREEN_SCALE_X(1.7f), SCREEN_SCALE_Y(1.8f));
+						Font_SetScale(SCREEN_SCALE_X(1.7f), SCREEN_SCALE_Y(1.8f));
 
-					CFont::SetSlantRefPoint(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(128.0f));
-					CFont::SetSlant(0.15f);
+					Font_SetSlantRefPoint(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(128.0f));
+					Font_SetSlant(0.15f);
 
-					CFont::SetRightJustifyOn();
-					CFont::SetRightJustifyWrap(0.0f);
-					CFont::SetBackGroundOnlyTextOff();
-					CFont::SetDropShadowPosition(2);
-					CFont::SetDropColor(CRGBA(0, 0, 0, fZoneAlpha));
-					CFont::SetFontStyle(FONT_BANK);
-					CFont::SetColor(CRGBA(ZONE_COLOR.r, ZONE_COLOR.g, ZONE_COLOR.b, fZoneAlpha));
+					Font_SetRightJustifyOn();
+					Font_SetRightJustifyWrap(0.0f);
+					Font_SetBackGroundOnlyTextOff();
+					Font_SetDropShadowPosition(2);
+					Font_SetDropColor(CRGBA(0, 0, 0, fZoneAlpha));
+					Font_SetFontStyle(FONT_BANK);
+					Font_SetColor(CRGBA(ZONE_COLOR.r, ZONE_COLOR.g, ZONE_COLOR.b, fZoneAlpha));
 
-					if (!CTheScripts::bPlayerIsInTheStatium)
-						CFont::PrintStringFromBottom(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(128.0f), m_ZoneToPrint);
+					if (!TheScripts_bPlayerIsInTheStatium)
+						Font_PrintStringFromBottom(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(128.0f), Hud_m_ZoneToPrint);
 
-					CFont::SetSlant(0.f);
+					Font_SetSlant(0.f);
 				} else {
-					m_ZoneState = 3;
+					Hud_m_ZoneState = 3;
 				}
 			}
 		}
@@ -804,80 +804,80 @@ void CHud::Draw()
 		/*
 			DrawVehicleName
 		*/
-		if (m_VehicleName) {
+		if (Hud_m_VehicleName) {
 			float fVehicleAlpha = 0.0f;
 
-			if (m_VehicleName != m_pLastVehicleName) {
+			if (Hud_m_VehicleName != Hud_m_pLastVehicleName) {
 				// Delegate to the C implementation
-				if (Hud_VehicleNameChanged(&m_VehicleState, &m_VehicleNameTimer, &m_VehicleFadeTimer, &m_ZoneState))
-					m_pVehicleNameToPrint = m_VehicleName;
-				m_pLastVehicleName = m_VehicleName;
+				if (Hud_VehicleNameChanged(&Hud_m_VehicleState, &Hud_m_VehicleNameTimer, &Hud_m_VehicleFadeTimer, &Hud_m_ZoneState))
+					Hud_m_pVehicleNameToPrint = Hud_m_VehicleName;
+				Hud_m_pLastVehicleName = Hud_m_VehicleName;
 			}
 
-			if (m_VehicleState) {
+			if (Hud_m_VehicleState) {
 				// Delegate to the C implementation
 				bool restoreVehiclePrint;
-				fVehicleAlpha = Hud_VehicleNameFadeStep(&m_VehicleState, &m_VehicleFadeTimer, &m_VehicleNameTimer, Timer_GetTimeStepInMilliseconds(), &restoreVehiclePrint);
+				fVehicleAlpha = Hud_VehicleNameFadeStep(&Hud_m_VehicleState, &Hud_m_VehicleFadeTimer, &Hud_m_VehicleNameTimer, Timer_GetTimeStepInMilliseconds(), &restoreVehiclePrint);
 				if (restoreVehiclePrint)
-					m_pVehicleNameToPrint = m_pLastVehicleName;
+					Hud_m_pVehicleNameToPrint = Hud_m_pLastVehicleName;
 
-				if (!m_Message[0]) {
-					m_VehicleNameTimer += Timer_GetTimeStepInMilliseconds();
-					CFont::SetJustifyOff();
-					CFont::SetPropOn();
-					CFont::SetBackgroundOff();
+				if (!Hud_m_Message[0]) {
+					Hud_m_VehicleNameTimer += Timer_GetTimeStepInMilliseconds();
+					Font_SetJustifyOff();
+					Font_SetPropOn();
+					Font_SetBackgroundOff();
 
 					if (FrontEndMenuManager.m_PrefsLanguage != CMenuManager::LANGUAGE_ITALIAN && FrontEndMenuManager.m_PrefsLanguage != CMenuManager::LANGUAGE_SPANISH)
-						CFont::SetScale(SCREEN_SCALE_X(1.7f), SCREEN_SCALE_Y(1.8f));
+						Font_SetScale(SCREEN_SCALE_X(1.7f), SCREEN_SCALE_Y(1.8f));
 					else
-						CFont::SetScale(SCREEN_SCALE_X(1.7f * 0.85f), SCREEN_SCALE_Y(1.8f));
+						Font_SetScale(SCREEN_SCALE_X(1.7f * 0.85f), SCREEN_SCALE_Y(1.8f));
 
-					CFont::SetSlantRefPoint(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(105.0f));
-					CFont::SetSlant(0.15f);
+					Font_SetSlantRefPoint(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(105.0f));
+					Font_SetSlant(0.15f);
 
-					CFont::SetRightJustifyOn();
-					CFont::SetRightJustifyWrap(0.0f);
-					CFont::SetBackGroundOnlyTextOff();
-					CFont::SetFontStyle(FONT_BANK);
-					CFont::SetDropShadowPosition(2);
-					CFont::SetColor(CRGBA(VEHICLE_COLOR.r, VEHICLE_COLOR.g, VEHICLE_COLOR.b, fVehicleAlpha));
-					CFont::SetDropColor(CRGBA(0, 0, 0, fVehicleAlpha));
+					Font_SetRightJustifyOn();
+					Font_SetRightJustifyWrap(0.0f);
+					Font_SetBackGroundOnlyTextOff();
+					Font_SetFontStyle(FONT_BANK);
+					Font_SetDropShadowPosition(2);
+					Font_SetColor(CRGBA(VEHICLE_COLOR.r, VEHICLE_COLOR.g, VEHICLE_COLOR.b, fVehicleAlpha));
+					Font_SetDropColor(CRGBA(0, 0, 0, fVehicleAlpha));
 
-					CFont::PrintStringFromBottom(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(105.0f), m_pVehicleNameToPrint);
+					Font_PrintStringFromBottom(SCREEN_SCALE_FROM_RIGHT(32.0f), SCREEN_SCALE_FROM_BOTTOM(105.0f), Hud_m_pVehicleNameToPrint);
 
-					CFont::SetSlant(0.f);
+					Font_SetSlant(0.f);
 				}
 			}
 		}
 		else {
-			m_pLastVehicleName = nil;
-			m_VehicleState = 0;
-			m_VehicleFadeTimer = 0;
-			m_VehicleNameTimer = 0;
+			Hud_m_pLastVehicleName = nil;
+			Hud_m_VehicleState = 0;
+			Hud_m_VehicleFadeTimer = 0;
+			Hud_m_VehicleNameTimer = 0;
 		}
 
 		/*
 			DrawClock
 		*/
-		if (m_ClockState) {
-			CFont::SetJustifyOff();
-			CFont::SetCentreOff();
-			CFont::SetBackgroundOff();
-			CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-			CFont::SetBackGroundOnlyTextOff();
-			CFont::SetPropOff();
-			CFont::SetFontStyle(FONT_HEADING);
-			CFont::SetRightJustifyOn();
-			CFont::SetRightJustifyWrap(0.0f);
-			CFont::SetDropShadowPosition(2);
-			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
+		if (Hud_m_ClockState) {
+			Font_SetJustifyOff();
+			Font_SetCentreOff();
+			Font_SetBackgroundOff();
+			Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+			Font_SetBackGroundOnlyTextOff();
+			Font_SetPropOff();
+			Font_SetFontStyle(FONT_HEADING);
+			Font_SetRightJustifyOn();
+			Font_SetRightJustifyWrap(0.0f);
+			Font_SetDropShadowPosition(2);
+			Font_SetDropColor(CRGBA(0, 0, 0, 255));
 
 			sprintf(sTemp, "%02d:%02d", Clock_GetHours(), Clock_GetMinutes());
 			AsciiToUnicode(sTemp, sPrint);
 
-			CFont::SetColor(CLOCK_COLOR);
+			Font_SetColor(CLOCK_COLOR);
 			if (FrontEndMenuManager.m_PrefsShowHud)
-				CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(111.0f), SCREEN_SCALE_Y(22.0f), sPrint);
+				Font_PrintString(SCREEN_SCALE_FROM_RIGHT(111.0f), SCREEN_SCALE_Y(22.0f), sPrint);
 		}
 
 		/*
@@ -887,38 +887,38 @@ void CHud::Draw()
 		wchar sTimer[16];
 
 		if (!OnscreenTimer_state.m_sClocks[0].m_bClockProcessed)
-			TimerOnLastFrame = false;
+			Hud_TimerOnLastFrame = false;
 
 		for(uint32 i = 0; i < NUMONSCREENCOUNTERS; i++) {
 			if (!OnscreenTimer_state.m_sCounters[0].m_bCounterProcessed)
-				CounterOnLastFrame[i] = false;
+				Hud_CounterOnLastFrame[i] = false;
 		}
 
 		if (OnscreenTimer_state.m_bProcessed) {
 			if (OnscreenTimer_state.m_sClocks[0].m_bClockProcessed) {
 				// Delegate the blinking to the C implementation
-				if (Hud_FlashTimerStep(&TimerOnLastFrame, &TimerFlashTimer, FRAMECOUNTER)) {
+				if (Hud_FlashTimerStep(&Hud_TimerOnLastFrame, &Hud_TimerFlashTimer, FRAMECOUNTER)) {
 					AsciiToUnicode(OnscreenTimer_state.m_sClocks[0].m_aClockBuffer, sTimer);
-					CFont::SetPropOn();
-					CFont::SetBackgroundOff();
-					CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-					CFont::SetRightJustifyOn();
-					CFont::SetRightJustifyWrap(0.0f);
-					CFont::SetFontStyle(FONT_LOCALE(FONT_HEADING));
-					CFont::SetPropOff();
-					CFont::SetBackGroundOnlyTextOn();
-					CFont::SetDropShadowPosition(2);
-					CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-					CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-					CFont::SetColor(TIMER_COLOR);
-					CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f), SCREEN_SCALE_Y(110.0f), sTimer);
-					CFont::SetPropOn();
+					Font_SetPropOn();
+					Font_SetBackgroundOff();
+					Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+					Font_SetRightJustifyOn();
+					Font_SetRightJustifyWrap(0.0f);
+					Font_SetFontStyle(FONT_LOCALE(FONT_HEADING));
+					Font_SetPropOff();
+					Font_SetBackGroundOnlyTextOn();
+					Font_SetDropShadowPosition(2);
+					Font_SetDropColor(CRGBA(0, 0, 0, 255));
+					Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+					Font_SetColor(TIMER_COLOR);
+					Font_PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f), SCREEN_SCALE_Y(110.0f), sTimer);
+					Font_SetPropOn();
 
 					if (OnscreenTimer_state.m_sClocks[0].m_aClockText[0]) {
-						CFont::SetDropShadowPosition(2);
-						CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-						CFont::SetColor(TIMER_COLOR);
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(80.0f), SCREEN_SCALE_Y(110.0f), Text_Get(&TheText,OnscreenTimer_state.m_sClocks[0].m_aClockText));
+						Font_SetDropShadowPosition(2);
+						Font_SetDropColor(CRGBA(0, 0, 0, 255));
+						Font_SetColor(TIMER_COLOR);
+						Font_PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(80.0f), SCREEN_SCALE_Y(110.0f), Text_Get(&TheText,OnscreenTimer_state.m_sClocks[0].m_aClockText));
 					}
 				}
 			}
@@ -926,23 +926,23 @@ void CHud::Draw()
 			for(uint32 i = 0; i < NUMONSCREENCOUNTERS; i++) {
 				if (OnscreenTimer_state.m_sCounters[i].m_bCounterProcessed) {
 					// Delegate the blinking to the C implementation
-					if (Hud_FlashTimerStep(&CounterOnLastFrame[i], &CounterFlashTimer[i], FRAMECOUNTER)) {
+					if (Hud_FlashTimerStep(&Hud_CounterOnLastFrame[i], &Hud_CounterFlashTimer[i], FRAMECOUNTER)) {
 						if (OnscreenTimer_state.m_sCounters[i].m_nType == COUNTER_DISPLAY_NUMBER) {
 							AsciiToUnicode(OnscreenTimer_state.m_sCounters[i].m_aCounterBuffer, sTimer);
-							CFont::SetPropOn();
-							CFont::SetBackgroundOff();
-							CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-							CFont::SetCentreOff();
-							CFont::SetRightJustifyOn();
-							CFont::SetRightJustifyWrap(0.0f);
-							CFont::SetFontStyle(FONT_LOCALE(FONT_HEADING));
-							CFont::SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
-							CFont::SetPropOn();
-							CFont::SetBackGroundOnlyTextOn();
-							CFont::SetDropShadowPosition(2);
-							CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-							CFont::SetColor(COUNTER_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), sTimer);
+							Font_SetPropOn();
+							Font_SetBackgroundOff();
+							Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+							Font_SetCentreOff();
+							Font_SetRightJustifyOn();
+							Font_SetRightJustifyWrap(0.0f);
+							Font_SetFontStyle(FONT_LOCALE(FONT_HEADING));
+							Font_SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
+							Font_SetPropOn();
+							Font_SetBackGroundOnlyTextOn();
+							Font_SetDropShadowPosition(2);
+							Font_SetDropColor(CRGBA(0, 0, 0, 255));
+							Font_SetColor(COUNTER_COLOR);
+							Font_PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), sTimer);
 						} else {
 							int counter = atoi(OnscreenTimer_state.m_sCounters[i].m_aCounterBuffer);
 
@@ -971,16 +971,16 @@ void CHud::Draw()
 						}
 
 						if (OnscreenTimer_state.m_sCounters[i].m_aCounterText[0]) {
-							CFont::SetPropOn();
-							CFont::SetFontStyle(FONT_LOCALE(FONT_HEADING));
-							CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
-							CFont::SetDropShadowPosition(2);
-							CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-							CFont::SetColor(COUNTER_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(61.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), Text_Get(&TheText,OnscreenTimer_state.m_sCounters[i].m_aCounterText));
+							Font_SetPropOn();
+							Font_SetFontStyle(FONT_LOCALE(FONT_HEADING));
+							Font_SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
+							Font_SetDropShadowPosition(2);
+							Font_SetDropColor(CRGBA(0, 0, 0, 255));
+							Font_SetColor(COUNTER_COLOR);
+							Font_PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(61.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), Text_Get(&TheText,OnscreenTimer_state.m_sCounters[i].m_aCounterText));
 						}
 						// unused/leftover color. I wonder what was it for
-						CFont::SetColor(CRGBA(244, 225, 91, 255));
+						Font_SetColor(CRGBA(244, 225, 91, 255));
 					}
 				}
 			}
@@ -990,10 +990,10 @@ void CHud::Draw()
 			DrawRadar
 		*/
 		if (FrontEndMenuManager.m_PrefsRadarMode != 2 &&
-			!m_HideRadar && (m_ItemToFlash == ITEM_RADAR && FRAMECOUNTER & 8 || m_ItemToFlash != ITEM_RADAR)) {
+			!Hud_m_HideRadar && (Hud_m_ItemToFlash == ITEM_RADAR && FRAMECOUNTER & 8 || Hud_m_ItemToFlash != ITEM_RADAR)) {
 
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
-			CRadar::DrawMap();
+			Radar_DrawMap();
 			if (FrontEndMenuManager.m_PrefsRadarMode != 1) {
 				CRect rect = Rect_Make(0.0f, 0.0f, SCREEN_SCALE_X(RADAR_WIDTH), SCREEN_SCALE_Y(RADAR_HEIGHT));
 				
@@ -1008,74 +1008,74 @@ void CHud::Draw()
 				([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(Sprites[HUD_RADARDISC]),rect, CRGBA(0, 0, 0, 255));
+})(&(Hud_Sprites[HUD_RADARDISC]),rect, CRGBA(0, 0, 0, 255));
 				Rect_Translate(&rect, SCREEN_SCALE_X_FIX(0.0f), SCREEN_SCALE_Y_FIX(-2.0f));
 				([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(Sprites[HUD_RADARDISC]),rect, RADARDISC_COLOR);
+})(&(Hud_Sprites[HUD_RADARDISC]),rect, RADARDISC_COLOR);
 			}
-			CRadar::DrawBlips();
+			Radar_DrawBlips();
 		}
 	}
 
 	/*
 		Draw3dMarkers
 	*/
-	if (m_Wants_To_Draw_3dMarkers && !TheCamera.m_WideScreenOn && !m_BigMessage[0][0] && !m_BigMessage[2][0]) {
-		CRadar::Draw3dMarkers();
+	if (Hud_m_Wants_To_Draw_3dMarkers && !TheCamera.m_WideScreenOn && !Hud_m_BigMessage[0][0] && !Hud_m_BigMessage[2][0]) {
+		Radar_Draw3dMarkers();
 	}
 
 	/*
 		DrawScriptText
 	*/
 	if (!Timer_GetIsUserPaused()) {
-		for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroTextLines); i++) {
-			if (CTheScripts::IntroTextLines[i].m_Text[0] && CTheScripts::IntroTextLines[i].m_bTextBeforeFade) {
-				CFont::SetScale(SCREEN_SCALE_X(CTheScripts::IntroTextLines[i].m_fScaleX), SCREEN_SCALE_Y(CTheScripts::IntroTextLines[i].m_fScaleY * 0.5f));
-				CFont::SetColor(CTheScripts::IntroTextLines[i].m_sColor);
+		for (int i = 0; i < ARRAY_SIZE(TheScripts_IntroTextLines); i++) {
+			if (TheScripts_IntroTextLines[i].m_Text[0] && TheScripts_IntroTextLines[i].m_bTextBeforeFade) {
+				Font_SetScale(SCREEN_SCALE_X(TheScripts_IntroTextLines[i].m_fScaleX), SCREEN_SCALE_Y(TheScripts_IntroTextLines[i].m_fScaleY * 0.5f));
+				Font_SetColor(TheScripts_IntroTextLines[i].m_sColor);
 
-				if (CTheScripts::IntroTextLines[i].m_bJustify)
-					CFont::SetJustifyOn();
+				if (TheScripts_IntroTextLines[i].m_bJustify)
+					Font_SetJustifyOn();
 				else
-					CFont::SetJustifyOff();
+					Font_SetJustifyOff();
 
-				if (CTheScripts::IntroTextLines[i].m_bRightJustify)
-					CFont::SetRightJustifyOn();
+				if (TheScripts_IntroTextLines[i].m_bRightJustify)
+					Font_SetRightJustifyOn();
 				else
-					CFont::SetRightJustifyOff();
+					Font_SetRightJustifyOff();
 
-				if (CTheScripts::IntroTextLines[i].m_bCentered)
-					CFont::SetCentreOn();
+				if (TheScripts_IntroTextLines[i].m_bCentered)
+					Font_SetCentreOn();
 				else
-					CFont::SetCentreOff();
+					Font_SetCentreOff();
 
-				CFont::SetWrapx(SCALE_AND_CENTER_X(CTheScripts::IntroTextLines[i].m_fWrapX));
-				CFont::SetCentreSize(SCREEN_SCALE_X(CTheScripts::IntroTextLines[i].m_fCenterSize));
+				Font_SetWrapx(SCALE_AND_CENTER_X(TheScripts_IntroTextLines[i].m_fWrapX));
+				Font_SetCentreSize(SCREEN_SCALE_X(TheScripts_IntroTextLines[i].m_fCenterSize));
 
-				if (CTheScripts::IntroTextLines[i].m_bBackground)
-					CFont::SetBackgroundOn();
+				if (TheScripts_IntroTextLines[i].m_bBackground)
+					Font_SetBackgroundOn();
 				else
-					CFont::SetBackgroundOff();
+					Font_SetBackgroundOff();
 
-				CFont::SetBackgroundColor(CTheScripts::IntroTextLines[i].m_sBackgroundColor);
+				Font_SetBackgroundColor(TheScripts_IntroTextLines[i].m_sBackgroundColor);
 
-				if (CTheScripts::IntroTextLines[i].m_bBackgroundOnly)
-					CFont::SetBackGroundOnlyTextOn();
+				if (TheScripts_IntroTextLines[i].m_bBackgroundOnly)
+					Font_SetBackGroundOnlyTextOn();
 				else
-					CFont::SetBackGroundOnlyTextOff();
+					Font_SetBackGroundOnlyTextOff();
 
-				if (CTheScripts::IntroTextLines[i].m_bTextProportional)
-					CFont::SetPropOn();
+				if (TheScripts_IntroTextLines[i].m_bTextProportional)
+					Font_SetPropOn();
 				else
-					CFont::SetPropOff();
+					Font_SetPropOff();
 
-				CFont::SetFontStyle(FONT_LOCALE(CTheScripts::IntroTextLines[i].m_nFont));
-				CFont::PrintString(SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - CTheScripts::IntroTextLines[i].m_fAtX), SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - CTheScripts::IntroTextLines[i].m_fAtY), CTheScripts::IntroTextLines[i].m_Text);
+				Font_SetFontStyle(FONT_LOCALE(TheScripts_IntroTextLines[i].m_nFont));
+				Font_PrintString(SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - TheScripts_IntroTextLines[i].m_fAtX), SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - TheScripts_IntroTextLines[i].m_fAtY), TheScripts_IntroTextLines[i].m_Text);
 			}
 		}
-		for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroRectangles); i++) {
-			intro_script_rectangle &IntroRect = CTheScripts::IntroRectangles[i];
+		for (int i = 0; i < ARRAY_SIZE(TheScripts_IntroRectangles); i++) {
+			intro_script_rectangle &IntroRect = TheScripts_IntroRectangles[i];
 
 			// Yeah, top and bottom changed place. R* vision
 			if (IntroRect.m_bIsUsed && IntroRect.m_bBeforeFade) {
@@ -1089,7 +1089,7 @@ void CHud::Draw()
 					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(CTheScripts::ScriptSprites[IntroRect.m_nTextureId]),rect, IntroRect.m_sColor);
+})(&(TheScripts_ScriptSprites[IntroRect.m_nTextureId]),rect, IntroRect.m_sColor);
 				}
 				else {
 					CRect rect = Rect_Make(
@@ -1109,27 +1109,27 @@ void CHud::Draw()
 		/*
 			DrawSubtitles
 		*/
-		if (m_Message[0] && !m_BigMessage[2][0]) {
-			if (m_VehicleState != 0)
-				m_VehicleState = 3;
-			if (m_ZoneState != 0)
-				m_ZoneState = 3;
+		if (Hud_m_Message[0] && !Hud_m_BigMessage[2][0]) {
+			if (Hud_m_VehicleState != 0)
+				Hud_m_VehicleState = 3;
+			if (Hud_m_ZoneState != 0)
+				Hud_m_ZoneState = 3;
 
-			CFont::SetJustifyOff();
-			CFont::SetBackgroundOff();
-			CFont::SetBackgroundColor(CRGBA(0, 0, 0, 128));
-			CFont::SetCentreOn();
-			CFont::SetPropOn();
+			Font_SetJustifyOff();
+			Font_SetBackgroundOff();
+			Font_SetBackgroundColor(CRGBA(0, 0, 0, 128));
+			Font_SetCentreOn();
+			Font_SetPropOn();
 #ifdef CUTSCENE_BORDERS_SWITCH
 			if (!FrontEndMenuManager.m_PrefsCutsceneBorders) {
-				CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-				CFont::SetDropShadowPosition(2);
+				Font_SetDropColor(CRGBA(0, 0, 0, 255));
+				Font_SetDropShadowPosition(2);
 			}
 			else
 #endif
-				CFont::SetDropShadowPosition(0);
-			CFont::SetFontStyle(FONT_LOCALE(FONT_STANDARD));
-			CFont::SetColor(CRGBA(225, 225, 225, 255));
+				Font_SetDropShadowPosition(0);
+			Font_SetFontStyle(FONT_LOCALE(FONT_STANDARD));
+			Font_SetColor(CRGBA(225, 225, 225, 255));
 
 			static bool onceItWasWidescreen = false;
 
@@ -1137,177 +1137,177 @@ void CHud::Draw()
 				onceItWasWidescreen = true;
 				
 				if (FrontEndMenuManager.m_PrefsShowSubtitles || !Cutscene_IsRunning()) { // rouz edit (ChatGPT)
-					CFont::SetCentreSize(SCREEN_WIDTH - SCREEN_SCALE_X(60.0f));
-					CFont::SetScale(SCREEN_SCALE_X(0.58f), SCREEN_SCALE_Y(1.2f));
-					CFont::PrintString(SCREEN_WIDTH / 2.f, SCREEN_SCALE_FROM_BOTTOM(80.0f), m_Message);
+					Font_SetCentreSize(SCREEN_WIDTH - SCREEN_SCALE_X(60.0f));
+					Font_SetScale(SCREEN_SCALE_X(0.58f), SCREEN_SCALE_Y(1.2f));
+					Font_PrintString(SCREEN_WIDTH / 2.f, SCREEN_SCALE_FROM_BOTTOM(80.0f), Hud_m_Message);
 				}
 			} else {
 				if (onceItWasWidescreen)
-					m_Message[0] = '\0';
+					Hud_m_Message[0] = '\0';
 
 				onceItWasWidescreen = false;
-				CFont::DrawFonts();
-				CFont::SetDropShadowPosition(2);
-				CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-				CFont::SetScale(SCREEN_SCALE_X(0.58f), SCREEN_SCALE_Y(1.22f));
+				Font_DrawFonts();
+				Font_SetDropShadowPosition(2);
+				Font_SetDropColor(CRGBA(0, 0, 0, 255));
+				Font_SetScale(SCREEN_SCALE_X(0.58f), SCREEN_SCALE_Y(1.22f));
 
 				float radarBulge = SCREEN_SCALE_X(140.0f) + SCREEN_SCALE_X(8.0f);
 				float rectWidth = SCREEN_WIDTH - SCREEN_SCALE_X(20.0f) - SCREEN_SCALE_X(8.0f) - radarBulge;
-				CFont::SetCentreSize(rectWidth);
+				Font_SetCentreSize(rectWidth);
 
-				CFont::PrintString(rectWidth / 2.0f + radarBulge, SCREEN_SCALE_FROM_BOTTOM(105.f + 2.0f), m_Message);
+				Font_PrintString(rectWidth / 2.0f + radarBulge, SCREEN_SCALE_FROM_BOTTOM(105.f + 2.0f), Hud_m_Message);
 			}
-			CFont::SetDropShadowPosition(0);
+			Font_SetDropShadowPosition(0);
 		}
 
 		/*
 			HelpMessage
 		*/
 
-		if (m_HelpMessage[0]) {
-			if (!Messages_WideStringCompare(m_HelpMessage, m_LastHelpMessage, HELP_MSG_LENGTH)) {
+		if (Hud_m_HelpMessage[0]) {
+			if (!Messages_WideStringCompare(Hud_m_HelpMessage, Hud_m_LastHelpMessage, HELP_MSG_LENGTH)) {
 				// Delegate to the C implementation
-				if (Hud_HelpMessageChanged(&m_HelpMessageState, &m_HelpMessageFadeTimer, &m_HelpMessageTimer, &m_HelpMessageDisplayTime, Messages_GetWideStringLength(m_HelpMessage))) {
-					Messages_WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
+				if (Hud_HelpMessageChanged(&Hud_m_HelpMessageState, &Hud_m_HelpMessageFadeTimer, &Hud_m_HelpMessageTimer, &Hud_m_HelpMessageDisplayTime, Messages_GetWideStringLength(Hud_m_HelpMessage))) {
+					Messages_WideStringCopy(Hud_m_HelpMessageToPrint, Hud_m_HelpMessage, HELP_MSG_LENGTH);
 				
 					if (TheCamera.m_ScreenReductionPercentage == 0.0f)
 						DMAudio_PlayFrontEndSound(SOUND_HUD, 0);
 				}
-				Messages_WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
+				Messages_WideStringCopy(Hud_m_LastHelpMessage, Hud_m_HelpMessage, HELP_MSG_LENGTH);
 			}
 
 			float fAlpha = 225.0f;
 
-			if (m_HelpMessageState != 0) {
+			if (Hud_m_HelpMessageState != 0) {
 				// Delegate to the C implementation
 				bool showNewHelpMessage;
-				fAlpha = Hud_HelpMessageFadeStep(&m_HelpMessageState, m_HelpMessageTimer, &m_HelpMessageFadeTimer, m_HelpMessageDisplayTime, m_HelpMessageDisplayForever, m_HelpMessageQuick,
+				fAlpha = Hud_HelpMessageFadeStep(&Hud_m_HelpMessageState, Hud_m_HelpMessageTimer, &Hud_m_HelpMessageFadeTimer, Hud_m_HelpMessageDisplayTime, Hud_m_HelpMessageDisplayForever, Hud_m_HelpMessageQuick,
 					TheCamera.m_WideScreenOn, Timer_GetTimeStepInMilliseconds(), &showNewHelpMessage);
 				if (showNewHelpMessage)
-					Messages_WideStringCopy(m_HelpMessageToPrint, m_LastHelpMessage, HELP_MSG_LENGTH);
+					Messages_WideStringCopy(Hud_m_HelpMessageToPrint, Hud_m_LastHelpMessage, HELP_MSG_LENGTH);
 
 				if (!TheCamera.m_WideScreenOn) {
-					m_HelpMessageTimer += Timer_GetTimeStepInMilliseconds();
+					Hud_m_HelpMessageTimer += Timer_GetTimeStepInMilliseconds();
 
-					CFont::SetAlphaFade(fAlpha);
-					CFont::SetCentreOff();
-					CFont::SetPropOn();
+					Font_SetAlphaFade(fAlpha);
+					Font_SetCentreOff();
+					Font_SetPropOn();
 
-					if (CGame::germanGame)
-						CFont::SetScale(SCREEN_SCALE_X(0.52f * 0.85f), SCREEN_SCALE_Y(1.1f * 0.85f));
+					if (Game_germanGame)
+						Font_SetScale(SCREEN_SCALE_X(0.52f * 0.85f), SCREEN_SCALE_Y(1.1f * 0.85f));
 #ifdef MORE_LANGUAGES
-					else if (CFont::IsJapanese())
-						CFont::SetScale(SCREEN_SCALE_X(0.52f) * 1.35f, SCREEN_SCALE_Y(1.1f) * 1.25f);
+					else if (Font_IsJapanese())
+						Font_SetScale(SCREEN_SCALE_X(0.52f) * 1.35f, SCREEN_SCALE_Y(1.1f) * 1.25f);
 #endif
 					else
-						CFont::SetScale(SCREEN_SCALE_X(0.52f), SCREEN_SCALE_Y(1.1f));
+						Font_SetScale(SCREEN_SCALE_X(0.52f), SCREEN_SCALE_Y(1.1f));
 
-					CFont::DrawFonts();
-					CFont::SetColor(CRGBA(175, 175, 175, 255));
-					CFont::SetJustifyOff();
+					Font_DrawFonts();
+					Font_SetColor(CRGBA(175, 175, 175, 255));
+					Font_SetJustifyOff();
 #ifdef MORE_LANGUAGES
-					if (CFont::IsJapanese())
-						CFont::SetWrapx(SCREEN_SCALE_X(229.0f + 34.0f - 4.0f));
+					if (Font_IsJapanese())
+						Font_SetWrapx(SCREEN_SCALE_X(229.0f + 34.0f - 4.0f));
 					else
 #endif
-						CFont::SetWrapx(SCREEN_SCALE_X(200.0f + 34.0f - 4.0f));
-					CFont::SetFontStyle(FONT_LOCALE(FONT_STANDARD));
-					CFont::SetBackgroundOn();
-					CFont::SetBackGroundOnlyTextOff();
-					CFont::SetDropShadowPosition(0);
-					CFont::SetBackgroundColor(CRGBA(0, 0, 0, fAlpha * 0.9f));
-					CFont::SetColor(CRGBA(175, 175, 175, 255));
-					CFont::PrintString(SCREEN_SCALE_X(34.0f), SCREEN_SCALE_Y(28.0f + (150.0f - PagerXOffset) * 0.6f), m_HelpMessageToPrint);
-					CFont::SetAlphaFade(255.0f);
-					CFont::SetWrapx(SCREEN_WIDTH);
+						Font_SetWrapx(SCREEN_SCALE_X(200.0f + 34.0f - 4.0f));
+					Font_SetFontStyle(FONT_LOCALE(FONT_STANDARD));
+					Font_SetBackgroundOn();
+					Font_SetBackGroundOnlyTextOff();
+					Font_SetDropShadowPosition(0);
+					Font_SetBackgroundColor(CRGBA(0, 0, 0, fAlpha * 0.9f));
+					Font_SetColor(CRGBA(175, 175, 175, 255));
+					Font_PrintString(SCREEN_SCALE_X(34.0f), SCREEN_SCALE_Y(28.0f + (150.0f - Hud_PagerXOffset) * 0.6f), Hud_m_HelpMessageToPrint);
+					Font_SetAlphaFade(255.0f);
+					Font_SetWrapx(SCREEN_WIDTH);
 				}
 			}
 		} else
-			m_HelpMessageState = 0;
+			Hud_m_HelpMessageState = 0;
 
 		/*
 			DrawBigMessage
 		*/
 		// MissionCompleteFailedText
-		if (m_BigMessage[0][0]) {
-			if (BigMessageInUse[0] != 0.0f) {
-				CFont::SetJustifyOff();
-				CFont::SetBackgroundOff();
-				CFont::SetBackGroundOnlyTextOff();
-				if (CGame::frenchGame || CGame::germanGame) {
-					CFont::SetScale(SCREEN_SCALE_X(1.6f), SCREEN_SCALE_Y(1.8f));
+		if (Hud_m_BigMessage[0][0]) {
+			if (Hud_BigMessageInUse[0] != 0.0f) {
+				Font_SetJustifyOff();
+				Font_SetBackgroundOff();
+				Font_SetBackGroundOnlyTextOff();
+				if (Game_frenchGame || Game_germanGame) {
+					Font_SetScale(SCREEN_SCALE_X(1.6f), SCREEN_SCALE_Y(1.8f));
 				} else {
-					CFont::SetScale(SCREEN_SCALE_X(1.8f), SCREEN_SCALE_Y(1.8f));
+					Font_SetScale(SCREEN_SCALE_X(1.8f), SCREEN_SCALE_Y(1.8f));
 				}
-				CFont::SetPropOn();
-				CFont::SetCentreOn();
-				CFont::SetCentreSize(SCREEN_SCALE_X(590.0f));
-				CFont::SetColor(CRGBA(255, 255, 0, BigMessageAlpha[0])); // unused color
-				CFont::SetFontStyle(FONT_HEADING);
+				Font_SetPropOn();
+				Font_SetCentreOn();
+				Font_SetCentreSize(SCREEN_SCALE_X(590.0f));
+				Font_SetColor(CRGBA(255, 255, 0, Hud_BigMessageAlpha[0])); // unused color
+				Font_SetFontStyle(FONT_HEADING);
 
 				// Appearently sliding text in here was abandoned very early, since this text is centered now.
 
 				// Delegate to the C implementation
 				bool clearBigMessage0;
-				Hud_BigMessage0Step(&BigMessageX[0], &BigMessageInUse[0], &BigMessageAlpha[0], SCALE_AND_CENTER_X(620.0f), (*Timer_GetTimeStep()),
+				Hud_BigMessage0Step(&Hud_BigMessageX[0], &Hud_BigMessageInUse[0], &Hud_BigMessageAlpha[0], SCALE_AND_CENTER_X(620.0f), (*Timer_GetTimeStep()),
 					Timer_GetTimeStepInMilliseconds(), SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f)), &clearBigMessage0);
 				if (clearBigMessage0)
-					m_BigMessage[0][0] = 0;
-				CFont::DrawFonts();
-				CFont::SetDropShadowPosition(2);
-				CFont::SetDropColor(CRGBA(0, 0, 0, BigMessageAlpha[0]));
-				CFont::SetColor(CRGBA(BIGMESSAGE_COLOR.r, BIGMESSAGE_COLOR.g, BIGMESSAGE_COLOR.b, BigMessageAlpha[0]));
-				CFont::PrintString(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - SCREEN_SCALE_Y(18.0f), m_BigMessage[0]);
+					Hud_m_BigMessage[0][0] = 0;
+				Font_DrawFonts();
+				Font_SetDropShadowPosition(2);
+				Font_SetDropColor(CRGBA(0, 0, 0, Hud_BigMessageAlpha[0]));
+				Font_SetColor(CRGBA(BIGMESSAGE_COLOR.r, BIGMESSAGE_COLOR.g, BIGMESSAGE_COLOR.b, Hud_BigMessageAlpha[0]));
+				Font_PrintString(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - SCREEN_SCALE_Y(18.0f), Hud_m_BigMessage[0]);
 			}
 			else {
-				BigMessageAlpha[0] = 0.0f;
-				BigMessageX[0] = SCALE_AND_CENTER_X(-60.0f);
-				BigMessageInUse[0] = 1.0f;
+				Hud_BigMessageAlpha[0] = 0.0f;
+				Hud_BigMessageX[0] = SCALE_AND_CENTER_X(-60.0f);
+				Hud_BigMessageInUse[0] = 1.0f;
 			}
 		}
 		else {
-			BigMessageInUse[0] = 0.0f;
+			Hud_BigMessageInUse[0] = 0.0f;
 		}
 
 		// WastedBustedText
-		if (m_BigMessage[2][0]) {
-			if (BigMessageInUse[2] != 0.0f) {
+		if (Hud_m_BigMessage[2][0]) {
+			if (Hud_BigMessageInUse[2] != 0.0f) {
 				// Delegate to the C implementation
-				Hud_BigMessage2Step(&BigMessageAlpha[2], Timer_GetTimeStepInMilliseconds());
+				Hud_BigMessage2Step(&Hud_BigMessageAlpha[2], Timer_GetTimeStepInMilliseconds());
 
-				CFont::SetBackgroundOff();
+				Font_SetBackgroundOff();
 
-				if (CGame::frenchGame || CGame::germanGame)
-					CFont::SetScale(SCREEN_SCALE_X(1.4f), SCREEN_SCALE_Y(1.4f));
+				if (Game_frenchGame || Game_germanGame)
+					Font_SetScale(SCREEN_SCALE_X(1.4f), SCREEN_SCALE_Y(1.4f));
 				else
-					CFont::SetScale(SCREEN_SCALE_X(2.0f), SCREEN_SCALE_Y(2.0f));
+					Font_SetScale(SCREEN_SCALE_X(2.0f), SCREEN_SCALE_Y(2.0f));
 
-				CFont::SetPropOn();
-				CFont::SetRightJustifyOn();
-				CFont::SetFontStyle(FONT_HEADING);
+				Font_SetPropOn();
+				Font_SetRightJustifyOn();
+				Font_SetFontStyle(FONT_HEADING);
 
-				CFont::SetDropShadowPosition(2);
-				CFont::SetDropColor(CRGBA(0, 0, 0, BigMessageAlpha[2]));
+				Font_SetDropShadowPosition(2);
+				Font_SetDropColor(CRGBA(0, 0, 0, Hud_BigMessageAlpha[2]));
 
-				CFont::SetColor(CRGBA(WASTEDBUSTED_COLOR.r, WASTEDBUSTED_COLOR.g, WASTEDBUSTED_COLOR.b, BigMessageAlpha[2]));
-				CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(20.0f), SCREEN_SCALE_FROM_BOTTOM(90.0f), m_BigMessage[2]);
+				Font_SetColor(CRGBA(WASTEDBUSTED_COLOR.r, WASTEDBUSTED_COLOR.g, WASTEDBUSTED_COLOR.b, Hud_BigMessageAlpha[2]));
+				Font_PrintString(SCREEN_SCALE_FROM_RIGHT(20.0f), SCREEN_SCALE_FROM_BOTTOM(90.0f), Hud_m_BigMessage[2]);
 			}
 			else {
-				BigMessageInUse[2] = 1.0f;
-				BigMessageAlpha[2] = 0.0f;
-				if (m_VehicleState != 0) // Hide vehicle name if wasted/busted text is displaying
-					m_VehicleState = 0;
-				if (m_ZoneState != 0)
-					m_ZoneState = 0;
+				Hud_BigMessageInUse[2] = 1.0f;
+				Hud_BigMessageAlpha[2] = 0.0f;
+				if (Hud_m_VehicleState != 0) // Hide vehicle name if wasted/busted text is displaying
+					Hud_m_VehicleState = 0;
+				if (Hud_m_ZoneState != 0)
+					Hud_m_ZoneState = 0;
 			}
 		}
 		else {
-			BigMessageInUse[2] = 0.0f;
+			Hud_BigMessageInUse[2] = 0.0f;
 		}
 	}
 }
 
-void CHud::DrawAfterFade()
+void Hud_DrawAfterFade()
 {
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
@@ -1316,51 +1316,51 @@ void CHud::DrawAfterFade()
 	if (Timer_GetIsUserPaused() || Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
-	for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroTextLines); i++) {
-		intro_text_line &line = CTheScripts::IntroTextLines[i];
+	for (int i = 0; i < ARRAY_SIZE(TheScripts_IntroTextLines); i++) {
+		intro_text_line &line = TheScripts_IntroTextLines[i];
 		if (line.m_Text[0] != '\0' && !line.m_bTextBeforeFade) {
-			CFont::SetScale(SCREEN_SCALE_X(line.m_fScaleX), SCREEN_SCALE_Y(line.m_fScaleY) / 2);
+			Font_SetScale(SCREEN_SCALE_X(line.m_fScaleX), SCREEN_SCALE_Y(line.m_fScaleY) / 2);
 
-			CFont::SetColor(line.m_sColor);
+			Font_SetColor(line.m_sColor);
 			if (line.m_bJustify)
-				CFont::SetJustifyOn();
+				Font_SetJustifyOn();
 			else
-				CFont::SetJustifyOff();
+				Font_SetJustifyOff();
 
 			if (line.m_bRightJustify)
-				CFont::SetRightJustifyOn();
+				Font_SetRightJustifyOn();
 			else
-				CFont::SetRightJustifyOff();
+				Font_SetRightJustifyOff();
 
 			if (line.m_bCentered)
-				CFont::SetCentreOn();
+				Font_SetCentreOn();
 			else
-				CFont::SetCentreOff();
+				Font_SetCentreOff();
 
-			CFont::SetWrapx(SCALE_AND_CENTER_X(line.m_fWrapX));
-			CFont::SetCentreSize(SCREEN_SCALE_X(line.m_fCenterSize));
+			Font_SetWrapx(SCALE_AND_CENTER_X(line.m_fWrapX));
+			Font_SetCentreSize(SCREEN_SCALE_X(line.m_fCenterSize));
 			if (line.m_bBackground)
-				CFont::SetBackgroundOn();
+				Font_SetBackgroundOn();
 			else
-				CFont::SetBackgroundOff();
+				Font_SetBackgroundOff();
 
-			CFont::SetBackgroundColor(line.m_sBackgroundColor);
+			Font_SetBackgroundColor(line.m_sBackgroundColor);
 			if (line.m_bBackgroundOnly)
-				CFont::SetBackGroundOnlyTextOn();
+				Font_SetBackGroundOnlyTextOn();
 			else
-				CFont::SetBackGroundOnlyTextOff();
+				Font_SetBackGroundOnlyTextOff();
 
 			if (line.m_bTextProportional)
-				CFont::SetPropOn();
+				Font_SetPropOn();
 			else
-				CFont::SetPropOff();
+				Font_SetPropOff();
 
-			CFont::SetFontStyle(line.m_nFont);
-			CFont::PrintString(SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line.m_fAtX), SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line.m_fAtY), line.m_Text);
+			Font_SetFontStyle(line.m_nFont);
+			Font_PrintString(SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line.m_fAtX), SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line.m_fAtY), line.m_Text);
 		}
 	}
-	for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroRectangles); i++) {
-		intro_script_rectangle &rectangle = CTheScripts::IntroRectangles[i];
+	for (int i = 0; i < ARRAY_SIZE(TheScripts_IntroRectangles); i++) {
+		intro_script_rectangle &rectangle = TheScripts_IntroRectangles[i];
 		if (rectangle.m_bIsUsed && !rectangle.m_bBeforeFade) {
 
 			// Yeah, top and bottom changed place. R* vision
@@ -1368,7 +1368,7 @@ void CHud::DrawAfterFade()
 				([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
-})(&(CTheScripts::ScriptSprites[rectangle.m_nTextureId]),Rect_Make(rectangle.m_sRect.left, rectangle.m_sRect.bottom,
+})(&(TheScripts_ScriptSprites[rectangle.m_nTextureId]),Rect_Make(rectangle.m_sRect.left, rectangle.m_sRect.bottom,
 					rectangle.m_sRect.right, rectangle.m_sRect.top), rectangle.m_sColor);
 			} else {
 				([](const CRect &r,const CRGBA &col){
@@ -1384,139 +1384,139 @@ void CHud::DrawAfterFade()
 		DrawBigMessage2
 	*/
 	// Oddjob
-	if (m_BigMessage[3][0]) {
-		CFont::SetJustifyOff();
-		CFont::SetBackgroundOff();
-		CFont::SetScale(SCREEN_SCALE_X(1.2f), SCREEN_SCALE_Y(1.5f));
-		CFont::SetCentreOn();
-		CFont::SetPropOn();
-		CFont::SetCentreSize(SCREEN_SCALE_X(600.0f));
-		CFont::SetFontStyle(FONT_LOCALE(FONT_STANDARD));
-		CFont::SetDropShadowPosition(2);
-		CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-		CFont::SetColor(ODDJOB_COLOR);
-		CFont::PrintString((SCREEN_WIDTH / 2), SCREEN_SCALE_Y(140.0f) - SCREEN_SCALE_Y(16.0f), m_BigMessage[3]);
+	if (Hud_m_BigMessage[3][0]) {
+		Font_SetJustifyOff();
+		Font_SetBackgroundOff();
+		Font_SetScale(SCREEN_SCALE_X(1.2f), SCREEN_SCALE_Y(1.5f));
+		Font_SetCentreOn();
+		Font_SetPropOn();
+		Font_SetCentreSize(SCREEN_SCALE_X(600.0f));
+		Font_SetFontStyle(FONT_LOCALE(FONT_STANDARD));
+		Font_SetDropShadowPosition(2);
+		Font_SetDropColor(CRGBA(0, 0, 0, 255));
+		Font_SetColor(ODDJOB_COLOR);
+		Font_PrintString((SCREEN_WIDTH / 2), SCREEN_SCALE_Y(140.0f) - SCREEN_SCALE_Y(16.0f), Hud_m_BigMessage[3]);
 	}
 
-	if (!m_BigMessage[1][0] && m_BigMessage[4][0]) {
-		CFont::SetJustifyOff();
-		CFont::SetBackgroundOff();
-		CFont::SetScale(SCREEN_SCALE_X(1.2f), SCREEN_SCALE_Y(1.5f));
-		CFont::SetCentreOn();
-		CFont::SetPropOn();
-		CFont::SetCentreSize(SCREEN_SCALE_X(580.0f));
-		CFont::SetFontStyle(FONT_LOCALE(FONT_STANDARD));
-		CFont::SetDropShadowPosition(2);
-		CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-		CFont::SetColor(ODDJOB_COLOR);
-		CFont::PrintString((SCREEN_WIDTH / 2), SCREEN_SCALE_Y(140.0f), m_BigMessage[4]);
+	if (!Hud_m_BigMessage[1][0] && Hud_m_BigMessage[4][0]) {
+		Font_SetJustifyOff();
+		Font_SetBackgroundOff();
+		Font_SetScale(SCREEN_SCALE_X(1.2f), SCREEN_SCALE_Y(1.5f));
+		Font_SetCentreOn();
+		Font_SetPropOn();
+		Font_SetCentreSize(SCREEN_SCALE_X(580.0f));
+		Font_SetFontStyle(FONT_LOCALE(FONT_STANDARD));
+		Font_SetDropShadowPosition(2);
+		Font_SetDropColor(CRGBA(0, 0, 0, 255));
+		Font_SetColor(ODDJOB_COLOR);
+		Font_PrintString((SCREEN_WIDTH / 2), SCREEN_SCALE_Y(140.0f), Hud_m_BigMessage[4]);
 	}
 
 	// Oddjob result
 	// Delegate the sliding of the message to the C implementation
-	if (Hud_OddJob2Step(&OddJob2OffTimer, &OddJob2On, &OddJob2XOffset, &OddJob2Timer, m_BigMessage[5][0] != 0, Timer_GetTimeStepInMilliseconds())) {
-		if (!m_BigMessage[1][0]) {
-			CFont::SetJustifyOff();
-			CFont::SetBackgroundOff();
-			CFont::SetScale(SCREEN_SCALE_X(1.0f), SCREEN_SCALE_Y(1.2f));
-			CFont::SetCentreOn();
-			CFont::SetPropOn();
-			CFont::SetCentreSize(SCREEN_SCALE_X(560.0f));
-			CFont::SetFontStyle(FONT_LOCALE(FONT_STANDARD));
-			CFont::SetDropShadowPosition(2);
-			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
-			CFont::SetColor(ODDJOB2_COLOR);
-			CFont::PrintString(SCREEN_WIDTH / 2, SCREEN_SCALE_Y(217.0f), m_BigMessage[5]);
+	if (Hud_OddJob2Step(&Hud_OddJob2OffTimer, &Hud_OddJob2On, &Hud_OddJob2XOffset, &Hud_OddJob2Timer, Hud_m_BigMessage[5][0] != 0, Timer_GetTimeStepInMilliseconds())) {
+		if (!Hud_m_BigMessage[1][0]) {
+			Font_SetJustifyOff();
+			Font_SetBackgroundOff();
+			Font_SetScale(SCREEN_SCALE_X(1.0f), SCREEN_SCALE_Y(1.2f));
+			Font_SetCentreOn();
+			Font_SetPropOn();
+			Font_SetCentreSize(SCREEN_SCALE_X(560.0f));
+			Font_SetFontStyle(FONT_LOCALE(FONT_STANDARD));
+			Font_SetDropShadowPosition(2);
+			Font_SetDropColor(CRGBA(0, 0, 0, 255));
+			Font_SetColor(ODDJOB2_COLOR);
+			Font_PrintString(SCREEN_WIDTH / 2, SCREEN_SCALE_Y(217.0f), Hud_m_BigMessage[5]);
 		}
 	}
 
 	/*
 		DrawMissionTitle
 	*/
-	if (m_BigMessage[1][0]) {
-		if (BigMessageInUse[1] != 0.0f) {
-			CFont::SetJustifyOff();
-			CFont::SetBackgroundOff();
+	if (Hud_m_BigMessage[1][0]) {
+		if (Hud_BigMessageInUse[1] != 0.0f) {
+			Font_SetJustifyOff();
+			Font_SetBackgroundOff();
 
 			// will be overwritten below
-			if (CGame::frenchGame || FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_SPANISH)
-				CFont::SetScale(SCREEN_SCALE_X(0.884f), SCREEN_SCALE_Y(1.36f));
+			if (Game_frenchGame || FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_SPANISH)
+				Font_SetScale(SCREEN_SCALE_X(0.884f), SCREEN_SCALE_Y(1.36f));
 			else
-				CFont::SetScale(SCREEN_SCALE_X(1.04f), SCREEN_SCALE_Y(1.6f));
+				Font_SetScale(SCREEN_SCALE_X(1.04f), SCREEN_SCALE_Y(1.6f));
 
-			CFont::SetPropOn();
-			CFont::SetRightJustifyWrap(SCALE_AND_CENTER_X(0.0f));
-			CFont::SetRightJustifyOn();
-			CFont::SetFontStyle(FONT_BANK);
-			CFont::SetScale(FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_AMERICAN ? SCREEN_SCALE_X(1.7f) : SCREEN_SCALE_X(1.5f), SCREEN_SCALE_Y(1.8f));
+			Font_SetPropOn();
+			Font_SetRightJustifyWrap(SCALE_AND_CENTER_X(0.0f));
+			Font_SetRightJustifyOn();
+			Font_SetFontStyle(FONT_BANK);
+			Font_SetScale(FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_AMERICAN ? SCREEN_SCALE_X(1.7f) : SCREEN_SCALE_X(1.5f), SCREEN_SCALE_Y(1.8f));
 
 			// Delegate to the C implementation
 			bool clearMissionTitle;
-			Hud_MissionTitleStep(&BigMessageX[1], &BigMessageInUse[1], &BigMessageAlpha[1], SCREEN_SCALE_FROM_RIGHT(20.0f), (*Timer_GetTimeStep()),
+			Hud_MissionTitleStep(&Hud_BigMessageX[1], &Hud_BigMessageInUse[1], &Hud_BigMessageAlpha[1], SCREEN_SCALE_FROM_RIGHT(20.0f), (*Timer_GetTimeStep()),
 				Timer_GetTimeStepInMilliseconds(), SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f)), &clearMissionTitle);
 			if (clearMissionTitle)
-				m_BigMessage[1][0] = 0;
+				Hud_m_BigMessage[1][0] = 0;
 
-			CFont::SetColor(CRGBA(40, 40, 40, BigMessageAlpha[1])); // what was that for?
+			Font_SetColor(CRGBA(40, 40, 40, Hud_BigMessageAlpha[1])); // what was that for?
 
-			CFont::SetDropShadowPosition(2);
-			CFont::SetDropColor(CRGBA(0, 0, 0, BigMessageAlpha[1]));
-			CFont::SetColor(CRGBA(MISSIONTITLE_COLOR.r, MISSIONTITLE_COLOR.g, MISSIONTITLE_COLOR.b, BigMessageAlpha[1]));
-			CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(20.0f), SCREEN_SCALE_FROM_BOTTOM(140.0f), m_BigMessage[1]);
+			Font_SetDropShadowPosition(2);
+			Font_SetDropColor(CRGBA(0, 0, 0, Hud_BigMessageAlpha[1]));
+			Font_SetColor(CRGBA(MISSIONTITLE_COLOR.r, MISSIONTITLE_COLOR.g, MISSIONTITLE_COLOR.b, Hud_BigMessageAlpha[1]));
+			Font_PrintString(SCREEN_SCALE_FROM_RIGHT(20.0f), SCREEN_SCALE_FROM_BOTTOM(140.0f), Hud_m_BigMessage[1]);
 		} else {
-			m_ZoneFadeTimer = 0;
-			BigMessageX[1] = SCREEN_SCALE_FROM_RIGHT(DEFAULT_SCREEN_WIDTH + 60.0f);
-			BigMessageInUse[1] = 1.0f;
-			m_ZoneState = 0;
+			Hud_m_ZoneFadeTimer = 0;
+			Hud_BigMessageX[1] = SCREEN_SCALE_FROM_RIGHT(DEFAULT_SCREEN_WIDTH + 60.0f);
+			Hud_BigMessageInUse[1] = 1.0f;
+			Hud_m_ZoneState = 0;
 		}
 	} else {
-		BigMessageInUse[1] = 0.0f;
+		Hud_BigMessageInUse[1] = 0.0f;
 	}
 }
 
-void CHud::GetRidOfAllHudMessages()
+void Hud_GetRidOfAllHudMessages()
 {
-	m_ZoneNameTimer = 0;
-	m_pZoneName = nil;
-	m_ZoneState = 0;
+	Hud_m_ZoneNameTimer = 0;
+	Hud_m_pZoneName = nil;
+	Hud_m_ZoneState = 0;
 
 	for (int i = 0; i < HELP_MSG_LENGTH; i++) {
-		m_HelpMessage[i] = 0;
-		m_LastHelpMessage[i] = 0;
-		m_HelpMessageToPrint[i] = 0;
+		Hud_m_HelpMessage[i] = 0;
+		Hud_m_LastHelpMessage[i] = 0;
+		Hud_m_HelpMessageToPrint[i] = 0;
 	}
 
-	m_HelpMessageTimer = 0;
-	m_HelpMessageFadeTimer = 0;
-	m_HelpMessageState = 0;
-	m_HelpMessageQuick = 0;
-	m_HelpMessageDisplayForever = false;
-	m_HelpMessageDisplayTime = 1.0f;
-	m_VehicleName = nil;
-	m_pVehicleNameToPrint = nil;
-	m_VehicleNameTimer = 0;
-	m_VehicleFadeTimer = 0;
-	m_VehicleState = 0;
+	Hud_m_HelpMessageTimer = 0;
+	Hud_m_HelpMessageFadeTimer = 0;
+	Hud_m_HelpMessageState = 0;
+	Hud_m_HelpMessageQuick = 0;
+	Hud_m_HelpMessageDisplayForever = false;
+	Hud_m_HelpMessageDisplayTime = 1.0f;
+	Hud_m_VehicleName = nil;
+	Hud_m_pVehicleNameToPrint = nil;
+	Hud_m_VehicleNameTimer = 0;
+	Hud_m_VehicleFadeTimer = 0;
+	Hud_m_VehicleState = 0;
 
-	for (int i = 0; i < ARRAY_SIZE(m_Message); i++)
-		m_Message[i] = 0;
+	for (int i = 0; i < ARRAY_SIZE(Hud_m_Message); i++)
+		Hud_m_Message[i] = 0;
 
 	for (int i = 0; i < 6; i++) {
-		BigMessageInUse[i] = 0.0f;
+		Hud_BigMessageInUse[i] = 0.0f;
 
 		for (int j = 0; j < 128; j++)
-			m_BigMessage[i][j] = 0;
+			Hud_m_BigMessage[i][j] = 0;
 	}
 }
 
 #ifdef RELOADABLES
-void CHud::ReloadTXD()
+void Hud_ReloadTXD()
 {
 	for (int i = 0; i < NUM_HUD_SPRITES; ++i) {
 		([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprites[i]));
+})(&(Hud_Sprites[i]));
 	}
 
 	// Use the complete C texture dictionary owner with the original live arguments
@@ -1541,15 +1541,15 @@ void CHud::ReloadTXD()
 		([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprites[i]),WeaponFilenames[i].name, WeaponFilenames[i].mask);
+})(&(Hud_Sprites[i]),WeaponFilenames[i].name, WeaponFilenames[i].mask);
 	}
 }
 #endif
 
-void CHud::Initialise()
+void Hud_Initialise()
 {
-	m_Wants_To_Draw_Hud = true;
-	m_Wants_To_Draw_3dMarkers = true;
+	Hud_m_Wants_To_Draw_Hud = true;
+	Hud_m_Wants_To_Draw_3dMarkers = true;
 
 	// Use the complete C texture dictionary owner with the original live arguments
 	int HudTXD = TxdStore_AddTxdSlot("hud");
@@ -1566,12 +1566,12 @@ void CHud::Initialise()
 		([](Sprite2d *spriteSelf,const char *name,const char *mask){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_SetTextureMasked(spriteSelf,name,mask);
-})(&(Sprites[i]),WeaponFilenames[i].name, WeaponFilenames[i].mask);
+})(&(Hud_Sprites[i]),WeaponFilenames[i].name, WeaponFilenames[i].mask);
 	}
 
-	m_pLastZoneName = nil;
-	GetRidOfAllHudMessages();
-	m_pLastVehicleName = nil;
+	Hud_m_pLastZoneName = nil;
+	Hud_GetRidOfAllHudMessages();
+	Hud_m_pLastVehicleName = nil;
 
 	if (gpSniperSightTex == nil)
 		gpSniperSightTex = RwTextureRead("sitesniper", nil); // unused
@@ -1584,202 +1584,202 @@ void CHud::Initialise()
 	if (gpViewFinderTex == nil)
 		gpViewFinderTex = RwTextureRead("viewfinder_128", "viewfinder_128m"); // unused
 
-	m_ClockState = 1;
-	CounterOnLastFrame[0] = false;
-	CounterOnLastFrame[1] = false;
-	CounterOnLastFrame[2] = false;
+	Hud_m_ClockState = 1;
+	Hud_CounterOnLastFrame[0] = false;
+	Hud_CounterOnLastFrame[1] = false;
+	Hud_CounterOnLastFrame[2] = false;
 	
-	m_ItemToFlash = ITEM_NONE;
-	OddJob2Timer = 0;
-	OddJob2OffTimer = 0.0f;
-	OddJob2On = 0;
-	OddJob2XOffset = 0.0f;
-	CounterFlashTimer[0] = 0;
-	CounterFlashTimer[1] = 0;
-	CounterFlashTimer[2] = 0;
-	TimerOnLastFrame = false;
-	TimerFlashTimer = 0;
-	SpriteBrightness = 0;
-	PagerOn = 0;
-	PagerTimer = 0;
-	PagerSoundPlayed = 0;
-	PagerXOffset = 150.0f;
+	Hud_m_ItemToFlash = ITEM_NONE;
+	Hud_OddJob2Timer = 0;
+	Hud_OddJob2OffTimer = 0.0f;
+	Hud_OddJob2On = 0;
+	Hud_OddJob2XOffset = 0.0f;
+	Hud_CounterFlashTimer[0] = 0;
+	Hud_CounterFlashTimer[1] = 0;
+	Hud_CounterFlashTimer[2] = 0;
+	Hud_TimerOnLastFrame = false;
+	Hud_TimerFlashTimer = 0;
+	Hud_SpriteBrightness = 0;
+	Hud_PagerOn = 0;
+	Hud_PagerTimer = 0;
+	Hud_PagerSoundPlayed = 0;
+	Hud_PagerXOffset = 150.0f;
 
 #ifdef HUD_AUTO_FADE
-	m_EnergyLostState = START_FADE_OUT;
-	m_WantedState = START_FADE_OUT;
-	m_DisplayScoreState = START_FADE_OUT;
-	m_WeaponState = START_FADE_OUT;
+	Hud_m_EnergyLostState = START_FADE_OUT;
+	Hud_m_WantedState = START_FADE_OUT;
+	Hud_m_DisplayScoreState = START_FADE_OUT;
+	Hud_m_WeaponState = START_FADE_OUT;
 #else
-	m_EnergyLostState = FADE_DISABLED;
-	m_WantedState = FADE_DISABLED;
-	m_DisplayScoreState = FADE_DISABLED;
-	m_WeaponState = FADE_DISABLED;
+	Hud_m_EnergyLostState = FADE_DISABLED;
+	Hud_m_WantedState = FADE_DISABLED;
+	Hud_m_DisplayScoreState = FADE_DISABLED;
+	Hud_m_WeaponState = FADE_DISABLED;
 #endif
-	m_WantedFadeTimer = 0;
-	m_WantedTimer = 0;
-	m_EnergyLostFadeTimer = 0;
-	m_EnergyLostTimer = 0;
-	m_DisplayScoreFadeTimer = 0;
-	m_DisplayScoreTimer = 0;
-	m_WeaponFadeTimer = 0;
-	m_WeaponTimer = 0;
+	Hud_m_WantedFadeTimer = 0;
+	Hud_m_WantedTimer = 0;
+	Hud_m_EnergyLostFadeTimer = 0;
+	Hud_m_EnergyLostTimer = 0;
+	Hud_m_DisplayScoreFadeTimer = 0;
+	Hud_m_DisplayScoreTimer = 0;
+	Hud_m_WeaponFadeTimer = 0;
+	Hud_m_WeaponTimer = 0;
 
-	m_HideRadar = false;
-	m_LastDisplayScore = CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney;
-	m_LastTimeEnergyLost = CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss;
-	m_LastWanted = 0;
-	m_LastWeapon = 0;
+	Hud_m_HideRadar = false;
+	Hud_m_LastDisplayScore = World_Players[World_PlayerInFocus].m_nVisibleMoney;
+	Hud_m_LastTimeEnergyLost = World_Players[World_PlayerInFocus].m_nTimeLastHealthLoss;
+	Hud_m_LastWanted = 0;
+	Hud_m_LastWeapon = 0;
 
 #ifndef MASTER
-	VarConsole_AddBool(&VarConsole,"Draw HUD", &m_Wants_To_Draw_Hud, false); // rouz edit (ChatGPT)
+	VarConsole_AddBool(&VarConsole,"Draw HUD", &Hud_m_Wants_To_Draw_Hud, false); // rouz edit (ChatGPT)
 #endif
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_PopCurrentTxd();
 }
 
-void CHud::ReInitialise() {
-	m_Wants_To_Draw_Hud = true;
-	m_Wants_To_Draw_3dMarkers = true;
+void Hud_ReInitialise() {
+	Hud_m_Wants_To_Draw_Hud = true;
+	Hud_m_Wants_To_Draw_3dMarkers = true;
 
-	m_pLastZoneName = nil;
-	GetRidOfAllHudMessages();
-	m_pLastVehicleName = nil;
+	Hud_m_pLastZoneName = nil;
+	Hud_GetRidOfAllHudMessages();
+	Hud_m_pLastVehicleName = nil;
 
-	CounterOnLastFrame[0] = false;
-	CounterOnLastFrame[1] = false;
-	CounterOnLastFrame[2] = false;
-	m_ItemToFlash = ITEM_NONE;
-	m_ClockState = 1;
-	OddJob2Timer = 0;
-	OddJob2OffTimer = 0.0f;
-	OddJob2On = 0;
-	OddJob2XOffset = 0.0f;
-	CounterFlashTimer[0] = 0;
-	CounterFlashTimer[1] = 0;
-	CounterFlashTimer[2] = 0;
-	TimerOnLastFrame = false;
-	TimerFlashTimer = 0;
-	SpriteBrightness = 0;
-	PagerOn = 0;
-	PagerTimer = 0;
-	PagerSoundPlayed = 0;
-	PagerXOffset = 150.0f;
+	Hud_CounterOnLastFrame[0] = false;
+	Hud_CounterOnLastFrame[1] = false;
+	Hud_CounterOnLastFrame[2] = false;
+	Hud_m_ItemToFlash = ITEM_NONE;
+	Hud_m_ClockState = 1;
+	Hud_OddJob2Timer = 0;
+	Hud_OddJob2OffTimer = 0.0f;
+	Hud_OddJob2On = 0;
+	Hud_OddJob2XOffset = 0.0f;
+	Hud_CounterFlashTimer[0] = 0;
+	Hud_CounterFlashTimer[1] = 0;
+	Hud_CounterFlashTimer[2] = 0;
+	Hud_TimerOnLastFrame = false;
+	Hud_TimerFlashTimer = 0;
+	Hud_SpriteBrightness = 0;
+	Hud_PagerOn = 0;
+	Hud_PagerTimer = 0;
+	Hud_PagerSoundPlayed = 0;
+	Hud_PagerXOffset = 150.0f;
 
 #ifdef HUD_AUTO_FADE
-	m_EnergyLostState = START_FADE_OUT;
-	m_WantedState = START_FADE_OUT;
-	m_DisplayScoreState = START_FADE_OUT;
-	m_WeaponState = START_FADE_OUT;
+	Hud_m_EnergyLostState = START_FADE_OUT;
+	Hud_m_WantedState = START_FADE_OUT;
+	Hud_m_DisplayScoreState = START_FADE_OUT;
+	Hud_m_WeaponState = START_FADE_OUT;
 #else
-	m_EnergyLostState = FADE_DISABLED;
-	m_WantedState = FADE_DISABLED;
-	m_DisplayScoreState = FADE_DISABLED;
-	m_WeaponState = FADE_DISABLED;
+	Hud_m_EnergyLostState = FADE_DISABLED;
+	Hud_m_WantedState = FADE_DISABLED;
+	Hud_m_DisplayScoreState = FADE_DISABLED;
+	Hud_m_WeaponState = FADE_DISABLED;
 #endif
-	m_WantedFadeTimer = 0;
-	m_WantedTimer = 0;
-	m_EnergyLostFadeTimer = 0;
-	m_EnergyLostTimer = 0;
-	m_DisplayScoreFadeTimer = 0;
-	m_DisplayScoreTimer = 0;
-	m_WeaponFadeTimer = 0;
-	m_WeaponTimer = 0;
+	Hud_m_WantedFadeTimer = 0;
+	Hud_m_WantedTimer = 0;
+	Hud_m_EnergyLostFadeTimer = 0;
+	Hud_m_EnergyLostTimer = 0;
+	Hud_m_DisplayScoreFadeTimer = 0;
+	Hud_m_DisplayScoreTimer = 0;
+	Hud_m_WeaponFadeTimer = 0;
+	Hud_m_WeaponTimer = 0;
 
-	m_HideRadar = false;
-	m_LastDisplayScore = CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney;
-	m_LastTimeEnergyLost = CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss;
-	m_LastWanted = 0;
-	m_LastWeapon = 0;
+	Hud_m_HideRadar = false;
+	Hud_m_LastDisplayScore = World_Players[World_PlayerInFocus].m_nVisibleMoney;
+	Hud_m_LastTimeEnergyLost = World_Players[World_PlayerInFocus].m_nTimeLastHealthLoss;
+	Hud_m_LastWanted = 0;
+	Hud_m_LastWeapon = 0;
 }
 
 wchar LastBigMessage[6][128];
 
-void CHud::SetBigMessage(wchar *message, uint16 style)
+void Hud_SetBigMessage(wchar *message, uint16 style)
 {
-	if (BigMessageInUse[style] != 0.0f)
+	if (Hud_BigMessageInUse[style] != 0.0f)
 		return;
 
 	// Delegate to the C implementation
-	if (Hud_SetBigMessage(m_BigMessage[style], LastBigMessage[style], message, style == 5)) {
-		OddJob2On = 0;
-		OddJob2OffTimer = 0.0f;
+	if (Hud_StoreBigMessage(Hud_m_BigMessage[style], LastBigMessage[style], message, style == 5)) {
+		Hud_OddJob2On = 0;
+		Hud_OddJob2OffTimer = 0.0f;
 	}
 }
 
-void CHud::SetHelpMessage(wchar *message, bool quick, bool displayForever)
+void Hud_SetHelpMessage(wchar *message, bool quick, bool displayForever)
 {
 	if (!Replay_IsPlayingBack()) { // rouz edit (ChatGPT)
 		for (int i = 0; i < HELP_MSG_LENGTH; i++) {
-			m_HelpMessage[i] = 0;
+			Hud_m_HelpMessage[i] = 0;
 		}
 		for (int i = 0; i < HELP_MSG_LENGTH; i++) {
-			m_LastHelpMessage[i] = 0;
+			Hud_m_LastHelpMessage[i] = 0;
 		}
 		for (int i = 0; i < HELP_MSG_LENGTH; i++) {
-			m_HelpMessageToPrint[i] = 0;
+			Hud_m_HelpMessageToPrint[i] = 0;
 		}
 
-		Messages_WideStringCopy(m_HelpMessage, message, HELP_MSG_LENGTH);
-		Messages_InsertPlayerControlKeysInString(m_HelpMessage);
-		if (m_HelpMessageState == 0 || !Messages_WideStringCompare(m_HelpMessage, m_HelpMessageToPrint, HELP_MSG_LENGTH)) {
+		Messages_WideStringCopy(Hud_m_HelpMessage, message, HELP_MSG_LENGTH);
+		Messages_InsertPlayerControlKeysInString(Hud_m_HelpMessage);
+		if (Hud_m_HelpMessageState == 0 || !Messages_WideStringCompare(Hud_m_HelpMessage, Hud_m_HelpMessageToPrint, HELP_MSG_LENGTH)) {
 			for (int i = 0; i < HELP_MSG_LENGTH; i++) {
-				m_LastHelpMessage[i] = 0;
+				Hud_m_LastHelpMessage[i] = 0;
 			}
 
 			if (!message) {
-				m_HelpMessage[0] = 0;
-				m_HelpMessageToPrint[0] = 0;
+				Hud_m_HelpMessage[0] = 0;
+				Hud_m_HelpMessageToPrint[0] = 0;
 			}
 			if (!displayForever) {
-				m_HelpMessageState = displayForever;
+				Hud_m_HelpMessageState = displayForever;
 			} else {
-				m_HelpMessageState = 1;
-				Messages_WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
-				Messages_WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
+				Hud_m_HelpMessageState = 1;
+				Messages_WideStringCopy(Hud_m_HelpMessageToPrint, Hud_m_HelpMessage, HELP_MSG_LENGTH);
+				Messages_WideStringCopy(Hud_m_LastHelpMessage, Hud_m_HelpMessage, HELP_MSG_LENGTH);
 			}
 
-			m_HelpMessageQuick = quick;
-			m_HelpMessageDisplayForever = displayForever;
+			Hud_m_HelpMessageQuick = quick;
+			Hud_m_HelpMessageDisplayForever = displayForever;
 		}
 
 	}
 }
 
-bool CHud::IsHelpMessageBeingDisplayed(void)
+bool Hud_IsHelpMessageBeingDisplayed(void)
 {
-	return m_HelpMessageState != 0;
+	return Hud_m_HelpMessageState != 0;
 }
 
-void CHud::SetMessage(wchar *message)
-{
-	// Delegate to the C implementation
-	Hud_CopyMessage(m_Message, message, ARRAY_SIZE(m_Message));
-}
-
-void CHud::SetPagerMessage(wchar *message)
+void Hud_SetMessage(wchar *message)
 {
 	// Delegate to the C implementation
-	Hud_CopyMessage(m_PagerMessage, message, ARRAY_SIZE(m_PagerMessage));
+	Hud_CopyMessage(Hud_m_Message, message, ARRAY_SIZE(Hud_m_Message));
 }
 
-void CHud::SetVehicleName(wchar *name)
+void Hud_SetPagerMessage(wchar *message)
 {
-	m_VehicleName = name;
+	// Delegate to the C implementation
+	Hud_CopyMessage(Hud_m_PagerMessage, message, ARRAY_SIZE(Hud_m_PagerMessage));
 }
 
-void CHud::SetZoneName(wchar *name)
+void Hud_SetVehicleName(wchar *name)
 {
-	m_pZoneName = name;
+	Hud_m_VehicleName = name;
 }
 
-void CHud::Shutdown()
+void Hud_SetZoneName(wchar *name)
+{
+	Hud_m_pZoneName = name;
+}
+
+void Hud_Shutdown()
 {
 	for (int i = 0; i < NUM_HUD_SPRITES; ++i) {
 		([](Sprite2d *spriteSelf){
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_Delete(spriteSelf);
-})(&(Sprites[i]));
+})(&(Hud_Sprites[i]));
 	}
 
 	RwTextureDestroy(gpSniperSightTex);
@@ -1803,7 +1803,7 @@ void CHud::Shutdown()
 	TxdStore_RemoveTxdSlot(HudTXD);
 }
 
-float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
+float Hud_DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 {
 	float alpha = 255.0f;
 	uint32 operation, timer;
@@ -1811,24 +1811,24 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 
 	switch (fadingElement) {
 		case HUD_WANTED_FADING:
-			fadeTimer = m_WantedFadeTimer;
-			operation = m_WantedState;
-			timer = m_WantedTimer;
+			fadeTimer = Hud_m_WantedFadeTimer;
+			operation = Hud_m_WantedState;
+			timer = Hud_m_WantedTimer;
 			break;
 		case HUD_ENERGY_FADING:
-			fadeTimer = m_EnergyLostFadeTimer;
-			operation = m_EnergyLostState;
-			timer = m_EnergyLostTimer;
+			fadeTimer = Hud_m_EnergyLostFadeTimer;
+			operation = Hud_m_EnergyLostState;
+			timer = Hud_m_EnergyLostTimer;
 			break;
 		case HUD_SCORE_FADING:
-			fadeTimer = m_DisplayScoreFadeTimer;
-			operation = m_DisplayScoreState;
-			timer = m_DisplayScoreTimer;
+			fadeTimer = Hud_m_DisplayScoreFadeTimer;
+			operation = Hud_m_DisplayScoreState;
+			timer = Hud_m_DisplayScoreTimer;
 			break;
 		case HUD_WEAPON_FADING:
-			fadeTimer = m_WeaponFadeTimer;
-			operation = m_WeaponState;
-			timer = m_WeaponTimer;
+			fadeTimer = Hud_m_WeaponFadeTimer;
+			operation = Hud_m_WeaponState;
+			timer = Hud_m_WeaponTimer;
 			break;
 		default:
 			break;
@@ -1838,24 +1838,24 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 
 	switch (fadingElement) {
 		case HUD_WANTED_FADING:
-			m_WantedFadeTimer = fadeTimer;
-			m_WantedState = operation;
-			m_WantedTimer = timer;
+			Hud_m_WantedFadeTimer = fadeTimer;
+			Hud_m_WantedState = operation;
+			Hud_m_WantedTimer = timer;
 			break;
 		case HUD_ENERGY_FADING:
-			m_EnergyLostFadeTimer = fadeTimer;
-			m_EnergyLostState = operation;
-			m_EnergyLostTimer = timer;
+			Hud_m_EnergyLostFadeTimer = fadeTimer;
+			Hud_m_EnergyLostState = operation;
+			Hud_m_EnergyLostTimer = timer;
 			break;
 		case HUD_SCORE_FADING:
-			m_DisplayScoreFadeTimer = fadeTimer;
-			m_DisplayScoreState = operation;
-			m_DisplayScoreTimer = timer;
+			Hud_m_DisplayScoreFadeTimer = fadeTimer;
+			Hud_m_DisplayScoreState = operation;
+			Hud_m_DisplayScoreTimer = timer;
 			break;
 		case HUD_WEAPON_FADING:
-			m_WeaponFadeTimer = fadeTimer;
-			m_WeaponState = operation;
-			m_WeaponTimer = timer;
+			Hud_m_WeaponFadeTimer = fadeTimer;
+			Hud_m_WeaponState = operation;
+			Hud_m_WeaponTimer = timer;
 			break;
 		default:
 			break;
@@ -1865,12 +1865,12 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 }
 
 void
-CHud::ResetWastedText(void)
+Hud_ResetWastedText(void)
 {
-	BigMessageInUse[2] = 0.0f;
-	BigMessageInUse[0] = 0.0f;
-	m_BigMessage[2][0] = 0;
-	m_BigMessage[0][0] = 0;
+	Hud_BigMessageInUse[2] = 0.0f;
+	Hud_BigMessageInUse[0] = 0.0f;
+	Hud_m_BigMessage[2][0] = 0;
+	Hud_m_BigMessage[0][0] = 0;
 }
 
 //- rouz edit (ChatGPT)

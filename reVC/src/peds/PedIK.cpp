@@ -339,10 +339,7 @@ void
 CPedIK::ExtractYawAndPitchLocal(RwMatrix *mat, float *yaw, float *pitch)
 {
 	// Delegate to the C implementation
-	float r[3] = {mat->right.x, mat->right.y, mat->right.z};
-	float u[3] = {mat->up.x, mat->up.y, mat->up.z};
-	float a[3] = {mat->at.x, mat->at.y, mat->at.z};
-	PedIK_ExtractYawAndPitchLocal(r, u, a, yaw, pitch);
+	PedIK_ExtractYawAndPitchLocal((const CVector*)&mat->right, (const CVector*)&mat->up, (const CVector*)&mat->at, yaw, pitch);
 }
 
 void

@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include "PlaceableData.h"
 #include "PhysicalData.h"
 #include "VectorMath.h"
@@ -58,7 +59,7 @@ float Physical_AudioSpeedDiff(float turnSpeedDiff, float moveSpeedDiff);
 // Factor the speeds of an entity are damped by while it is shifted, per time step
 float Physical_ShiftDamping(float damp, float timeStep);
 // New gravity direction of a vehicle that sticks to surfaces: the previous direction blended towards the surface direction by a factor from the time step, normalised, or straight up when it ends up too short
-void Physical_BlendGravityUp(const float gravityUp[3], const float surfaceUp[3], float timeStep, float out[3]);
+void Physical_BlendGravityUp(const CVector *gravityUp, const CVector *surfaceUp, float timeStep, CVector *out);
 #ifdef __cplusplus
 }
 #endif

@@ -730,7 +730,7 @@ SpawnCar(int id)
 {
 	CVector playerpos;
 	Streaming_RequestModel(id, 0); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 	if(Streaming_HasModelLoaded(id)){ // rouz edit (ChatGPT)
 		playerpos = FindPlayerCoors();
 		int node;
@@ -746,7 +746,7 @@ SpawnCar(int id)
 			// Allocate the debug-spawned boat without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			v = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			v = ((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CBoat>().construct((CBoat*)v, id, RANDOM_VEHICLE);
@@ -754,7 +754,7 @@ SpawnCar(int id)
 			// Allocate the debug-spawned bike without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			v = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			v = ((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CBike>().construct((CBike*)v, id, RANDOM_VEHICLE);
@@ -762,7 +762,7 @@ SpawnCar(int id)
 			// Allocate the debug-spawned automobile without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			v = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			v = ((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CAutomobile>().construct((CAutomobile*)v, id, RANDOM_VEHICLE);
@@ -784,7 +784,7 @@ SpawnCar(int id)
 		v->SetOrientation(0.0f, 0.0f, 3.49f);
 		v->SetStatus(STATUS_ABANDONED);
 		v->m_nDoorLock = CARLOCK_UNLOCKED;
-		CWorld::Add(v);
+		World_Add(v);
 	}
 }
 
@@ -807,13 +807,13 @@ FixCar(void)
 static void
 TeleportToWaypoint(void)
 {
-	if (CRadar::TargetMarkerId == -1)
+	if (Radar_TargetMarkerId == -1)
 		return;
 	CEntity* pEntityToTeleport = FindPlayerEntity();
-	CVector vNewPos = CRadar::TargetMarkerPos;
-	CStreaming::LoadScene(vNewPos);
-	CStreaming::LoadSceneCollision(vNewPos);
-	vNewPos.z = CWorld::FindGroundZForCoord(vNewPos.x, vNewPos.y) + pEntityToTeleport->GetDistanceFromCentreOfMassToBaseOfModel();
+	CVector vNewPos = Radar_TargetMarkerPos;
+	Streaming_LoadScene(vNewPos);
+	Streaming_LoadSceneCollision(vNewPos);
+	vNewPos.z = World_FindGroundZForCoord(vNewPos.x, vNewPos.y) + pEntityToTeleport->GetDistanceFromCentreOfMassToBaseOfModel();
 	pEntityToTeleport->Teleport(vNewPos);
 }
 #endif
@@ -856,7 +856,7 @@ int8 nextMissionToSwitch = 0;
 static void
 SwitchToMission(void)
 {
-	CTheScripts::SwitchToMission(nextMissionToSwitch);
+	TheScripts_SwitchToMission(nextMissionToSwitch);
 }
 #endif
 
@@ -879,7 +879,7 @@ static int TweakVarsListSize = -1;
 static bool bAddTweakVarsNow = false;
 static const char *pTweakVarsDefaultPath = NULL;
 
-void CTweakVars::Add(CTweakVar *var)
+void TweakVars_Add(CTweakVar *var)
 {
 	if(TweakVarsListSize == -1) {
 		TweakVarsList = (CTweakVar**)malloc(64 * sizeof(CTweakVar*));
@@ -895,7 +895,7 @@ void CTweakVars::Add(CTweakVar *var)
 		var->AddDBG(pTweakVarsDefaultPath);
 }
 
-void CTweakVars::AddDBG(const char *path)
+void TweakVars_AddDBG(const char *path)
 {
 	pTweakVarsDefaultPath = path;
 
@@ -1046,7 +1046,7 @@ DebugMenuPopulate(void)
 		DebugMenuAddCmd("Spawn", "Spawn Squalo", [](){ SpawnCar(MI_SQUALO); });
 		DebugMenuAddCmd("Spawn", "Spawn Skimmer", [](){ SpawnCar(MI_SKIMMER); });
 
-		DebugMenuAddVarBool8("Render", "Draw hud", &CHud::m_Wants_To_Draw_Hud, nil);
+		DebugMenuAddVarBool8("Render", "Draw hud", &Hud_m_Wants_To_Draw_Hud, nil);
 #ifdef PROPER_SCALING	
 		DebugMenuAddVarBool8("Render", "Proper Scaling", &Draw_ms_bProperScaling, nil);
 #endif
@@ -1151,7 +1151,7 @@ extern bool gbRenderWorld2;
 
 		DebugMenuAddVarBool8("Debug", "pad 1 -> pad 2", &Input_mapPadOneToPadTwo, nil); // rouz edit (ChatGPT)
 #ifdef GTA_SCENE_EDIT
-		DebugMenuAddVarBool8("Debug", "Edit on", &CSceneEdit::m_bEditOn, nil);
+		DebugMenuAddVarBool8("Debug", "Edit on", &SceneEdit_m_bEditOn, nil);
 #endif
 		//DebugMenuAddCmd("Debug", "Start Credits", Credits_Start);
 		//DebugMenuAddCmd("Debug", "Stop Credits", Credits_Stop);
@@ -1208,7 +1208,7 @@ extern bool gbRenderWorld2;
 		DebugMenuAddCmd("Cam", "Normal", []() { DebugCamMode = 0; });
 		DebugMenuAddCmd("Cam", "Reset Statics", ResetCamStatics);
 
-		CTweakVars::AddDBG("Debug");
+		TweakVars_AddDBG("Debug");
 	}
 }
 #endif

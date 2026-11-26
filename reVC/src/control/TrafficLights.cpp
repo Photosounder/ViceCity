@@ -67,7 +67,7 @@ int32_t TrafficLights_BackendNumSectorsY(void)
 TrafficLightList * TrafficLights_BackendSectorList(int32_t x,int32_t y)
 {
     // Enter the original typed native field or action at the C decision point
-    return &CWorld::GetSector(x,y)->m_lists[ENTITYLIST_DUMMIES];
+    return &World_GetSector(x,y)->m_lists[ENTITYLIST_DUMMIES];
 }
 TrafficLightNode * TrafficLights_BackendFirst(TrafficLightList *list)
 {

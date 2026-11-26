@@ -147,7 +147,7 @@ CPlayerPed::MakeObjectTargettable(int32 handle)
 {
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
 				// Access raw storage through the C store or pool API
-		if (((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i])) == nil) {
+		if (((CObject*)CPool_GetAt(Pools_GetObjectPool(), m_nTargettableObjects[i])) == nil) {
 					m_nTargettableObjects[i] = handle;
 			return;
 		}
@@ -179,8 +179,8 @@ CPlayerPed::ClearAdrenaline(void)
 CPlayerInfo *
 CPlayerPed::GetPlayerInfoForThisPlayerPed()
 {
-	if (CWorld::Players[0].m_pPed == this)
-		return &CWorld::Players[0];
+	if (World_Players[0].m_pPed == this)
+		return &World_Players[0];
 
 	return nil;
 }
@@ -190,17 +190,17 @@ CPlayerPed::SetupPlayerPed(int32 index)
 {
 	// Allocate the player ped from the ped pool without invoking C++ new.
 		// Access raw storage through the C store or pool API
-	CPlayerPed *player = (CPlayerPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+	CPlayerPed *player = (CPlayerPed*)((CPed*)CPool_New(Pools_GetPedPool()));
 		assert(player);
 	std::allocator<CPlayerPed>().construct(player);
-	CWorld::Players[index].m_pPed = player;
+	World_Players[index].m_pPed = player;
 #ifdef FIX_BUGS
-	player->RegisterReference((CEntity**)&CWorld::Players[index].m_pPed);
+	player->RegisterReference((CEntity**)&World_Players[index].m_pPed);
 #endif
 
 	player->SetOrientation(0.0f, 0.0f, 0.0f);
 
-	CWorld::Add(player);
+	World_Add(player);
 	player->m_wepAccuracy = 100;
 
 #ifndef MASTER
@@ -212,20 +212,20 @@ CPlayerPed::SetupPlayerPed(int32 index)
 void
 CPlayerPed::DeactivatePlayerPed(int32 index)
 {
-	CWorld::Remove(CWorld::Players[index].m_pPed);
+	World_Remove(World_Players[index].m_pPed);
 }
 
 void
 CPlayerPed::ReactivatePlayerPed(int32 index)
 {
-	CWorld::Add(CWorld::Players[index].m_pPed);
+	World_Add(World_Players[index].m_pPed);
 }
 
 void
 CPlayerPed::UseSprintEnergy(void)
 {
 	// Delegate to the C implementation
-	PlayerPedLogic_UseSprintEnergy(&m_fCurrentStamina, &m_fStaminaProgress, &m_fMaxStamina, CWorld::Players[CWorld::PlayerInFocus].m_bInfiniteSprint, m_bAdrenalineActive, (*Timer_GetTimeStep()));
+	PlayerPedLogic_UseSprintEnergy(&m_fCurrentStamina, &m_fStaminaProgress, &m_fMaxStamina, World_Players[World_PlayerInFocus].m_bInfiniteSprint, m_bAdrenalineActive, (*Timer_GetTimeStep()));
 }
 
 void
@@ -374,7 +374,7 @@ CPlayerPed::SetRealMoveAnim(void)
 			
 			RestoreHeadingRate();
 			if (!curIdleAssoc) {
-				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && !CWorld::TestSphereAgainstWorld(GetPosition(), 0.5f,
+				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && !World_TestSphereAgainstWorld(GetPosition(), 0.5f,
 						nil, true, false, false, false, false, false)) {
 					// Use the complete C animation manager at the original call boundary
 					curIdleAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 8.0f);
@@ -390,7 +390,7 @@ CPlayerPed::SetRealMoveAnim(void)
 
 		} else if (m_fMoveSpeed == 0.0f && !curSprintAssoc) {
 			if (!curIdleAssoc) {
-				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && !CWorld::TestSphereAgainstWorld(GetPosition(), 0.5f,
+				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && !World_TestSphereAgainstWorld(GetPosition(), 0.5f,
 						nil, true, false, false, false, false, false)) {
 					// Use the complete C animation manager at the original call boundary
 					curIdleAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
@@ -409,7 +409,7 @@ CPlayerPed::SetRealMoveAnim(void)
 
 			} else if (m_nPedState != PED_FIGHT) {
 				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && curIdleAssoc->animId != ANIM_STD_IDLE_TIRED
-					&& !CWorld::TestSphereAgainstWorld(GetPosition(), 0.5f, nil, true, false, false, false, false, false)) {
+					&& !World_TestSphereAgainstWorld(GetPosition(), 0.5f, nil, true, false, false, false, false, false)) {
 					// Use the complete C animation manager at the original call boundary
 					AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
 
@@ -1024,7 +1024,7 @@ CPlayerPed::KeepAreaAroundPlayerClear(void)
 	CVector pos = GetPosition();
 	int16 lastVehicle;
 	CEntity *vehicles[8];
-	CWorld::FindObjectsInRange(pos, CHECK_NEARBY_THINGS_MAX_DIST, true, &lastVehicle, 6, vehicles, false, true, false, false, false);
+	World_FindObjectsInRange(pos, CHECK_NEARBY_THINGS_MAX_DIST, true, &lastVehicle, 6, vehicles, false, true, false, false, false);
 
 	for (int i = 0; i < lastVehicle; i++) {
 		CVehicle *veh = (CVehicle*)vehicles[i];
@@ -1041,7 +1041,7 @@ CPlayerPed::KeepAreaAroundPlayerClear(void)
 
 					veh->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 2000;
 				}
-				CCarCtrl::PossiblyRemoveVehicle(veh);
+				CarCtrl_PossiblyRemoveVehicle(veh);
 			}
 		}
 	}
@@ -1134,9 +1134,9 @@ CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 	float referenceBeta = General_GetATanOfXY(distVec.x, distVec.y);
 
 		// Access raw storage through the C store or pool API
-	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
+	for (int h = CPool_GetSize(Pools_GetPedPool()) - 1; h >= 0; h--) {
 		// Access raw storage through the C store or pool API
-		CPed *pedToCheck = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), h));
+		CPed *pedToCheck = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), h));
 			if (pedToCheck) {
 			if (pedToCheck != this && pedToCheck != previousTarget) {
 				if (!pedToCheck->DyingOrDead()
@@ -1154,7 +1154,7 @@ CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 	}
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
 				// Access raw storage through the C store or pool API
-		CObject *obj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i]));
+		CObject *obj = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), m_nTargettableObjects[i]));
 				if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
 			EvaluateNeighbouringTarget(obj, &nextTarget, &lastCloseness, weaponRange, referenceBeta, lookToLeft, true);
 	}
@@ -1187,9 +1187,9 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 	float lastCloseness = -10000.0f;
 	float referenceBeta = General_GetATanOfXY(GetForward().x, GetForward().y);
 		// Access raw storage through the C store or pool API
-	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
+	for (int h = CPool_GetSize(Pools_GetPedPool()) - 1; h >= 0; h--) {
 		// Access raw storage through the C store or pool API
-		CPed *pedToCheck = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), h));
+		CPed *pedToCheck = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), h));
 			if (pedToCheck) {
 			if (pedToCheck != this) {
 				if (!pedToCheck->DyingOrDead()
@@ -1207,7 +1207,7 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 	}
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
 				// Access raw storage through the C store or pool API
-		CObject *obj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i]));
+		CObject *obj = ((CObject*)CPool_GetAt(Pools_GetObjectPool(), m_nTargettableObjects[i]));
 				if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
 			EvaluateTarget(obj, &nextTarget, &lastCloseness, weaponRange, referenceBeta, true);
 	}
@@ -1498,7 +1498,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 #ifndef AIMING_VEHICLE_OCCUPANTS
 				(((CPed*)m_pPointGunAt)->bInVehicle && (!((CPed*)m_pPointGunAt)->m_pMyVehicle || !((CPed*)m_pPointGunAt)->m_pMyVehicle->IsBike())) ||
 #endif
-				!CGame::nastyGame && ((CPed*)m_pPointGunAt)->DyingOrDead())) {
+				!Game_nastyGame && ((CPed*)m_pPointGunAt)->DyingOrDead())) {
 				ClearWeaponTarget();
 				return;
 			}
@@ -1669,7 +1669,7 @@ CPlayerPed::FindNewAttackPoints(void)
 	CEntity *entities[6];
 	int16 numEnts;
 	float rightMult, fwdMult;
-	CWorld::FindObjectsInRange(GetPosition(), 18.0f, true, &numEnts, 6, entities, true, false, false, true, false);
+	World_FindObjectsInRange(GetPosition(), 18.0f, true, &numEnts, 6, entities, true, false, false, true, false);
 	for (int i = 0; i < numEnts; ++i) {
 		CEntity *ent = entities[i];
 		int16 mi = ent->GetModelIndex();
@@ -1783,7 +1783,7 @@ CPlayerPed::ProcessControl(void)
 				rouz.health_drop_time = get_game_time();
 			}
 
-			ped->m_fHealth = mix(CWorld::Players[0].m_nMaxHealth, rouz.base_player_health, gaussian((get_game_time() - rouz.health_drop_time) / 30.));
+			ped->m_fHealth = mix(World_Players[0].m_nMaxHealth, rouz.base_player_health, gaussian((get_game_time() - rouz.health_drop_time) / 30.));
 
 			rouz.prev_player_health = ped->m_fHealth;
 		}
@@ -1793,7 +1793,7 @@ CPlayerPed::ProcessControl(void)
 		bTryingToReachDryLand = true;
 
 	} else if (!(((uint8)(*Timer_GetFrameCounter()) + m_randomSeed) & 0xF)) {
-		CVehicle *nearVeh = (CVehicle*)CWorld::TestSphereAgainstWorld(GetPosition(), 7.0f, nil, false, true, false, false, false, false);
+		CVehicle *nearVeh = (CVehicle*)World_TestSphereAgainstWorld(GetPosition(), 7.0f, nil, false, true, false, false, false, false);
 		if (nearVeh && nearVeh->IsBoat())
 			bTryingToReachDryLand = true;
 		else
@@ -2170,12 +2170,12 @@ CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 void
 CPlayerPed::SetNearbyPedsToInteractWithPlayer(void)
 {
-	if (CGame::noProstitutes)
+	if (Game_noProstitutes)
 		return;
 
 	for (int i = 0; i < m_numNearPeds; ++i) {
 		CPed *nearPed = m_nearPeds[i];
-		if (nearPed && nearPed->m_objectiveTimer < (*Timer_GetTimeInMilliseconds()) && !CTheScripts::IsPlayerOnAMission()) {
+		if (nearPed && nearPed->m_objectiveTimer < (*Timer_GetTimeInMilliseconds()) && !TheScripts_IsPlayerOnAMission()) {
 			int mi = nearPed->GetModelIndex();
 			if (Population_CanSolicitPlayerOnFoot(mi)) { // rouz edit (ChatGPT)
 				CVector distToMe = nearPed->GetPosition() - GetPosition();
@@ -2209,8 +2209,8 @@ CPlayerPed::UpdateMeleeAttackers(void)
 		GetMeleeAttackCoords(attackCoord, m_nAttackDirToCheck, 2.0f);
 
 		// Check if there is any vehicle/building inbetween us and m_nAttackDirToCheck. Peds will be able to attack us from those available directions.
-		if (CWorld::GetIsLineOfSightClear(GetPosition(), attackCoord, true, true, false, true, false, false, false)
-			&& !CWorld::TestSphereAgainstWorld(attackCoord, 0.4f, m_pMeleeList[m_nAttackDirToCheck], true, true, false, true, false, false)) {
+		if (World_GetIsLineOfSightClear(GetPosition(), attackCoord, true, true, false, true, false, false, false)
+			&& !World_TestSphereAgainstWorld(attackCoord, 0.4f, m_pMeleeList[m_nAttackDirToCheck], true, true, false, true, false, false)) {
 			if (m_pMeleeList[m_nAttackDirToCheck] == this)
 				m_pMeleeList[m_nAttackDirToCheck] = nil; // mark it as available
 		} else {

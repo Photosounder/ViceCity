@@ -131,7 +131,7 @@ const void * Projectile_BackendPosition(CProjectile *projectile)
 CPool * Projectile_BackendObjectPool(void)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    return CPools::GetObjectPool();
+    return Pools_GetObjectPool();
 }
 int8_t Projectile_BackendCreatedBy(CObject *object)
 {
@@ -181,17 +181,17 @@ void Projectile_BackendCollisionResponse(CProjectile *projectile,int8_t response
 void Projectile_BackendAdd(CProjectile *projectile)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    CWorld::Add(projectile);
+    World_Add(projectile);
 }
 void Projectile_BackendRemove(CProjectile *projectile)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    CWorld::Remove(projectile);
+    World_Remove(projectile);
 }
 void Projectile_BackendRemoveObject(CObject *object)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    CWorld::Remove(object);
+    World_Remove(object);
 }
 CEntity * Projectile_BackendColliding(CEntity *entity)
 {
@@ -231,12 +231,12 @@ bool Projectile_BackendCollided(CProjectile *projectile)
 void Projectile_BackendIgnore(CProjectile *projectile)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    CWorld::pIgnoreEntity=projectile;
+    World_pIgnoreEntity=projectile;
 }
 bool Projectile_BackendLineClear(ProjectileVector from,ProjectileVector to)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    return CWorld::GetIsLineOfSightClear(CVector(from.x,from.y,from.z),CVector(to.x,to.y,to.z),true,true,true,true,false,false);
+    return World_GetIsLineOfSightClear(CVector(from.x,from.y,from.z),CVector(to.x,to.y,to.z),true,true,true,true,false,false);
 }
 bool Projectile_BackendHeliCollision(ProjectileVector *position)
 {
@@ -261,7 +261,7 @@ void Projectile_BackendSmoke(ProjectileVector from,ProjectileVector to)
 void Projectile_BackendChoking(float x,float y,float z,CEntity *source)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    CWorld::SetPedsChoking(x,y,z,6.0f,source);
+    World_SetPedsChoking(x,y,z,6.0f,source);
 }
 enum eWeaponType Projectile_BackendDetonatorType(CEntity *entity)
 {

@@ -353,14 +353,7 @@ CPlane::ProcessControl(void)
 			// Delegate the orientation along the path to the C implementation
 			CVector fwd, right, up;
 			{
-				float fr[3] = { posFront.x, posFront.y, posFront.z };
-				float re[3] = { posRear.x, posRear.y, posRear.z };
-				float fr2[3] = { posFront2.x, posFront2.y, posFront2.z };
-				float f[3], r[3], u[3];
-				PlaneMath_PathOrientation(fr, re, fr2, pitch, !bothOnGround, f, r, u);
-				fwd = CVector(f[0], f[1], f[2]);
-				right = CVector(r[0], r[1], r[2]);
-				up = CVector(u[0], u[1], u[2]);
+				PlaneMath_PathOrientation(&posFront, &posRear, &posFront2, pitch, !bothOnGround, &fwd, &right, &up);
 			}
 			GetMatrix().GetRight() = right;
 			GetMatrix().GetUp() = up;
@@ -431,14 +424,7 @@ CPlane::ProcessControl(void)
 			// Delegate the orientation along the path to the C implementation
 			CVector fwd, right, up;
 			{
-				float fr[3] = { posFront.x, posFront.y, posFront.z };
-				float re[3] = { posRear.x, posRear.y, posRear.z };
-				float fr2[3] = { posFront2.x, posFront2.y, posFront2.z };
-				float f[3], r[3], u[3];
-				PlaneMath_PathOrientation(fr, re, fr2, 0.0f, true, f, r, u);
-				fwd = CVector(f[0], f[1], f[2]);
-				right = CVector(r[0], r[1], r[2]);
-				up = CVector(u[0], u[1], u[2]);
+				PlaneMath_PathOrientation(&posFront, &posRear, &posFront2, 0.0f, true, &fwd, &right, &up);
 			}
 			GetMatrix().GetRight() = right;
 			GetMatrix().GetUp() = up;
@@ -653,15 +639,15 @@ CPlane::InitPlanes(void)
 		TotalDurationOfFlightPath3 = TotalLengthOfFlightPath3/CRUISE_SPEED;
 	}
 
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 	Streaming_RequestModel(MI_AIRTRAIN, 0); // rouz edit (ChatGPT)
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 
 	// NB: 3 hardcoded also in CPlaneTrails
 	for(i = 0; i < 3; i++){
 		// Allocate the airtrain from the vehicle pool without invoking C++ new.
 				// Access raw storage through the C store or pool API
-		CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		CPlane *plane = (CPlane*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 				assert(plane);
 		std::allocator<CPlane>().construct(plane, MI_AIRTRAIN, PERMANENT_VEHICLE);
 		plane->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -669,7 +655,7 @@ CPlane::InitPlanes(void)
 		plane->bIsLocked = true;
 		plane->m_nPlaneId = i;
 		plane->m_nCurPathNode = 0;
-		CWorld::Add(plane);
+		World_Add(plane);
 	}
 }
 
@@ -758,7 +744,7 @@ CPlane::UpdatePlanes(void)
 				for(i = 0; i < 5; i++){
 					// Allocate the temporary cesna from the vehicle pool without invoking C++ new.
 										// Access raw storage through the C store or pool API
-					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 										assert(plane);
 					std::allocator<CPlane>().construct(plane, MI_DEADDODO, PERMANENT_VEHICLE);
 					plane->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -767,7 +753,7 @@ CPlane::UpdatePlanes(void)
 					plane->m_nPlaneId = i;
 					plane->m_nCurPathNode = 0;
 					plane->m_bTempPlane = true;
-					CWorld::Add(plane);
+					World_Add(plane);
 				}
 				bCesnasActivated = true;
 			}else
@@ -779,7 +765,7 @@ CPlane::UpdatePlanes(void)
 				for(i = 0; i < 4; i++){
 					// Allocate the temporary chopper from the vehicle pool without invoking C++ new.
 										// Access raw storage through the C store or pool API
-					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 										assert(plane);
 					std::allocator<CPlane>().construct(plane, MI_CHOPPER, PERMANENT_VEHICLE);
 					plane->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -788,7 +774,7 @@ CPlane::UpdatePlanes(void)
 					plane->m_nPlaneId = i;
 					plane->m_nCurPathNode = 0;
 					plane->m_bTempPlane = true;
-					CWorld::Add(plane);
+					World_Add(plane);
 				}
 				bHelisActivated = true;
 			}else
@@ -806,16 +792,16 @@ CPlane::RemoveTemporaryPlanes(void)
 		return;
 
 		// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
+	i = CPool_GetSize(Pools_GetVehiclePool());
 		while(--i >= 0){
 				// Access raw storage through the C store or pool API
-		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 				if(plane && plane->IsPlane() && plane->m_bTempPlane){
-			CWorld::Remove(plane);
+			World_Remove(plane);
 			// Destroy and release the temporary plane without invoking C++ delete.
 			plane->~CPlane();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), plane);
+			CPool_Delete(Pools_GetVehiclePool(), plane);
 					}
 	}
 	bCesnasActivated = false;
@@ -828,10 +814,10 @@ CPlane::TestRocketCollision(CVector *rocketPos)
 	int i;
 
 		// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
+	i = CPool_GetSize(Pools_GetVehiclePool());
 		while(--i >= 0){
 				// Access raw storage through the C store or pool API
-		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 				if(plane &&
 #ifdef EXPLODING_AIRTRAIN
 		   (plane->GetModelIndex() == MI_AIRTRAIN || plane->GetModelIndex() == MI_DEADDODO) &&
@@ -841,7 +827,7 @@ CPlane::TestRocketCollision(CVector *rocketPos)
 		   !plane->m_bHasBeenHit && (*rocketPos - plane->GetPosition()).Magnitude() < 25.0f){
 			plane->m_nFrameWhenHit = (*Timer_GetFrameCounter());
 			plane->m_bHasBeenHit = true;
-			Wanted_RegisterCrime_Immediately(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted,CRIME_DESTROYED_CESSNA,Wanted_ReferenceNative(plane->GetPosition()),i+1983,false);
+			Wanted_RegisterCrime_Immediately(World_Players[World_PlayerInFocus].m_pPed->m_pWanted,CRIME_DESTROYED_CESSNA,Wanted_ReferenceNative(plane->GetPosition()),i+1983,false);
 			return true;
 		}
 	}
@@ -854,16 +840,16 @@ void
 CPlane::CreateIncomingCesna(void)
 {
 	if(CesnaMissionStatus == CESNA_STATUS_FLYING){
-		CWorld::Remove(pDrugRunCesna);
+		World_Remove(pDrugRunCesna);
 		// Destroy and release the drug-run cesna without invoking C++ delete.
 		pDrugRunCesna->~CPlane();
 				// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetVehiclePool(), pDrugRunCesna);
+		CPool_Delete(Pools_GetVehiclePool(), pDrugRunCesna);
 				pDrugRunCesna = nil;
 	}
 	// Allocate the drug-run cesna from the vehicle pool without invoking C++ new.
 		// Access raw storage through the C store or pool API
-	pDrugRunCesna = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	pDrugRunCesna = (CPlane*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 		assert(pDrugRunCesna);
 	std::allocator<CPlane>().construct(pDrugRunCesna, MI_DEADDODO, PERMANENT_VEHICLE);
 	pDrugRunCesna->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -872,7 +858,7 @@ CPlane::CreateIncomingCesna(void)
 	pDrugRunCesna->m_nPlaneId = 0;
 	pDrugRunCesna->m_nCurPathNode = 0;
 	pDrugRunCesna->m_bIsDrugRunCesna = true;
-	CWorld::Add(pDrugRunCesna);
+	World_Add(pDrugRunCesna);
 
         CesnaMissionStatus = CESNA_STATUS_FLYING;
         CesnaMissionStartTime = (*Timer_GetTimeInMilliseconds());
@@ -884,16 +870,16 @@ void
 CPlane::CreateDropOffCesna(void)
 {
 	if(DropOffCesnaMissionStatus == CESNA_STATUS_FLYING){
-		CWorld::Remove(pDropOffCesna);
+		World_Remove(pDropOffCesna);
 		// Destroy and release the drop-off cesna without invoking C++ delete.
 		pDropOffCesna->~CPlane();
 				// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetVehiclePool(), pDropOffCesna);
+		CPool_Delete(Pools_GetVehiclePool(), pDropOffCesna);
 				pDropOffCesna = nil;
 	}
 	// Allocate the drop-off cesna from the vehicle pool without invoking C++ new.
 		// Access raw storage through the C store or pool API
-	pDropOffCesna = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	pDropOffCesna = (CPlane*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 		assert(pDropOffCesna);
 	std::allocator<CPlane>().construct(pDropOffCesna, MI_DEADDODO, PERMANENT_VEHICLE);
 	pDropOffCesna->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
@@ -902,7 +888,7 @@ CPlane::CreateDropOffCesna(void)
 	pDropOffCesna->m_nPlaneId = 0;
 	pDropOffCesna->m_nCurPathNode = 0;
 	pDropOffCesna->m_bIsDropOffCesna = true;
-	CWorld::Add(pDropOffCesna);
+	World_Add(pDropOffCesna);
 
         DropOffCesnaMissionStatus = CESNA_STATUS_FLYING;
         DropOffCesnaMissionStartTime = (*Timer_GetTimeInMilliseconds());

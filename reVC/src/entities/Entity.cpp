@@ -282,18 +282,18 @@ CEntity::PreRender(void)
 		break;
 	case ENTITY_TYPE_OBJECT:
 		if(GetModelIndex() == MI_COLLECTABLE1){
-			CPickups::DoCollectableEffects(this);
+			Pickups_DoCollectableEffects(this);
 			GetMatrix().UpdateRW();
 			UpdateRwFrame();
 		}else if(GetModelIndex() == MI_MONEY){
-			CPickups::DoMoneyEffects(this);
+			Pickups_DoMoneyEffects(this);
 			GetMatrix().UpdateRW();
 			UpdateRwFrame();
 		}else if(GetModelIndex() == MI_NAUTICALMINE ||
 		         GetModelIndex() == MI_CARMINE ||
 		         GetModelIndex() == MI_BRIEFCASE){
 			if(((CObject*)this)->bIsPickup){
-				CPickups::DoMineEffects(this);
+				Pickups_DoMineEffects(this);
 				GetMatrix().UpdateRW();
 				UpdateRwFrame();
 			}
@@ -321,7 +321,7 @@ CEntity::PreRender(void)
 		}else if(IsGlass(GetModelIndex())){
 			PreRenderForGlassWindow();
 		}else if (((CObject*)this)->bIsPickup) {
-			CPickups::DoPickUpEffects(this);
+			Pickups_DoPickUpEffects(this);
 			GetMatrix().UpdateRW();
 			UpdateRwFrame();
 		} else if (GetModelIndex() == MI_GRENADE) {
@@ -437,14 +437,14 @@ void
 CEntity::Add(void)
 {
 	// Delegate to the C implementation
-	Entity_AddToSectors(this, this, this, CWorld::GetSector(0, 0));
+	Entity_AddToSectors(this, this, this, World_GetSector(0, 0));
 }
 
 void
 CEntity::Remove(void)
 {
 	// Delegate to the C implementation
-	Entity_RemoveFromSectors(this, this, this, CWorld::GetSector(0, 0));
+	Entity_RemoveFromSectors(this, this, this, World_GetSector(0, 0));
 }
 
 float
@@ -535,7 +535,7 @@ CEntity::PreRenderForGlassWindow(void)
 {
 	if(((CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex)))->m_isArtistGlass) // rouz edit (ChatGPT)
 		return;
-	CGlass::AskForObjectToBeRenderedInGlass(this);
+	Glass_AskForObjectToBeRenderedInGlass(this);
 	bIsVisible = false;
 }
 

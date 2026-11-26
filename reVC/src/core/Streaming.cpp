@@ -59,7 +59,7 @@
 void StreamingFlush_ProcessLoadingChannel(int32_t channel)
 {
     // Preserve the original native channel processing call
-    CStreaming::ProcessLoadingChannel(channel);
+    Streaming_ProcessLoadingChannel(channel);
 }
 int StreamingRemove_NoUnstreaming(void)
 {
@@ -69,21 +69,21 @@ int StreamingRemove_NoUnstreaming(void)
 bool StreamingRemove_TryVehicleFallback(void)
 {
     // Preserve the original vehicle thresholds and short-circuit order
-    return (Streaming_numVehiclesLoaded > 7 || CGame::currArea != AREA_MAIN_MAP && Streaming_numVehiclesLoaded > 4) && Streaming_RemoveLoadedVehicle();
+    return (Streaming_numVehiclesLoaded > 7 || Game_currArea != AREA_MAIN_MAP && Streaming_numVehiclesLoaded > 4) && Streaming_RemoveLoadedVehicle();
 }
 void StreamingRemove_RemoveVehicleClass(int32_t id)
 {
     // Remove the original vehicle class entry after streaming removal
     CVehicleModelInfo *info = (CVehicleModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(id));
     if (info->m_vehicleClass != -1)
-        CCarCtrl::RemoveFromLoadedVehicleArray(id, info->m_vehicleClass);
+        CarCtrl_RemoveFromLoadedVehicleArray(id, info->m_vehicleClass);
 }
 void StreamingRemove_AddVehicleClass(int32_t id)
 {
     // Register the original vehicle class and frequency
     CVehicleModelInfo *info = (CVehicleModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(id));
     if (info->m_vehicleClass != -1)
-        CCarCtrl::AddToLoadedVehicleArray(id, info->m_vehicleClass, info->m_frequency);
+        CarCtrl_AddToLoadedVehicleArray(id, info->m_vehicleClass, info->m_frequency);
 }
 int StreamingRemove_ModelRefs(int32_t id)
 {
@@ -98,7 +98,7 @@ void StreamingRemove_DeleteModel(int32_t id)
 void StreamingRemove_RemoveCol(int32_t id)
 {
     // Preserve the original collision-store removal
-    CColStore::RemoveCol(id);
+    ColStore_RemoveCol(id);
 }
 int32_t StreamingDependencies_AnimIndex(void *model)
 {
@@ -129,21 +129,21 @@ void StreamingRequest_SetOpaqueIfSimple(void *model)
 }
 //- rouz edit (ChatGPT)
 
-bool CStreaming::ms_disableStreaming;
-bool CStreaming::ms_bLoadingBigModel;
-int32 CStreaming::ms_oldSectorX;
-int32 CStreaming::ms_oldSectorY;
-int32 CStreaming::ms_streamingBufferSize;
+bool Streaming_ms_disableStreaming;
+bool Streaming_ms_bLoadingBigModel;
+int32 Streaming_ms_oldSectorX;
+int32 Streaming_ms_oldSectorY;
+int32 Streaming_ms_streamingBufferSize;
 #ifndef ONE_THREAD_PER_CHANNEL
-int8 *CStreaming::ms_pStreamingBuffer[2];
+int8 *Streaming_ms_pStreamingBuffer[2];
 #else
-int8 *CStreaming::ms_pStreamingBuffer[4];
+int8 *Streaming_ms_pStreamingBuffer[4];
 #endif
-int32 CStreaming::ms_channelError; // rouz edit (ChatGPT)
-CDirectory *CStreaming::ms_pExtraObjectsDir;
-int32 CStreaming::ms_currentPedLoading;
-int32 CStreaming::ms_lastCullZone;
-size_t CStreaming::ms_memoryAvailable;
+int32 Streaming_ms_channelError; // rouz edit (ChatGPT)
+CDirectory *Streaming_ms_pExtraObjectsDir;
+int32 Streaming_ms_currentPedLoading;
+int32 Streaming_ms_lastCullZone;
+size_t Streaming_ms_memoryAvailable;
 
 int32 desiredNumVehiclesLoaded = 12;
 
@@ -163,7 +163,7 @@ bool gbPrintStreamingBuffer; // TODO
 
 
 void
-CStreaming::Init2(void)
+Streaming_Init2(void)
 {
 	int i;
 
@@ -176,7 +176,7 @@ CStreaming::Init2(void)
 		Streaming_modelInfo[i].m_position = 0; // rouz edit (ChatGPT)
 	}
 
-	ms_channelError = -1;
+	Streaming_ms_channelError = -1;
 
 	// init lists
 
@@ -192,12 +192,12 @@ CStreaming::Init2(void)
 
 	// init misc
 
-	ms_oldSectorX = 0;
-	ms_oldSectorY = 0;
-	ms_streamingBufferSize = 0;
-	ms_disableStreaming = false;
+	Streaming_ms_oldSectorX = 0;
+	Streaming_ms_oldSectorY = 0;
+	Streaming_ms_streamingBufferSize = 0;
+	Streaming_ms_disableStreaming = false;
 	Streaming_memoryUsed = 0; // rouz edit (ChatGPT)
-	ms_bLoadingBigModel = false;
+	Streaming_ms_bLoadingBigModel = false;
 
 	// init channels
 
@@ -237,31 +237,31 @@ CStreaming::Init2(void)
 		Streaming_pedGroupLoaded[i] = false; // rouz edit (ChatGPT)
 
 	// Allocate the extra-object directory without invoking C++ new.
-	ms_pExtraObjectsDir = (CDirectory*)malloc(sizeof(CDirectory));
-	assert(ms_pExtraObjectsDir);
-	Directory_Initialize(ms_pExtraObjectsDir, EXTRADIRSIZE);
+	Streaming_ms_pExtraObjectsDir = (CDirectory*)malloc(sizeof(CDirectory));
+	assert(Streaming_ms_pExtraObjectsDir);
+	Directory_Initialize(Streaming_ms_pExtraObjectsDir, EXTRADIRSIZE);
 	Streaming_numPriorityRequests = 0; // rouz edit (ChatGPT)
 	Streaming_currentPedGroup = -1; // rouz edit (ChatGPT)
-	ms_lastCullZone = -1;		// unused because RemoveModelsNotVisibleFromCullzone is gone
+	Streaming_ms_lastCullZone = -1;		// unused because RemoveModelsNotVisibleFromCullzone is gone
 	Streaming_loadedGangs = 0; // rouz edit (ChatGPT)
-	ms_currentPedLoading = NUMMODELSPERPEDGROUP;	// unused, whatever it is
+	Streaming_ms_currentPedLoading = NUMMODELSPERPEDGROUP;	// unused, whatever it is
 
-	LoadCdDirectory();
+	Streaming_LoadCdDirectory();
 
 	// allocate streaming buffers
-	if(ms_streamingBufferSize & 1) ms_streamingBufferSize++;
+	if(Streaming_ms_streamingBufferSize & 1) Streaming_ms_streamingBufferSize++;
 #ifndef ONE_THREAD_PER_CHANNEL
-	ms_pStreamingBuffer[0] = (int8*)RwMallocAlign(ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE, CDSTREAM_SECTOR_SIZE);
-	ms_streamingBufferSize /= 2;
-	ms_pStreamingBuffer[1] = ms_pStreamingBuffer[0] + ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
+	Streaming_ms_pStreamingBuffer[0] = (int8*)RwMallocAlign(Streaming_ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE, CDSTREAM_SECTOR_SIZE);
+	Streaming_ms_streamingBufferSize /= 2;
+	Streaming_ms_pStreamingBuffer[1] = Streaming_ms_pStreamingBuffer[0] + Streaming_ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
 #else
-	ms_pStreamingBuffer[0] = (int8*)RwMallocAlign(ms_streamingBufferSize*2*CDSTREAM_SECTOR_SIZE, CDSTREAM_SECTOR_SIZE);
-	ms_streamingBufferSize /= 2;
-	ms_pStreamingBuffer[1] = ms_pStreamingBuffer[0] + ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
-	ms_pStreamingBuffer[2] = ms_pStreamingBuffer[1] + ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
-	ms_pStreamingBuffer[3] = ms_pStreamingBuffer[2] + ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
+	Streaming_ms_pStreamingBuffer[0] = (int8*)RwMallocAlign(Streaming_ms_streamingBufferSize*2*CDSTREAM_SECTOR_SIZE, CDSTREAM_SECTOR_SIZE);
+	Streaming_ms_streamingBufferSize /= 2;
+	Streaming_ms_pStreamingBuffer[1] = Streaming_ms_pStreamingBuffer[0] + Streaming_ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
+	Streaming_ms_pStreamingBuffer[2] = Streaming_ms_pStreamingBuffer[1] + Streaming_ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
+	Streaming_ms_pStreamingBuffer[3] = Streaming_ms_pStreamingBuffer[2] + Streaming_ms_streamingBufferSize*CDSTREAM_SECTOR_SIZE;
 #endif
-	debug("Streaming buffer size is %d sectors", ms_streamingBufferSize);
+	debug("Streaming buffer size is %d sectors", Streaming_ms_streamingBufferSize);
 
 	// PC only, figure out how much memory we got
 #ifdef GTA_PC
@@ -269,16 +269,16 @@ CStreaming::Init2(void)
 #ifdef FIX_BUGS
 	// do what gta3 does
 	extern size_t _dwMemAvailPhys;
-	ms_memoryAvailable = (_dwMemAvailPhys - 10*MB)/2;
-	if(ms_memoryAvailable < 65*MB)
-		ms_memoryAvailable = 65*MB;
-	desiredNumVehiclesLoaded = (int32)((ms_memoryAvailable / MB - 65) / 3 + 12);
+	Streaming_ms_memoryAvailable = (_dwMemAvailPhys - 10*MB)/2;
+	if(Streaming_ms_memoryAvailable < 65*MB)
+		Streaming_ms_memoryAvailable = 65*MB;
+	desiredNumVehiclesLoaded = (int32)((Streaming_ms_memoryAvailable / MB - 65) / 3 + 12);
 	if(desiredNumVehiclesLoaded > MAXVEHICLESLOADED)
 		desiredNumVehiclesLoaded = MAXVEHICLESLOADED;
 #else
-	ms_memoryAvailable = 65 * MB;
+	Streaming_ms_memoryAvailable = 65 * MB;
 	desiredNumVehiclesLoaded = 25;
-	debug("Memory allocated to Streaming is %zuMB", ms_memoryAvailable/MB); // original modifier was %d
+	debug("Memory allocated to Streaming is %zuMB", Streaming_ms_memoryAvailable/MB); // original modifier was %d
 #endif
 #undef MB
 #endif
@@ -300,7 +300,7 @@ CStreaming::Init2(void)
 }
 
 void
-CStreaming::Init(void)
+Streaming_Init(void)
 {
 #ifdef USE_TXD_CDIMAGE
 	// Use the complete C texture reader with the original live SDK arguments
@@ -311,47 +311,47 @@ CStreaming::Init(void)
 		// Use the complete C texture reader with the original live SDK arguments
 		if (!TexRead_CheckVideoCardCaps() && txdHandle) {
 			CdStreamAddImage("MODELS\\TXD.IMG");
-			CStreaming::Init2();
+			Streaming_Init2();
 		} else {
-			CStreaming::Init2();
+			Streaming_Init2();
 			// Use the complete C texture reader with the original live SDK arguments
 			if (TexRead_CreateTxdImageForVideoCard()) {
-				CStreaming::Shutdown();
+				Streaming_Shutdown();
 				CdStreamAddImage("MODELS\\TXD.IMG");
-				CStreaming::Init2();
+				Streaming_Init2();
 			}
 		}
 	} else
-		CStreaming::Init2();
+		Streaming_Init2();
 #else
-	CStreaming::Init2();
+	Streaming_Init2();
 #endif
 }
 
 void
-CStreaming::ReInit(void)
+Streaming_ReInit(void)
 {
 	int i;
 	Streaming_FlushRequestList(); // rouz edit (ChatGPT)
-	CStreaming::DeleteAllRwObjects();
+	Streaming_DeleteAllRwObjects();
 	Streaming_RemoveAllUnusedModels(); // rouz edit (ChatGPT)
 	for(i = 0; i < MODELINFOSIZE; i++)
 		if(((CBaseModelInfo*)ModelRegistry_Get(i)) && Streaming_modelInfo[i].m_flags & STREAMFLAGS_SCRIPTOWNED) // rouz edit (ChatGPT)
 			Streaming_SetMissionDoesntRequireModel(i); // rouz edit (ChatGPT)
-	CStreaming::ms_disableStreaming = false;
+	Streaming_ms_disableStreaming = false;
 }
 
 void
-CStreaming::Shutdown(void)
+Streaming_Shutdown(void)
 {
-	RwFreeAlign(ms_pStreamingBuffer[0]);
-	ms_streamingBufferSize = 0;
-	if(ms_pExtraObjectsDir) {
+	RwFreeAlign(Streaming_ms_pStreamingBuffer[0]);
+	Streaming_ms_streamingBufferSize = 0;
+	if(Streaming_ms_pExtraObjectsDir) {
 		// Destroy and release the extra-object directory without invoking C++ delete.
-		Directory_Shutdown(ms_pExtraObjectsDir);
-		free(ms_pExtraObjectsDir);
+		Directory_Shutdown(Streaming_ms_pExtraObjectsDir);
+		free(Streaming_ms_pExtraObjectsDir);
 #ifdef FIX_BUGS
-		ms_pExtraObjectsDir = nil;
+		Streaming_ms_pExtraObjectsDir = nil;
 #endif
 	}
 }
@@ -362,7 +362,7 @@ uint64 timeProcessingDFF;
 #endif
 
 void
-CStreaming::Update(void)
+Streaming_Update(void)
 {
 	CStreamingInfo *si, *prev;
 	bool requestedSubway = false;
@@ -372,42 +372,42 @@ CStreaming::Update(void)
 	timeProcessingDFF = 0;
 #endif
 
-	UpdateMemoryUsed();
+	Streaming_UpdateMemoryUsed();
 
-	if(ms_channelError != -1){
-		RetryLoadFile(ms_channelError);
+	if(Streaming_ms_channelError != -1){
+		Streaming_RetryLoadFile(Streaming_ms_channelError);
 		return;
 	}
 
 	if(Timer_GetIsPaused())
 		return;
 
-	LoadBigBuildingsWhenNeeded();
-	if(!ms_disableStreaming && TheCamera.GetPosition().z < 55.0f)
-		AddModelsToRequestList(TheCamera.GetPosition(), 0);
+	Streaming_LoadBigBuildingsWhenNeeded();
+	if(!Streaming_ms_disableStreaming && TheCamera.GetPosition().z < 55.0f)
+		Streaming_AddModelsToRequestList(TheCamera.GetPosition(), 0);
 
 	if (rouz.no_unstreaming)
-		DeleteFarAwayRwObjects(TheCamera.GetPosition());
+		Streaming_DeleteFarAwayRwObjects(TheCamera.GetPosition());
 
-	if(!ms_disableStreaming &&
+	if(!Streaming_ms_disableStreaming &&
 	   !Cutscene_IsProcessing() && // rouz edit (ChatGPT)
 	   Streaming_numModelsRequested < 5 && // rouz edit (ChatGPT)
-	   !CRenderer::m_loadingPriority &&
-	   CGame::currArea == AREA_MAIN_MAP &&
+	   !Renderer_m_loadingPriority &&
+	   Game_currArea == AREA_MAIN_MAP &&
 	   !Replay_IsPlayingBack()){ // rouz edit (ChatGPT)
-		StreamVehiclesAndPeds();
-		StreamZoneModels(FindPlayerCoors());
+		Streaming_StreamVehiclesAndPeds();
+		Streaming_StreamZoneModels(FindPlayerCoors());
 	}
 
-	LoadRequestedModels();
+	Streaming_LoadRequestedModels();
 
-	if(CWorld::Players[0].m_pRemoteVehicle){
-		CColStore::AddCollisionNeededAtPosn(FindPlayerCoors());
-		CColStore::LoadCollision(CWorld::Players[0].m_pRemoteVehicle->GetPosition());
-		CColStore::EnsureCollisionIsInMemory(CWorld::Players[0].m_pRemoteVehicle->GetPosition());
+	if(World_Players[0].m_pRemoteVehicle){
+		ColStore_AddCollisionNeededAtPosn(FindPlayerCoors());
+		ColStore_LoadCollision(World_Players[0].m_pRemoteVehicle->GetPosition());
+		ColStore_EnsureCollisionIsInMemory(World_Players[0].m_pRemoteVehicle->GetPosition());
 	}else{
-		CColStore::LoadCollision(FindPlayerCoors());
-		CColStore::EnsureCollisionIsInMemory(FindPlayerCoors());
+		ColStore_LoadCollision(FindPlayerCoors());
+		ColStore_EnsureCollisionIsInMemory(FindPlayerCoors());
 	}
 
 	// TODO: PrintRequestList
@@ -423,7 +423,7 @@ CStreaming::Update(void)
 }
 
 void
-CStreaming::LoadCdDirectory(void)
+Streaming_LoadCdDirectory(void)
 {
 	char dirname[132];
 	int i;
@@ -443,7 +443,7 @@ CStreaming::LoadCdDirectory(void)
 	while(i-- >= 1){
 		strcpy(dirname, CdStreamGetImageName(i));
 		strncpy(strrchr(dirname, '.') + 1, "DIR", 3);
-		LoadCdDirectory(dirname, i);
+		Streaming_LoadCdDirectory(dirname, i);
 	}
 
 	Streaming_lastImageRead = 0; // rouz edit (ChatGPT)
@@ -451,7 +451,7 @@ CStreaming::LoadCdDirectory(void)
 }
 
 void
-CStreaming::LoadCdDirectory(const char *dirname, int n)
+Streaming_LoadCdDirectory(const char *dirname, int n)
 {
 	int fd, lastID, imgSelector;
 	int modelId;
@@ -467,8 +467,8 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 	while(FileMgr_Read(fd, (char*)&direntry, sizeof(direntry))){
 		bool bAddToStreaming = false;
 
-		if(direntry.size > (uint32)ms_streamingBufferSize)
-			ms_streamingBufferSize = direntry.size;
+		if(direntry.size > (uint32)Streaming_ms_streamingBufferSize)
+			Streaming_ms_streamingBufferSize = direntry.size;
 		direntry.name[23] = '\0';
 		dot = strchr(direntry.name, '.');
 		if(dot == nil || dot-direntry.name > 20){
@@ -485,9 +485,9 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 			}else{
 #ifdef FIX_BUGS
 				// remember which cdimage this came from
-				Directory_AddItemWithImage(ms_pExtraObjectsDir, &direntry, n);
+				Directory_AddItemWithImage(Streaming_ms_pExtraObjectsDir, &direntry, n);
 #else
-				Directory_AddItem(ms_pExtraObjectsDir, &direntry);
+				Directory_AddItem(Streaming_ms_pExtraObjectsDir, &direntry);
 #endif
 				lastID = -1;
 			}
@@ -500,9 +500,9 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 			modelId += STREAM_OFFSET_TXD;
 			bAddToStreaming = true;
 		}else if(strncasecmp(dot+1, "COL", 3) == 0){
-			modelId = CColStore::FindColSlot(direntry.name);
+			modelId = ColStore_FindColSlot(direntry.name);
 			if(modelId == -1)
-				modelId = CColStore::AddColSlot(direntry.name);
+				modelId = ColStore_AddColSlot(direntry.name);
 			modelId += STREAM_OFFSET_COL;
 			bAddToStreaming = true;
 		}else if(strncasecmp(dot+1, "IFP", 3) == 0){
@@ -542,7 +542,7 @@ GetObjectName(int streamId)
 		// Use the complete C texture dictionary owner with the original live arguments
 		sprintf(objname, "%s.txd", TxdStore_GetTxdName(streamId-STREAM_OFFSET_TXD));
 	else if(streamId >= STREAM_OFFSET_COL && streamId < STREAM_OFFSET_ANIM)
-		sprintf(objname, "%s.col", CColStore::GetColName(streamId-STREAM_OFFSET_COL));
+		sprintf(objname, "%s.col", ColStore_GetColName(streamId-STREAM_OFFSET_COL));
 	else{
 		assert(streamId < NUMSTREAMINFO);
 		// Use the complete C animation manager at the original call boundary
@@ -561,7 +561,7 @@ RegisterAtomicMemPtrsCB(RpAtomic *atomic, void *data)
 #endif
 
 bool
-CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
+Streaming_ConvertBufferToObject(int8 *buf, int32 streamId)
 {
 	RwMemory mem;
 	RwStream *stream;
@@ -611,23 +611,23 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		// Use the complete C texture dictionary owner with the original live arguments
 		TxdStore_SetCurrentTxd(mi->GetTxdSlot());
 		if(mi->IsSimple()){
-			success = CFileLoader::LoadAtomicFile(stream, streamId);
+			success = FileLoader_LoadAtomicFile(stream, streamId);
 			// TODO(MIAMI)? complain if file is not pre-instanced. we hardly are interested in that
 		} else if (mi->GetModelType() == MITYPE_VEHICLE) {
 			// load vehicles in two parts
 			((CBaseModelInfo*)ModelRegistry_Get(streamId))->AddRef(); // rouz edit (ChatGPT)
-			success = CFileLoader::StartLoadClumpFile(stream, streamId);
+			success = FileLoader_StartLoadClumpFile(stream, streamId);
 			if(success)
 				Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_STARTED; // rouz edit (ChatGPT)
 		}else{
-			success = CFileLoader::LoadClumpFile(stream, streamId);
+			success = FileLoader_LoadClumpFile(stream, streamId);
 #ifdef USE_CUSTOM_ALLOCATOR
 			if(success)
 				RpClumpForAllAtomics((RpClump*)mi->GetRwObject(), RegisterAtomicMemPtrsCB, nil);
 #endif
 		}
 		POP_MEMID();
-		UpdateMemoryUsed();
+		Streaming_UpdateMemoryUsed();
 
 		// Txd and anims no longer needed unless we only read part of the file
 		if(Streaming_modelInfo[streamId].m_loadState != STREAMSTATE_STARTED){ // rouz edit (ChatGPT)
@@ -657,7 +657,7 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		}
 
 		PUSH_MEMID(MEMID_STREAM_TEXUTRES);
-		if(ms_bLoadingBigModel || cdsize > 200){
+		if(Streaming_ms_bLoadingBigModel || cdsize > 200){
 			// Use the complete C texture dictionary owner with the original live arguments
 			success = TxdStore_StartLoadTxd(streamId - STREAM_OFFSET_TXD, stream);
 			if(success)
@@ -666,7 +666,7 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		        // Use the complete C texture dictionary owner with the original live arguments
 		        success = TxdStore_LoadStream(streamId - STREAM_OFFSET_TXD, stream);
 		POP_MEMID();
-		UpdateMemoryUsed();
+		Streaming_UpdateMemoryUsed();
 
 		if(!success){
 			// Use the complete C texture dictionary owner with the original live arguments
@@ -678,10 +678,10 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		}
 	}else if(streamId >= STREAM_OFFSET_COL && streamId < STREAM_OFFSET_ANIM){
 		PUSH_MEMID(MEMID_STREAM_COLLISION);
-		bool success = CColStore::LoadCol(streamId-STREAM_OFFSET_COL, mem.start, mem.length);
+		bool success = ColStore_LoadCol(streamId-STREAM_OFFSET_COL, mem.start, mem.length);
 		POP_MEMID();
 		if(!success){
-			debug("Failed to load %s.col\n", CColStore::GetColName(streamId - STREAM_OFFSET_COL));
+			debug("Failed to load %s.col\n", ColStore_GetColName(streamId - STREAM_OFFSET_COL));
 			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
 			Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
@@ -747,7 +747,7 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 }
 
 bool
-CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
+Streaming_FinishLoadingLargeFile(int8 *buf, int32 streamId)
 {
 	RwMemory mem;
 	RwStream *stream;
@@ -773,7 +773,7 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 		PUSH_MEMID(MEMID_STREAM_MODELS);
 		// Use the complete C texture dictionary owner with the original live arguments
 		TxdStore_SetCurrentTxd(mi->GetTxdSlot());
-		success = CFileLoader::FinishLoadClumpFile(stream, streamId);
+		success = FileLoader_FinishLoadClumpFile(stream, streamId);
 		if(success){
 #ifdef USE_CUSTOM_ALLOCATOR
 			RpClumpForAllAtomics((RpClump*)mi->GetRwObject(), RegisterAtomicMemPtrsCB, nil);
@@ -813,11 +813,11 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 	if(!success){
 		Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
 		Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
-		UpdateMemoryUsed();
+		Streaming_UpdateMemoryUsed();
 		return false;
 	}
 
-	UpdateMemoryUsed();
+	Streaming_UpdateMemoryUsed();
 
 	endTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 	timeDiff = endTime - startTime;
@@ -830,16 +830,16 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 #define BIGBUILDINGFLAGS STREAMFLAGS_DONT_REMOVE
 
 void
-CStreaming::RequestBigBuildings(eLevelName level)
+Streaming_RequestBigBuildings(eLevelName level)
 {
 	int i, n;
 	CBuilding *b;
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	n = CPool_GetSize(Pools_GetBuildingPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		b = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		b = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 				if(b && b->bIsBIGBuilding
 #ifdef NO_ISLAND_LOADING
 		   && (((FrontEndMenuManager.m_PrefsIslandLoading != CMenuManager::ISLAND_LOADING_LOW) && (b != pIslandLODmainlandEntity) &&
@@ -852,20 +852,20 @@ CStreaming::RequestBigBuildings(eLevelName level)
 			if(!b->bStreamBIGBuilding)
 				Streaming_RequestModel(b->GetModelIndex(), BIGBUILDINGFLAGS); // rouz edit (ChatGPT)
 	}
-	RequestIslands(level);
+	Streaming_RequestIslands(level);
 }
 
 void
-CStreaming::RequestBigBuildings(eLevelName level, const CVector &pos)
+Streaming_RequestBigBuildings(eLevelName level, const CVector &pos)
 {
 	int i, n;
 	CBuilding *b;
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	n = CPool_GetSize(Pools_GetBuildingPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		b = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		b = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 				if(b && b->bIsBIGBuilding
 #ifdef NO_ISLAND_LOADING
 		    && (((FrontEndMenuManager.m_PrefsIslandLoading != CMenuManager::ISLAND_LOADING_LOW) && (b != pIslandLODmainlandEntity) && (b != pIslandLODbeachEntity)
@@ -875,34 +875,34 @@ CStreaming::RequestBigBuildings(eLevelName level, const CVector &pos)
 #endif
 		)
 			if(b->bStreamBIGBuilding){
-				if(CRenderer::ShouldModelBeStreamed(b, pos))
+				if(Renderer_ShouldModelBeStreamed(b, pos))
 					Streaming_RequestModel(b->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			}else
 				Streaming_RequestModel(b->GetModelIndex(), BIGBUILDINGFLAGS); // rouz edit (ChatGPT)
 	}
-	RequestIslands(level);
+	Streaming_RequestIslands(level);
 }
 
 void
-CStreaming::InstanceBigBuildings(eLevelName level, const CVector &pos)
+Streaming_InstanceBigBuildings(eLevelName level, const CVector &pos)
 {
 	int i, n;
 	CBuilding *b;
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	n = CPool_GetSize(Pools_GetBuildingPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		b = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		b = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 				if(b && b->bIsBIGBuilding && b->m_level == level &&
 		   b->bStreamBIGBuilding && b->m_rwObject == nil)
-			if(CRenderer::ShouldModelBeStreamed(b, pos))
+			if(Renderer_ShouldModelBeStreamed(b, pos))
 				b->CreateRwObject();
 	}
 }
 
 void
-CStreaming::InstanceLoadedModelsInSectorList(CPtrList &list)
+Streaming_InstanceLoadedModelsInSectorList(CPtrList &list)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -914,7 +914,7 @@ CStreaming::InstanceLoadedModelsInSectorList(CPtrList &list)
 }
 
 void
-CStreaming::InstanceLoadedModels(const CVector &pos)
+Streaming_InstanceLoadedModels(const CVector &pos)
 {
 	// Delegate the range of sectors to the C implementation
 	int32_t minX, minY, maxX, maxY;
@@ -923,17 +923,17 @@ CStreaming::InstanceLoadedModels(const CVector &pos)
 	int x, y;
 	for(y = minY; y <= maxY; y++){
 		for(x = minX; x <= maxX; x++){
-			CSector *sector = CWorld::GetSector(x, y);
-			InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_BUILDINGS]);
-			InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
-			InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_OBJECTS]);
-			InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_DUMMIES]);
+			CSector *sector = World_GetSector(x, y);
+			Streaming_InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_BUILDINGS]);
+			Streaming_InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
+			Streaming_InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_OBJECTS]);
+			Streaming_InstanceLoadedModelsInSectorList(sector->m_lists[ENTITYLIST_DUMMIES]);
 		}
 	}
 }
 
 void
-CStreaming::RequestIslands(eLevelName level)
+Streaming_RequestIslands(eLevelName level)
 {
 	ISLAND_LOADING_ISNT(HIGH)
 	switch(level){
@@ -1000,7 +1000,7 @@ static char *CSnames[] = {
 };
 
 void
-CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flags)
+Streaming_RequestSpecialModel(int32 modelId, const char *modelName, int32 flags)
 {
 	CBaseModelInfo *mi;
 	int txdId;
@@ -1026,26 +1026,26 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 
 	if(mi->GetNumRefs() > 0){
 				// Access raw storage through the C store or pool API
-		n = CPool_GetSize(CPools::GetPedPool())-1;
+		n = CPool_GetSize(Pools_GetPedPool())-1;
 				for(i = n; i >= 0 && mi->GetNumRefs() > 0; i--){
 						// Access raw storage through the C store or pool API
-			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			CPed *ped = ((CPed*)CPool_GetSlot(Pools_GetPedPool(), i));
 						if(ped && ped->GetModelIndex() == modelId &&
 			   !ped->IsPlayer() && ped->CanBeDeletedEvenInVehicle())
-				CTheScripts::RemoveThisPed(ped);
+				TheScripts_RemoveThisPed(ped);
 		}
 				// Access raw storage through the C store or pool API
-		n = CPool_GetSize(CPools::GetObjectPool())-1;
+		n = CPool_GetSize(Pools_GetObjectPool())-1;
 				for(i = n; i >= 0 && mi->GetNumRefs() > 0; i--){
 						// Access raw storage through the C store or pool API
-			CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+			CObject *obj = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), i));
 						if(obj && obj->GetModelIndex() == modelId && obj->CanBeDeleted()){
-				CWorld::Remove(obj);
-				CWorld::RemoveReferencesToDeletedObject(obj);
+				World_Remove(obj);
+				World_RemoveReferencesToDeletedObject(obj);
 				// Destroy and release the swapped object without invoking C++ delete.
 				obj->~CObject();
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetObjectPool(), obj);
+				CPool_Delete(Pools_GetObjectPool(), obj);
 							}
 		}
 	}
@@ -1069,7 +1069,7 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 	}else
 		Streaming_RemoveModel(modelId); // rouz edit (ChatGPT)
 
-	bool found = Directory_FindItem(ms_pExtraObjectsDir, modelName, &pos, &size);
+	bool found = Directory_FindItem(Streaming_ms_pExtraObjectsDir, modelName, &pos, &size);
 	assert(found);
 	mi->ClearTexDictionary();
 	// Use the complete C texture dictionary owner with the original live arguments
@@ -1082,38 +1082,38 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 }
 
 void
-CStreaming::RequestSpecialChar(int32 charId, const char *modelName, int32 flags)
+Streaming_RequestSpecialChar(int32 charId, const char *modelName, int32 flags)
 {
-	RequestSpecialModel(charId + MI_SPECIAL01, modelName, flags);
+	Streaming_RequestSpecialModel(charId + MI_SPECIAL01, modelName, flags);
 }
 
 
 
 
 void
-CStreaming::RemoveUnusedBuildings(eLevelName level)
+Streaming_RemoveUnusedBuildings(eLevelName level)
 {
 	if (rouz.no_unstreaming)
 		return;
 
 	if(level != LEVEL_BEACH)
-		RemoveBuildings(LEVEL_BEACH);
+		Streaming_RemoveBuildings(LEVEL_BEACH);
 	if(level != LEVEL_MAINLAND)
-		RemoveBuildings(LEVEL_MAINLAND);
+		Streaming_RemoveBuildings(LEVEL_MAINLAND);
 }
 
 void
-CStreaming::RemoveBuildings(eLevelName level)
+Streaming_RemoveBuildings(eLevelName level)
 {
 	int i, n;
 	CEntity *e;
 	CBaseModelInfo *mi;
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	n = CPool_GetSize(Pools_GetBuildingPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		e = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 				if(e && e->m_level == level){
 			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
@@ -1125,10 +1125,10 @@ CStreaming::RemoveBuildings(eLevelName level)
 	}
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetTreadablePool())-1;
+	n = CPool_GetSize(Pools_GetTreadablePool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
+		e = ((CTreadable*)CPool_GetSlot(Pools_GetTreadablePool(), i));
 				if(e && e->m_level == level){
 			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
@@ -1140,10 +1140,10 @@ CStreaming::RemoveBuildings(eLevelName level)
 	}
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetObjectPool())-1;
+	n = CPool_GetSize(Pools_GetObjectPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		e = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), i));
 				if(e && e->m_level == level){
 			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered && ((CObject*)e)->ObjectCreatedBy == GAME_OBJECT){
@@ -1155,10 +1155,10 @@ CStreaming::RemoveBuildings(eLevelName level)
 	}
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetDummyPool())-1;
+	n = CPool_GetSize(Pools_GetDummyPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		e = ((CDummy*)CPool_GetSlot(Pools_GetDummyPool(), i));
 				if(e && e->m_level == level){
 			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
@@ -1171,16 +1171,16 @@ CStreaming::RemoveBuildings(eLevelName level)
 }
 
 void
-CStreaming::RemoveBuildingsNotInArea(int32 area)
+Streaming_RemoveBuildingsNotInArea(int32 area)
 {
 	int i, n;
 	CEntity *e;
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	n = CPool_GetSize(Pools_GetBuildingPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		e = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1191,10 +1191,10 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 	}
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetTreadablePool())-1;
+	n = CPool_GetSize(Pools_GetTreadablePool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
+		e = ((CTreadable*)CPool_GetSlot(Pools_GetTreadablePool(), i));
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1205,10 +1205,10 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 	}
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetObjectPool())-1;
+	n = CPool_GetSize(Pools_GetObjectPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		e = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), i));
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1219,10 +1219,10 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 	}
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetDummyPool())-1;
+	n = CPool_GetSize(Pools_GetDummyPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		e = ((CDummy*)CPool_GetSlot(Pools_GetDummyPool(), i));
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1234,7 +1234,7 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 }
 
 void
-CStreaming::RemoveUnusedBigBuildings(eLevelName level)
+Streaming_RemoveUnusedBigBuildings(eLevelName level)
 {
 	if (rouz.no_unstreaming)
 		return;
@@ -1242,11 +1242,11 @@ CStreaming::RemoveUnusedBigBuildings(eLevelName level)
 	ISLAND_LOADING_IS(LOW)
 	{
 	if(level != LEVEL_BEACH)
-		RemoveBigBuildings(LEVEL_BEACH);
+		Streaming_RemoveBigBuildings(LEVEL_BEACH);
 	if(level != LEVEL_MAINLAND)
-		RemoveBigBuildings(LEVEL_MAINLAND);
+		Streaming_RemoveBigBuildings(LEVEL_MAINLAND);
 	}
-	RemoveIslandsNotUsed(level);
+	Streaming_RemoveIslandsNotUsed(level);
 }
 
 void
@@ -1263,14 +1263,14 @@ DeleteIsland(CEntity *island)
 }
 
 void
-CStreaming::RemoveIslandsNotUsed(eLevelName level)
+Streaming_RemoveIslandsNotUsed(eLevelName level)
 {
 	int i;
 	if(pIslandLODmainlandEntity == nil)
 		// Access raw storage through the C store or pool API
-	for(i = CPool_GetSize(CPools::GetBuildingPool())-1; i >= 0; i--){
+	for(i = CPool_GetSize(Pools_GetBuildingPool())-1; i >= 0; i--){
 		// Access raw storage through the C store or pool API
-		CBuilding *building = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		CBuilding *building = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 			if(building == nil)
 			continue;
 		if(building->GetModelIndex() == islandLODmainland)
@@ -1296,17 +1296,17 @@ CStreaming::RemoveIslandsNotUsed(eLevelName level)
 }
 
 void
-CStreaming::RemoveBigBuildings(eLevelName level)
+Streaming_RemoveBigBuildings(eLevelName level)
 {
 	int i, n;
 	CEntity *e;
 	CBaseModelInfo *mi;
 
 		// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	n = CPool_GetSize(Pools_GetBuildingPool())-1;
 		for(i = n; i >= 0; i--){
 				// Access raw storage through the C store or pool API
-		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		e = ((CBuilding*)CPool_GetSlot(Pools_GetBuildingPool(), i));
 				if(e && e->bIsBIGBuilding && e->m_level == level){
 			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
@@ -1319,13 +1319,13 @@ CStreaming::RemoveBigBuildings(eLevelName level)
 }
 
 void
-CStreaming::RemoveUnusedModelsInLoadedList(void)
+Streaming_RemoveUnusedModelsInLoadedList(void)
 {
 	// empty
 }
 
 void
-CStreaming::LoadInitialPeds(void)
+Streaming_LoadInitialPeds(void)
 {
 	Streaming_RequestModel(MI_COP, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
@@ -1333,14 +1333,14 @@ CStreaming::LoadInitialPeds(void)
 }
 
 void
-CStreaming::LoadInitialWeapons(void)
+Streaming_LoadInitialWeapons(void)
 {
 	Streaming_RequestModel(MI_NIGHTSTICK, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_MISSILE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 }
 
 void
-CStreaming::LoadInitialVehicles(void)
+Streaming_LoadInitialVehicles(void)
 {
 	Streaming_numVehiclesLoaded = 0; // rouz edit (ChatGPT)
 	Streaming_lastVehicleDeleted = 0; // rouz edit (ChatGPT)
@@ -1349,7 +1349,7 @@ CStreaming::LoadInitialVehicles(void)
 }
 
 void
-CStreaming::StreamVehiclesAndPeds(void)
+Streaming_StreamVehiclesAndPeds(void)
 {
 	int model;
 	static int timeBeforeNextLoad = 0;
@@ -1412,7 +1412,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 		Streaming_SetModelIsDeletable(MI_VICE8); // rouz edit (ChatGPT)
 		Streaming_RequestModel(MI_VICECHEE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 		if(Population_numMiamiViceCops == 0) // rouz edit (ChatGPT)
-			switch (CCarCtrl::MiamiViceCycle) {
+			switch (CarCtrl_MiamiViceCycle) {
 			case 0:
 				Streaming_RequestModel(MI_VICE1, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 				Streaming_RequestModel(MI_VICE2, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
@@ -1450,18 +1450,18 @@ CStreaming::StreamVehiclesAndPeds(void)
 		CVector coors = FindPlayerCoors();
 		Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&coors)), &zone);
 		// Delegate to the C implementation
-		int32 mostRequestedRating = Streaming_MostRequestedRating(CCarCtrl::NumRequestsOfCarRating, zone.carThreshold, zone.boatThreshold);
-		model = CCarCtrl::ChooseCarModelToLoad(mostRequestedRating);
+		int32 mostRequestedRating = Streaming_MostRequestedRating(CarCtrl_NumRequestsOfCarRating, zone.carThreshold, zone.boatThreshold);
+		model = CarCtrl_ChooseCarModelToLoad(mostRequestedRating);
 		if(!Streaming_HasModelLoaded(model)){ // rouz edit (ChatGPT)
 			Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 			timeBeforeNextLoad = 350;
 		}
-		CCarCtrl::NumRequestsOfCarRating[mostRequestedRating] = 0;
+		CarCtrl_NumRequestsOfCarRating[mostRequestedRating] = 0;
 	}
 }
 
 void
-CStreaming::StreamZoneModels(const CVector &pos)
+Streaming_StreamZoneModels(const CVector &pos)
 {
 	int i, j;
 	uint16 gangsToLoad, gangCarsToLoad, bit;
@@ -1572,46 +1572,46 @@ CStreaming::StreamZoneModels(const CVector &pos)
 }
 
 void
-CStreaming::LoadBigBuildingsWhenNeeded(void)
+Streaming_LoadBigBuildingsWhenNeeded(void)
 {
 	// Very much like CCollision::Update and CCollision::LoadCollisionWhenINeedIt
 	if(Cutscene_IsProcessing()) // rouz edit (ChatGPT)
 		return;
 
 	if(Zones_currentLevel == LEVEL_GENERIC || 
-	   Zones_currentLevel == CGame::currLevel)
+	   Zones_currentLevel == Game_currLevel)
 		return;
 
 	Timer_Suspend();
-	CGame::currLevel = Zones_currentLevel;
+	Game_currLevel = Zones_currentLevel;
 	ISLAND_LOADING_IS(LOW)
 	{
 		DMAudio_SetEffectsFadeVol(0);
 		CPad::StopPadsShaking();
-		CCollision::LoadCollisionScreen(CGame::currLevel);
+		Collision_LoadCollisionScreen(Game_currLevel);
 		DMAudio_Service();
 
-		RemoveUnusedBigBuildings(CGame::currLevel);
-		RemoveUnusedBuildings(CGame::currLevel);
-		RemoveUnusedModelsInLoadedList();
-		CGame::TidyUpMemory(true, true);
+		Streaming_RemoveUnusedBigBuildings(Game_currLevel);
+		Streaming_RemoveUnusedBuildings(Game_currLevel);
+		Streaming_RemoveUnusedModelsInLoadedList();
+		Game_TidyUpMemory(true, true);
 	}
 	CReplay::EmptyReplayBuffer();
-	if(CGame::currLevel != LEVEL_GENERIC)
-		LoadSplash(GetLevelSplashScreen(CGame::currLevel));
+	if(Game_currLevel != LEVEL_GENERIC)
+		LoadSplash(GetLevelSplashScreen(Game_currLevel));
 
 	ISLAND_LOADING_IS(LOW)
-		CStreaming::RequestBigBuildings(CGame::currLevel, TheCamera.GetPosition());
+		Streaming_RequestBigBuildings(Game_currLevel, TheCamera.GetPosition());
 #ifdef NO_ISLAND_LOADING
 	else if(FrontEndMenuManager.m_PrefsIslandLoading == CMenuManager::ISLAND_LOADING_MEDIUM) {
-		RemoveIslandsNotUsed(CGame::currLevel);
-		CStreaming::RequestIslands(CGame::currLevel);
+		Streaming_RemoveIslandsNotUsed(Game_currLevel);
+		Streaming_RequestIslands(Game_currLevel);
 	}
 #endif
 
-	CStreaming::LoadAllRequestedModels(false);
+	Streaming_LoadAllRequestedModels(false);
 
-	CGame::TidyUpMemory(true, true);
+	Game_TidyUpMemory(true, true);
 	Timer_Resume();
 
 	ISLAND_LOADING_IS(LOW)
@@ -1631,7 +1631,7 @@ CStreaming::LoadBigBuildingsWhenNeeded(void)
 
 // Make channel read from disc
 void
-CStreaming::RequestModelStream(int32 ch)
+Streaming_RequestModelStream(int32 ch)
 {
 	int lastPosn, imgOffset, streamId;
 	int totalSize;
@@ -1666,11 +1666,11 @@ CStreaming::RequestModelStream(int32 ch)
 		return;
 
 	StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &posn, &size); // rouz edit (ChatGPT)
-	if(size > (uint32)ms_streamingBufferSize){
+	if(size > (uint32)Streaming_ms_streamingBufferSize){
 		// Can only load big models on channel 0, and 1 has to be idle
 		if(ch == 1 || Streaming_channel[1].state != CHANNELSTATE_IDLE) // rouz edit (ChatGPT)
 			return;
-		ms_bLoadingBigModel = true;
+		Streaming_ms_bLoadingBigModel = true;
 	}
 
 	// Load up to 4 adjacent files
@@ -1705,7 +1705,7 @@ CStreaming::RequestModelStream(int32 ch)
 		totalSize += size;
 
 		// To big for buffer, remove again
-		if(totalSize > ms_streamingBufferSize && i > 0){
+		if(totalSize > Streaming_ms_streamingBufferSize && i > 0){
 			totalSize -= size;
 			break;
 		}
@@ -1729,8 +1729,8 @@ CStreaming::RequestModelStream(int32 ch)
 	for(; i < 4; i++)
 		Streaming_channel[ch].streamIds[i] = -1; // rouz edit (ChatGPT)
 	// Now read the data
-	assert(!(ms_bLoadingBigModel && ch == 1));	// this would clobber the buffer
-	if(CdStreamRead(ch, ms_pStreamingBuffer[ch], imgOffset+posn, totalSize) == STREAM_NONE)
+	assert(!(Streaming_ms_bLoadingBigModel && ch == 1));	// this would clobber the buffer
+	if(CdStreamRead(ch, Streaming_ms_pStreamingBuffer[ch], imgOffset+posn, totalSize) == STREAM_NONE)
 		debug("FUCKFUCKFUCK\n");
 	Streaming_channel[ch].state = CHANNELSTATE_READING; // rouz edit (ChatGPT)
 	Streaming_channel[ch].field24 = 0; // rouz edit (ChatGPT)
@@ -1741,7 +1741,7 @@ CStreaming::RequestModelStream(int32 ch)
 
 // Load data previously read from disc
 bool
-CStreaming::ProcessLoadingChannel(int32 ch)
+Streaming_ProcessLoadingChannel(int32 ch)
 {
 	int status;
 	int i, id, cdsize;
@@ -1750,7 +1750,7 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 	if(status != STREAM_NONE){
 		// busy
 		if(status != STREAM_READING && status != STREAM_WAITING){
-			ms_channelError = ch;
+			Streaming_ms_channelError = ch;
 			Streaming_channel[ch].state = CHANNELSTATE_ERROR; // rouz edit (ChatGPT)
 			Streaming_channel[ch].status = status; // rouz edit (ChatGPT)
 		}
@@ -1759,7 +1759,7 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 
 	if(Streaming_channel[ch].state == CHANNELSTATE_STARTED){ // rouz edit (ChatGPT)
 		Streaming_channel[ch].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
-		FinishLoadingLargeFile(&ms_pStreamingBuffer[ch][Streaming_channel[ch].offsets[0]*CDSTREAM_SECTOR_SIZE], // rouz edit (ChatGPT)
+		Streaming_FinishLoadingLargeFile(&Streaming_ms_pStreamingBuffer[ch][Streaming_channel[ch].offsets[0]*CDSTREAM_SECTOR_SIZE], // rouz edit (ChatGPT)
 			Streaming_channel[ch].streamIds[0]); // rouz edit (ChatGPT)
 		Streaming_channel[ch].streamIds[0] = -1; // rouz edit (ChatGPT)
 	}else{
@@ -1782,8 +1782,8 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 				else if(TxdStore_GetNumRefs(((CBaseModelInfo*)ModelRegistry_Get(id))->GetTxdSlot()) == 0) // rouz edit (ChatGPT)
 					Streaming_RemoveTxd(((CBaseModelInfo*)ModelRegistry_Get(id))->GetTxdSlot()); // rouz edit (ChatGPT)
 			}else{
-				MakeSpaceFor(cdsize * CDSTREAM_SECTOR_SIZE);
-				ConvertBufferToObject(&ms_pStreamingBuffer[ch][Streaming_channel[ch].offsets[i]*CDSTREAM_SECTOR_SIZE], // rouz edit (ChatGPT)
+				Streaming_MakeSpaceFor(cdsize * CDSTREAM_SECTOR_SIZE);
+				Streaming_ConvertBufferToObject(&Streaming_ms_pStreamingBuffer[ch][Streaming_channel[ch].offsets[i]*CDSTREAM_SECTOR_SIZE], // rouz edit (ChatGPT)
 					id);
 				if(Streaming_modelInfo[id].m_loadState == STREAMSTATE_STARTED){ // rouz edit (ChatGPT)
 					// queue for second part
@@ -1798,8 +1798,8 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 		}
 	}
 
-	if(ms_bLoadingBigModel && Streaming_channel[ch].state != CHANNELSTATE_STARTED){ // rouz edit (ChatGPT)
-		ms_bLoadingBigModel = false;
+	if(Streaming_ms_bLoadingBigModel && Streaming_channel[ch].state != CHANNELSTATE_STARTED){ // rouz edit (ChatGPT)
+		Streaming_ms_bLoadingBigModel = false;
 		// reset channel 1 after loading a big model
 		for(i = 0; i < 4; i++)
 			Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
@@ -1810,7 +1810,7 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 }
 
 void
-CStreaming::RetryLoadFile(int32 ch)
+Streaming_RetryLoadFile(int32 ch)
 {
 	Const char *key;
 
@@ -1823,7 +1823,7 @@ CStreaming::RetryLoadFile(int32 ch)
 		case STREAM_ERROR_WRONGCD: key = "WRONGCD"; break;
 		default: key = "CDERROR"; break;
 		}
-		CHud::SetMessage(Text_Get(&TheText,key));
+		Hud_SetMessage(Text_Get(&TheText,key));
 		Timer_SetCodePause(true);
 	}
 
@@ -1832,13 +1832,13 @@ CStreaming::RetryLoadFile(int32 ch)
 		Streaming_channel[ch].numTries++; // rouz edit (ChatGPT)
 		if (CdStreamGetStatus(ch) == STREAM_READING || CdStreamGetStatus(ch) == STREAM_WAITING) break;
 	case CHANNELSTATE_IDLE:
-		CdStreamRead(ch, ms_pStreamingBuffer[ch], Streaming_channel[ch].position, Streaming_channel[ch].size); // rouz edit (ChatGPT)
+		CdStreamRead(ch, Streaming_ms_pStreamingBuffer[ch], Streaming_channel[ch].position, Streaming_channel[ch].size); // rouz edit (ChatGPT)
 		Streaming_channel[ch].state = CHANNELSTATE_READING; // rouz edit (ChatGPT)
 		Streaming_channel[ch].field24 = -600; // rouz edit (ChatGPT)
 		break;
 	case CHANNELSTATE_READING:
-		if(ProcessLoadingChannel(ch)){
-			ms_channelError = -1;
+		if(Streaming_ProcessLoadingChannel(ch)){
+			Streaming_ms_channelError = -1;
 			Timer_SetCodePause(false);
 		}
 		break;
@@ -1846,23 +1846,23 @@ CStreaming::RetryLoadFile(int32 ch)
 }
 
 void
-CStreaming::LoadRequestedModels(void)
+Streaming_LoadRequestedModels(void)
 {
 	static int currentChannel = 0;
 
 	// We can't read with channel 1 while channel 0 is using its buffer
-	if(ms_bLoadingBigModel)
+	if(Streaming_ms_bLoadingBigModel)
 		currentChannel = 0;
 
 	// We have data, load
 	if(Streaming_channel[currentChannel].state == CHANNELSTATE_READING || // rouz edit (ChatGPT)
 	   Streaming_channel[currentChannel].state == CHANNELSTATE_STARTED) // rouz edit (ChatGPT)
-		ProcessLoadingChannel(currentChannel);
+		Streaming_ProcessLoadingChannel(currentChannel);
 
-	if(ms_channelError == -1){
+	if(Streaming_ms_channelError == -1){
 		// Channel is idle, read more data
 		if(Streaming_channel[currentChannel].state == CHANNELSTATE_IDLE) // rouz edit (ChatGPT)
-			RequestModelStream(currentChannel);
+			Streaming_RequestModelStream(currentChannel);
 		// Switch channel
 		if(Streaming_channel[currentChannel].state != CHANNELSTATE_STARTED) // rouz edit (ChatGPT)
 			currentChannel = 1 - currentChannel;
@@ -1875,7 +1875,7 @@ CStreaming::LoadRequestedModels(void)
 // WIP - some files are loaded swapped (CdStreamPosix problem?)
 #if 0 //def ONE_THREAD_PER_CHANNEL
 void
-CStreaming::LoadAllRequestedModels(bool priority)
+Streaming_LoadAllRequestedModels(bool priority)
 {
 	static bool bInsideLoadAll = false;
 	int imgOffset, streamId, status;
@@ -1889,9 +1889,9 @@ CStreaming::LoadAllRequestedModels(bool priority)
 	Streaming_FlushChannels(); // rouz edit (ChatGPT)
 	imgOffset = Streaming_GetCdImageOffset(CdStreamGetLastPosn()); // rouz edit (ChatGPT)
 
-	int streamIds[ARRAY_SIZE(ms_pStreamingBuffer)];
-	int streamSizes[ARRAY_SIZE(ms_pStreamingBuffer)];
-	int streamPoses[ARRAY_SIZE(ms_pStreamingBuffer)];
+	int streamIds[ARRAY_SIZE(Streaming_ms_pStreamingBuffer)];
+	int streamSizes[ARRAY_SIZE(Streaming_ms_pStreamingBuffer)];
+	int streamPoses[ARRAY_SIZE(Streaming_ms_pStreamingBuffer)];
 	int readOrder[4] = {-1}; // Channel IDs ordered by read time
 	int readI = 0;
 	int processI = 0;
@@ -1900,7 +1900,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 	// All those "first" checks are because of variables aren't initialized in first pass.
 
 	while (true) {
-		for (int i=0; i<ARRAY_SIZE(ms_pStreamingBuffer); i++) {
+		for (int i=0; i<ARRAY_SIZE(Streaming_ms_pStreamingBuffer); i++) {
 
 			// Channel has file to load
 			if (!first && streamIds[i] != -1) {
@@ -1918,15 +1918,15 @@ CStreaming::LoadAllRequestedModels(bool priority)
 					streamIds[i] = -1;
 
 					// Big file, needs 2 buffer
-					if (size > (uint32)ms_streamingBufferSize) {
-						if (i + 1 == ARRAY_SIZE(ms_pStreamingBuffer))
+					if (size > (uint32)Streaming_ms_streamingBufferSize) {
+						if (i + 1 == ARRAY_SIZE(Streaming_ms_pStreamingBuffer))
 							break;
 						else if (!first && streamIds[i+1] != -1)
 							continue;
 
 					} else {
 						// Buffer of current channel is part of a "big file", pass
-						if (i != 0 && streamIds[i-1] != -1 && streamSizes[i-1] > (uint32)ms_streamingBufferSize)
+						if (i != 0 && streamIds[i-1] != -1 && streamSizes[i-1] > (uint32)Streaming_ms_streamingBufferSize)
 							continue;
 					}
 					StreamingInfo_RemoveFromList(&Streaming_modelInfo[streamId]); // rouz edit (ChatGPT)
@@ -1941,7 +1941,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 
 					//printf("read: order %d, ch %d, id %d, size %d\n", readI, i, streamId, size);
 
-					CdStreamRead(i, ms_pStreamingBuffer[i], imgOffset+posn, size);
+					CdStreamRead(i, Streaming_ms_pStreamingBuffer[i], imgOffset+posn, size);
 					readOrder[readI] = i;
 					if (first && readI+1 != ARRAY_SIZE(readOrder))
 						readOrder[readI+1] = -1;
@@ -1971,14 +1971,14 @@ CStreaming::LoadAllRequestedModels(bool priority)
 
 		// Try again on error
 		while (CdStreamSync(nextChannel) != STREAM_NONE) {
-			CdStreamRead(nextChannel, ms_pStreamingBuffer[nextChannel], imgOffset+streamPoses[nextChannel], streamSizes[nextChannel]);
+			CdStreamRead(nextChannel, Streaming_ms_pStreamingBuffer[nextChannel], imgOffset+streamPoses[nextChannel], streamSizes[nextChannel]);
 		}
 		Streaming_modelInfo[streamIds[nextChannel]].m_loadState = STREAMSTATE_READING; // rouz edit (ChatGPT)
 
-		MakeSpaceFor(streamSizes[nextChannel] * CDSTREAM_SECTOR_SIZE);
-		ConvertBufferToObject(ms_pStreamingBuffer[nextChannel], streamIds[nextChannel]);
+		Streaming_MakeSpaceFor(streamSizes[nextChannel] * CDSTREAM_SECTOR_SIZE);
+		Streaming_ConvertBufferToObject(Streaming_ms_pStreamingBuffer[nextChannel], streamIds[nextChannel]);
 		if(Streaming_modelInfo[streamIds[nextChannel]].m_loadState == STREAMSTATE_STARTED) // rouz edit (ChatGPT)
-			FinishLoadingLargeFile(ms_pStreamingBuffer[nextChannel], streamIds[nextChannel]);
+			Streaming_FinishLoadingLargeFile(Streaming_ms_pStreamingBuffer[nextChannel], streamIds[nextChannel]);
 
 		if(streamIds[nextChannel] < STREAM_OFFSET_TXD){
 			CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(streamIds[nextChannel])); // rouz edit (ChatGPT)
@@ -1990,7 +1990,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 		processI = (processI + 1) % ARRAY_SIZE(readOrder);
 	}
 
-	ms_bLoadingBigModel = false;
+	Streaming_ms_bLoadingBigModel = false;
 	for(i = 0; i < 4; i++){
 		Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
 		Streaming_channel[1].offsets[i] = -1; // rouz edit (ChatGPT)
@@ -2000,7 +2000,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 }
 #else
 void
-CStreaming::LoadAllRequestedModels(bool priority)
+Streaming_LoadAllRequestedModels(bool priority)
 {
 	static bool bInsideLoadAll = false;
 	int imgOffset, streamId, status;
@@ -2031,14 +2031,14 @@ CStreaming::LoadAllRequestedModels(bool priority)
 
 		if(StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &posn, &size)){ // rouz edit (ChatGPT)
 			do
-				status = CdStreamRead(0, ms_pStreamingBuffer[0], imgOffset+posn, size);
+				status = CdStreamRead(0, Streaming_ms_pStreamingBuffer[0], imgOffset+posn, size);
 			while(CdStreamSync(0) || status == STREAM_NONE);
 			Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_READING; // rouz edit (ChatGPT)
 
-			MakeSpaceFor(size * CDSTREAM_SECTOR_SIZE);
-			ConvertBufferToObject(ms_pStreamingBuffer[0], streamId);
+			Streaming_MakeSpaceFor(size * CDSTREAM_SECTOR_SIZE);
+			Streaming_ConvertBufferToObject(Streaming_ms_pStreamingBuffer[0], streamId);
 			if(Streaming_modelInfo[streamId].m_loadState == STREAMSTATE_STARTED) // rouz edit (ChatGPT)
-				FinishLoadingLargeFile(ms_pStreamingBuffer[0], streamId);
+				Streaming_FinishLoadingLargeFile(Streaming_ms_pStreamingBuffer[0], streamId);
 
 			if(streamId < STREAM_OFFSET_TXD){
 				CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(streamId)); // rouz edit (ChatGPT)
@@ -2051,7 +2051,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 		}
 	}
 
-	ms_bLoadingBigModel = false;
+	Streaming_ms_bLoadingBigModel = false;
 	for(i = 0; i < 4; i++){
 		Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
 		Streaming_channel[1].offsets[i] = -1; // rouz edit (ChatGPT)
@@ -2062,20 +2062,20 @@ CStreaming::LoadAllRequestedModels(bool priority)
 #endif
 
 void
-CStreaming::ImGonnaUseStreamingMemory(void)
+Streaming_ImGonnaUseStreamingMemory(void)
 {
 	PUSH_MEMID(MEMID_STREAM);
 }
 
 void
-CStreaming::IHaveUsedStreamingMemory(void)
+Streaming_IHaveUsedStreamingMemory(void)
 {
 	POP_MEMID();
-	UpdateMemoryUsed();
+	Streaming_UpdateMemoryUsed();
 }
 
 void
-CStreaming::UpdateMemoryUsed(void)
+Streaming_UpdateMemoryUsed(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
 	// Read streaming categories through the complete C heap owner
@@ -2091,7 +2091,7 @@ CStreaming::UpdateMemoryUsed(void)
 #define STREAM_DIST 80.0f
 
 void
-CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
+Streaming_AddModelsToRequestList(const CVector &pos, int32 flags)
 {
 	float xmin, xmax, ymin, ymax;
 	int ixmin, ixmax, iymin, iymax;
@@ -2107,35 +2107,35 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 	// Delegate to the C implementation
 	World_SectorRangeClamped(xmin, ymin, xmax, ymax, &ixmin, &iymin, &ixmax, &iymax);
 
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	for(iy = iymin; iy <= iymax; iy++){
-		dy = iy - CWorld::GetSectorIndexY(pos.y);
+		dy = iy - World_GetSectorIndexY(pos.y);
 		for(ix = ixmin; ix <= ixmax; ix++){
 
-			if(CRenderer::m_loadingPriority && Streaming_numModelsRequested > 5) // rouz edit (ChatGPT)
+			if(Renderer_m_loadingPriority && Streaming_numModelsRequested > 5) // rouz edit (ChatGPT)
 				return;
 
-			dx = ix - CWorld::GetSectorIndexX(pos.x);
+			dx = ix - World_GetSectorIndexX(pos.x);
 			d = World_SectorStreamRing(dx, dy);
-			sect = CWorld::GetSector(ix, iy);
+			sect = World_GetSector(ix, iy);
 			if(d == 0){
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], flags);
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], flags);
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], flags);
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], flags);
 			}else if(d == 1){
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
-				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				Streaming_ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
 			}
 		}
 	}
 }
 
 void
-CStreaming::ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float xmin, float ymin, float xmax, float ymax, int32 flags)
+Streaming_ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float xmin, float ymin, float xmax, float ymax, int32 flags)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -2145,10 +2145,10 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float 
 	for(node = list.first; node; node = node->next){
 		e = (CEntity*)node->item;
 
-		if(e->m_scanCode == CWorld::GetCurrentScanCode())
+		if(e->m_scanCode == World_GetCurrentScanCode())
 			continue;
 
-		e->m_scanCode = CWorld::GetCurrentScanCode();
+		e->m_scanCode = World_GetCurrentScanCode();
 		if(!e->bStreamingDontDelete && IsAreaVisible(e->m_area) && !e->bDontStream && e->bIsVisible){
 			CTimeModelInfo *mi = (CTimeModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->m_timeData.timeOn, mi->m_timeData.timeOff)) { // rouz edit (ChatGPT)
@@ -2163,7 +2163,7 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float 
 }
 
 void
-CStreaming::ProcessEntitiesInSectorList(CPtrList &list, int32 flags)
+Streaming_ProcessEntitiesInSectorList(CPtrList &list, int32 flags)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -2171,10 +2171,10 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, int32 flags)
 	for(node = list.first; node; node = node->next){
 		e = (CEntity*)node->item;
 
-		if(e->m_scanCode == CWorld::GetCurrentScanCode())
+		if(e->m_scanCode == World_GetCurrentScanCode())
 			continue;
 
-		e->m_scanCode = CWorld::GetCurrentScanCode();
+		e->m_scanCode = World_GetCurrentScanCode();
 		if(!e->bStreamingDontDelete && IsAreaVisible(e->m_area) && !e->bDontStream && e->bIsVisible){
 			CTimeModelInfo *mi = (CTimeModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->m_timeData.timeOn, mi->m_timeData.timeOff)) // rouz edit (ChatGPT)
@@ -2184,15 +2184,15 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, int32 flags)
 }
 
 void
-CStreaming::DeleteFarAwayRwObjects(const CVector &pos)
+Streaming_DeleteFarAwayRwObjects(const CVector &pos)
 {
 	int posx, posy;
 	int x, y;
 	int r, i;
 	CSector *sect;
 
-	posx = CWorld::GetSectorIndexX(pos.x);
-	posy = CWorld::GetSectorIndexY(pos.y);
+	posx = World_GetSectorIndexX(pos.x);
+	posy = World_GetSectorIndexY(pos.y);
 
 	// Move oldSectorX/Y to new sector and delete RW objects in its "wake" for every step:
 	// O is the old sector, <- is the direction in which we move it,
@@ -2207,109 +2207,109 @@ CStreaming::DeleteFarAwayRwObjects(const CVector &pos)
 	//          X X
 	//            X
 
-	while(posx != ms_oldSectorX){
-		if(posx < ms_oldSectorX){
+	while(posx != Streaming_ms_oldSectorX){
+		if(posx < Streaming_ms_oldSectorX){
 			for(r = 2; r <= 10; r++){
-				x = ms_oldSectorX + r;
+				x = Streaming_ms_oldSectorX + r;
 				if(x < 0)
 					continue;
 				if(x >= NUMSECTORS_X)
 					break;
 
 				for(i = -r; i <= r; i++){
-					y = ms_oldSectorY + i;
+					y = Streaming_ms_oldSectorY + i;
 					if(y < 0)
 						continue;
 					if(y >= NUMSECTORS_Y)
 						break;
 
-					sect = CWorld::GetSector(x, y);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
-					DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], ms_oldSectorX, ms_oldSectorY);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
+					sect = World_GetSector(x, y);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
+					Streaming_DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], Streaming_ms_oldSectorX, Streaming_ms_oldSectorY);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
 				}
 			}
-			ms_oldSectorX--;
+			Streaming_ms_oldSectorX--;
 		}else{
 			for(r = 2; r <= 10; r++){
-				x = ms_oldSectorX - r;
+				x = Streaming_ms_oldSectorX - r;
 				if(x < 0)
 					break;
 				if(x >= NUMSECTORS_X)
 					continue;
 
 				for(i = -r; i <= r; i++){
-					y = ms_oldSectorY + i;
+					y = Streaming_ms_oldSectorY + i;
 					if(y < 0)
 						continue;
 					if(y >= NUMSECTORS_Y)
 						break;
 
-					sect = CWorld::GetSector(x, y);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
-					DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], ms_oldSectorX, ms_oldSectorY);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
+					sect = World_GetSector(x, y);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
+					Streaming_DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], Streaming_ms_oldSectorX, Streaming_ms_oldSectorY);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
 				}
 			}
-			ms_oldSectorX++;
+			Streaming_ms_oldSectorX++;
 		}
 	}
 
-	while(posy != ms_oldSectorY){
-		if(posy < ms_oldSectorY){
+	while(posy != Streaming_ms_oldSectorY){
+		if(posy < Streaming_ms_oldSectorY){
 			for(r = 2; r <= 10; r++){
-				y = ms_oldSectorY + r;
+				y = Streaming_ms_oldSectorY + r;
 				if(y < 0)
 					continue;
 				if(y >= NUMSECTORS_Y)
 					break;
 
 				for(i = -r; i <= r; i++){
-					x = ms_oldSectorX + i;
+					x = Streaming_ms_oldSectorX + i;
 					if(x < 0)
 						continue;
 					if(x >= NUMSECTORS_X)
 						break;
 
-					sect = CWorld::GetSector(x, y);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
-					DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], ms_oldSectorX, ms_oldSectorY);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
+					sect = World_GetSector(x, y);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
+					Streaming_DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], Streaming_ms_oldSectorX, Streaming_ms_oldSectorY);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
 				}
 			}
-			ms_oldSectorY--;
+			Streaming_ms_oldSectorY--;
 		}else{
 			for(r = 2; r <= 10; r++){
-				y = ms_oldSectorY - r;
+				y = Streaming_ms_oldSectorY - r;
 				if(y < 0)
 					break;
 				if(y >= NUMSECTORS_Y)
 					continue;
 
 				for(i = -r; i <= r; i++){
-					x = ms_oldSectorX + i;
+					x = Streaming_ms_oldSectorX + i;
 					if(x < 0)
 						continue;
 					if(x >= NUMSECTORS_X)
 						break;
 
-					sect = CWorld::GetSector(x, y);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
-					DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], ms_oldSectorX, ms_oldSectorY);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
-					DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
+					sect = World_GetSector(x, y);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
+					Streaming_DeleteRwObjectsInOverlapSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], Streaming_ms_oldSectorX, Streaming_ms_oldSectorY);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
+					Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
 				}
 			}
-			ms_oldSectorY++;
+			Streaming_ms_oldSectorY++;
 		}
 	}
 }
 
 void
-CStreaming::DeleteAllRwObjects(void)
+Streaming_DeleteAllRwObjects(void)
 {
 	int x, y;
 	CSector *sect;
@@ -2319,42 +2319,42 @@ CStreaming::DeleteAllRwObjects(void)
 
 	for(x = 0; x < NUMSECTORS_X; x++)
 		for(y = 0; y < NUMSECTORS_Y; y++){
-			sect = CWorld::GetSector(x, y);
-			DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
-			DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
-			DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
-			DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS_OVERLAP]);
-			DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
-			DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES_OVERLAP]);
+			sect = World_GetSector(x, y);
+			Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
+			Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
+			Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
+			Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS_OVERLAP]);
+			Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
+			Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES_OVERLAP]);
 		}
 }
 
 void
-CStreaming::DeleteRwObjectsAfterDeath(const CVector &pos)
+Streaming_DeleteRwObjectsAfterDeath(const CVector &pos)
 {
 	int ix, iy;
 	int x, y;
 	CSector *sect;
 
-	ix = CWorld::GetSectorIndexX(pos.x);
-	iy = CWorld::GetSectorIndexY(pos.y);
+	ix = World_GetSectorIndexX(pos.x);
+	iy = World_GetSectorIndexY(pos.y);
 
 	for(x = 0; x < NUMSECTORS_X; x++)
 		for(y = 0; y < NUMSECTORS_Y; y++)
 			// Delegate the check that the sector is far from the player to the C implementation
 			if(Streaming_SectorIsFar(ix, iy, x, y)){
-				sect = CWorld::GetSector(x, y);
-				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
-				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
-				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
-				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS_OVERLAP]);
-				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
-				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES_OVERLAP]);
+				sect = World_GetSector(x, y);
+				Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
+				Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
+				Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS]);
+				Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_OBJECTS_OVERLAP]);
+				Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES]);
+				Streaming_DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_DUMMIES_OVERLAP]);
 			}
 }
 
 void
-CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
+Streaming_DeleteRwObjectsBehindCamera(size_t mem)
 {
 	int ix, iy;
 	int x, y;
@@ -2368,8 +2368,8 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 	if(Streaming_memoryUsed < mem) // rouz edit (ChatGPT)
 		return;
 
-	ix = CWorld::GetSectorIndexX(TheCamera.GetPosition().x);
-	iy = CWorld::GetSectorIndexY(TheCamera.GetPosition().y);
+	ix = World_GetSectorIndexX(TheCamera.GetPosition().x);
+	iy = World_GetSectorIndexY(TheCamera.GetPosition().y);
 
 	if(General_AbsGreater(TheCamera.GetForward().x, TheCamera.GetForward().y)){
 		// looking west/east
@@ -2383,10 +2383,10 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		Streaming_SectorRange(ix, TheCamera.GetForward().x > 0.0f, true, NUMSECTORS_X, &xmin, &xmax, &inc);
 		for(y = ymin; y <= ymax; y++){
 			for(x = xmin; x != xmax; x += inc){
-				sect = CWorld::GetSector(x, y);
-				if(DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
+				sect = World_GetSector(x, y);
+				if(Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
 					return;
 			}
 		}
@@ -2401,10 +2401,10 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		Streaming_SectorRange(ix, TheCamera.GetForward().x > 0.0f, false, NUMSECTORS_X, &xmin, &xmax, &inc);
 		for(y = ymin; y <= ymax; y++){
 			for(x = xmin; x != xmax; x += inc){
-				sect = CWorld::GetSector(x, y);
-				if(DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
-				   DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
-				   DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
+				sect = World_GetSector(x, y);
+				if(Streaming_DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
+				   Streaming_DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
+				   Streaming_DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
 					return;
 			}
 		}
@@ -2412,10 +2412,10 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		// As last resort, delete objects from the last step more aggressively
 		for(y = ymin; y <= ymax; y++){
 			for(x = xmax; x != xmin; x -= inc){
-				sect = CWorld::GetSector(x, y);
-				if(DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
+				sect = World_GetSector(x, y);
+				if(Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
 					return;
 			}
 		}
@@ -2431,10 +2431,10 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		Streaming_SectorRange(iy, TheCamera.GetForward().y > 0.0f, true, NUMSECTORS_Y, &ymin, &ymax, &inc);
 		for(x = xmin; x <= xmax; x++){
 			for(y = ymin; y != ymax; y += inc){
-				sect = CWorld::GetSector(x, y);
-				if(DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
+				sect = World_GetSector(x, y);
+				if(Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
 					return;
 			}
 		}
@@ -2448,10 +2448,10 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		Streaming_SectorRange(iy, TheCamera.GetForward().y > 0.0f, false, NUMSECTORS_Y, &ymin, &ymax, &inc);
 		for(x = xmin; x <= xmax; x++){
 			for(y = ymin; y != ymax; y += inc){
-				sect = CWorld::GetSector(x, y);
-				if(DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
-				   DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
-				   DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
+				sect = World_GetSector(x, y);
+				if(Streaming_DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
+				   Streaming_DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
+				   Streaming_DeleteRwObjectsNotInFrustumInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
 					return;
 			}
 		}
@@ -2463,10 +2463,10 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		// As last resort, delete objects from the last step more aggressively
 		for(x = xmin; x <= xmax; x++){
 			for(y = ymax; y != ymin; y -= inc){
-				sect = CWorld::GetSector(x, y);
-				if(DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
-				   DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
+				sect = World_GetSector(x, y);
+				if(Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], mem) ||
+				   Streaming_DeleteRwObjectsBehindCameraInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], mem))
 					return;
 			}
 		}
@@ -2476,7 +2476,7 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 }
 
 void
-CStreaming::DeleteRwObjectsInSectorList(CPtrList &list)
+Streaming_DeleteRwObjectsInSectorList(CPtrList &list)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -2489,7 +2489,7 @@ CStreaming::DeleteRwObjectsInSectorList(CPtrList &list)
 }
 
 void
-CStreaming::DeleteRwObjectsInOverlapSectorList(CPtrList &list, int32 x, int32 y)
+Streaming_DeleteRwObjectsInOverlapSectorList(CPtrList &list, int32 x, int32 y)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -2498,20 +2498,20 @@ CStreaming::DeleteRwObjectsInOverlapSectorList(CPtrList &list, int32 x, int32 y)
 		e = (CEntity*)node->item;
 		if(e->m_rwObject && !e->bStreamingDontDelete && !e->bImBeingRendered){
 			// Now this is pretty weird...
-			if(Abs(CWorld::GetSectorIndexX(e->GetPosition().x) - x) >= 1.6f)
+			if(Abs(World_GetSectorIndexX(e->GetPosition().x) - x) >= 1.6f)
 //			{
 				e->DeleteRwObject();
 //				return;		// BUG?
 //			}
 			else	// FIX?
-			if(Abs(CWorld::GetSectorIndexY(e->GetPosition().y) - y) >= 1.6f)
+			if(Abs(World_GetSectorIndexY(e->GetPosition().y) - y) >= 1.6f)
 				e->DeleteRwObject();
 		}
 	}
 }
 
 bool
-CStreaming::DeleteRwObjectsBehindCameraInSectorList(CPtrList &list, size_t mem)
+Streaming_DeleteRwObjectsBehindCameraInSectorList(CPtrList &list, size_t mem)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -2533,7 +2533,7 @@ CStreaming::DeleteRwObjectsBehindCameraInSectorList(CPtrList &list, size_t mem)
 }
 
 bool
-CStreaming::DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem)
+Streaming_DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem)
 {
 	CPtrNode *node;
 	CEntity *e;
@@ -2554,29 +2554,29 @@ CStreaming::DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem)
 }
 
 void
-CStreaming::MakeSpaceFor(int32 size)
+Streaming_MakeSpaceFor(int32 size)
 {
 	if (rouz.no_unstreaming)
 		return;
 
 #ifdef FIX_BUGS
 #define MB (1024 * 1024)
-	if(ms_memoryAvailable == 0) {
+	if(Streaming_ms_memoryAvailable == 0) {
 		extern size_t _dwMemAvailPhys;
-		ms_memoryAvailable = (_dwMemAvailPhys - 10 * MB) / 2;
-		if(ms_memoryAvailable < 65 * MB) ms_memoryAvailable = 65 * MB;
+		Streaming_ms_memoryAvailable = (_dwMemAvailPhys - 10 * MB) / 2;
+		if(Streaming_ms_memoryAvailable < 65 * MB) Streaming_ms_memoryAvailable = 65 * MB;
 	}
 #undef MB
 #endif
-	while(Streaming_memoryUsed >= ms_memoryAvailable - size) // rouz edit (ChatGPT)
+	while(Streaming_memoryUsed >= Streaming_ms_memoryAvailable - size) // rouz edit (ChatGPT)
 		if(!Streaming_RemoveLeastUsedModel(STREAMFLAGS_20)){ // rouz edit (ChatGPT)
-			DeleteRwObjectsBehindCamera(ms_memoryAvailable - size);
+			Streaming_DeleteRwObjectsBehindCamera(Streaming_ms_memoryAvailable - size);
 			return;
 		}
 }
 
 void
-CStreaming::LoadScene(const CVector &pos)
+Streaming_LoadScene(const CVector &pos)
 {
 	CStreamingInfo *si, *prev;
 	eLevelName level;
@@ -2588,31 +2588,31 @@ CStreaming::LoadScene(const CVector &pos)
 		if((si->m_flags & (STREAMFLAGS_KEEP_IN_MEMORY|STREAMFLAGS_PRIORITY)) == 0)
 			Streaming_RemoveModel(si - Streaming_modelInfo); // rouz edit (ChatGPT)
 	}
-	CRenderer::m_loadingPriority = false;
-	DeleteAllRwObjects();
+	Renderer_m_loadingPriority = false;
+	Streaming_DeleteAllRwObjects();
 	if(level == LEVEL_GENERIC)
-		level = CGame::currLevel;
-	CGame::currLevel = level;
-	RemoveUnusedBigBuildings(level);
-	RequestBigBuildings(level, pos);
-	RequestBigBuildings(LEVEL_GENERIC, pos);
-	RemoveIslandsNotUsed(level);
-	LoadAllRequestedModels(false);
-	InstanceBigBuildings(level, pos);
-	InstanceBigBuildings(LEVEL_GENERIC, pos);
-	AddModelsToRequestList(pos, STREAMFLAGS_20);
-	CRadar::StreamRadarSections(pos);
+		level = Game_currLevel;
+	Game_currLevel = level;
+	Streaming_RemoveUnusedBigBuildings(level);
+	Streaming_RequestBigBuildings(level, pos);
+	Streaming_RequestBigBuildings(LEVEL_GENERIC, pos);
+	Streaming_RemoveIslandsNotUsed(level);
+	Streaming_LoadAllRequestedModels(false);
+	Streaming_InstanceBigBuildings(level, pos);
+	Streaming_InstanceBigBuildings(LEVEL_GENERIC, pos);
+	Streaming_AddModelsToRequestList(pos, STREAMFLAGS_20);
+	Radar_StreamRadarSections(pos);
 
-	if (!CGame::IsInInterior()) {
+	if (!Game_IsInInterior()) {
 		for (int i = 0; i < 5; i++) {
 			CZoneInfo zone;
 			Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &zone);
-			int32 model = CCarCtrl::ChooseCarModelToLoad(CCarCtrl::ChooseCarRating(&zone));
+			int32 model = CarCtrl_ChooseCarModelToLoad(CarCtrl_ChooseCarRating(&zone));
 			Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		}
 	}
-	LoadAllRequestedModels(false);
-	InstanceLoadedModels(pos);
+	Streaming_LoadAllRequestedModels(false);
+	Streaming_InstanceLoadedModels(pos);
 
 	for(int i = 0; i < NUMSTREAMINFO; i++)
 		Streaming_modelInfo[i].m_flags &= ~STREAMFLAGS_20; // rouz edit (ChatGPT)
@@ -2620,14 +2620,14 @@ CStreaming::LoadScene(const CVector &pos)
 }
 
 void
-CStreaming::LoadSceneCollision(const CVector &pos)
+Streaming_LoadSceneCollision(const CVector &pos)
 {
-	CColStore::LoadCollision(pos);
-	CStreaming::LoadAllRequestedModels(false);
+	ColStore_LoadCollision(pos);
+	Streaming_LoadAllRequestedModels(false);
 }
 
 void
-CStreaming::MemoryCardSave(uint8 *buf, uint32 *size)
+Streaming_MemoryCardSave(uint8 *buf, uint32 *size)
 {
 	int i;
 
@@ -2640,7 +2640,7 @@ CStreaming::MemoryCardSave(uint8 *buf, uint32 *size)
 }
 
 void 
-CStreaming::MemoryCardLoad(uint8 *buf, uint32 size)
+Streaming_MemoryCardLoad(uint8 *buf, uint32 size)
 {
 	uint32 i;
 
@@ -2652,22 +2652,22 @@ CStreaming::MemoryCardLoad(uint8 *buf, uint32 size)
 }
 
 void
-CStreaming::UpdateForAnimViewer(void)
+Streaming_UpdateForAnimViewer(void)
 {
-	if (CStreaming::ms_channelError == -1) { // rouz edit (ChatGPT)
-		CStreaming::AddModelsToRequestList(CVector(0.0f, 0.0f, 0.0f), 0);
-		CStreaming::LoadRequestedModels();
+	if (Streaming_ms_channelError == -1) { // rouz edit (ChatGPT)
+		Streaming_AddModelsToRequestList(CVector(0.0f, 0.0f, 0.0f), 0);
+		Streaming_LoadRequestedModels();
 		// original modifier was %d
 		sprintf(gString, "Requested %d, memory size %zuK\n", Streaming_numModelsRequested, 2 * Streaming_memoryUsed); // rouz edit (ChatGPT)
 	}
 	else {
-		CStreaming::RetryLoadFile(CStreaming::ms_channelError); // rouz edit (ChatGPT)
+		Streaming_RetryLoadFile(Streaming_ms_channelError); // rouz edit (ChatGPT)
 	}
 }
 
 
 void
-CStreaming::PrintStreamingBufferState()
+Streaming_PrintStreamingBufferState()
 {
 	char str[128];
 	wchar wstr[128];
@@ -2682,20 +2682,20 @@ CStreaming::PrintStreamingBufferState()
 			CPad::UpdatePads();
 			// Preserve the original operation through the C sprite interface
 			Sprite2d_InitPerFrame();
-			CFont::InitPerFrame();
+			Font_InitPerFrame();
 			DefinedState();
 
 			CRect unusedRect = Rect_Make(0, 0, RsGlobal.maximumWidth, RsGlobal.maximumHeight);
 			CRGBA unusedColor(255, 255, 255, 255);
-			CFont::SetFontStyle(FONT_BANK);
-			CFont::SetBackgroundOff();
-			CFont::SetWrapx(DEFAULT_SCREEN_WIDTH);
-			CFont::SetScale(0.5f, 0.75f);
-			CFont::SetCentreOff();
-			CFont::SetCentreSize(DEFAULT_SCREEN_WIDTH);
-			CFont::SetJustifyOff();
-			CFont::SetColor(CRGBA(200, 200, 200, 200));
-			CFont::SetBackGroundOnlyTextOff();
+			Font_SetFontStyle(FONT_BANK);
+			Font_SetBackgroundOff();
+			Font_SetWrapx(DEFAULT_SCREEN_WIDTH);
+			Font_SetScale(0.5f, 0.75f);
+			Font_SetCentreOff();
+			Font_SetCentreSize(DEFAULT_SCREEN_WIDTH);
+			Font_SetJustifyOff();
+			Font_SetColor(CRGBA(200, 200, 200, 200));
+			Font_SetBackGroundOnlyTextOff();
 			int modelIndex = i;
 			if (modelIndex < NUMSTREAMINFO) {
 				int y = 24;
@@ -2714,7 +2714,7 @@ CStreaming::PrintStreamingBufferState()
 						sprintf(str, "model %d,%s, refs%d, size%dK, flags%x", modelIndex, modelInfo->GetModelName(), modelInfo->GetNumRefs(), 2 * size,
 						        streamingInfo->m_flags);
 					AsciiToUnicode(str, wstr);
-					CFont::PrintString(24.0f, y, wstr);
+					Font_PrintString(24.0f, y, wstr);
 					y += 12;
 					j++;
 				}
@@ -2727,10 +2727,10 @@ CStreaming::PrintStreamingBufferState()
 				break;
 
 			i = 0;
-			CFont::DrawFonts();
+			Font_DrawFonts();
 			DoRWStuffEndOfFrame();
 		}
-		CFont::DrawFonts();
+		Font_DrawFonts();
 		DoRWStuffEndOfFrame();
 	}
 	Timer_Update();

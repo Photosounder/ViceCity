@@ -71,7 +71,7 @@ enum
 };
 
 // abbreviate a few things
-#define PLAYER (CWorld::Players[CWorld::PlayerInFocus].m_pPed)
+#define PLAYER (World_Players[World_PlayerInFocus].m_pPed)
 // NB: removed explicit TheCamera from all functions
 
 CCamera TheCamera;
@@ -114,11 +114,10 @@ CCamera::CCamera(void)
 static CVector
 NormalisedHorizontal(const CVector &v)
 {
-	float in[3] = { v.x, v.y, v.z };
-	float out[3];
+	CVector out;
 
-	General_NormalisedHorizontal(in, out);
-	return CVector(out[0], out[1], out[2]);
+	General_NormalisedHorizontal(&v, &out);
+	return CVector(out.x, out.y, out.z);
 }
 
 void
@@ -196,7 +195,7 @@ CCamera::Init(void)
 	if(FindPlayerVehicle())
 		pTargetEntity = FindPlayerVehicle();
 	else
-		pTargetEntity = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+		pTargetEntity = World_Players[World_PlayerInFocus].m_pPed;
 	m_bInitialNodeFound = false;
 	m_ScreenReductionPercentage = 0.0f;
 	m_ScreenReductionSpeed = 0.0f;
@@ -412,25 +411,20 @@ CCamera::Process(void)
 			if(Cams[ActiveCam].Mode == CCam::MODE_TOPDOWN || Cams[ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
 				// Delegate the top-down camera basis to the C implementation
 				{
-					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
-					float fOut[3], rOut[3], uOut[3];
+					CVector fOut;
 
-					Camera_TopDownBasis(fIn, fOut, rOut, uOut);
-					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
-					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
-					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+					Camera_TopDownBasis(&CamFront, &fOut, &CamRight, &CamUp);
+					CamFront = CVector(fOut.x, fOut.y, fOut.z);
 				}
 			}else{
 				// Delegate the camera basis to the C implementation
 				{
-					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
-					float uIn[3] = { CamUp.x, CamUp.y, CamUp.z };
-					float fOut[3], rOut[3], uOut[3];
+					CVector fOut;
+					CVector uOut;
 
-					Camera_OrthonormalBasis(fIn, uIn, fOut, rOut, uOut);
-					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
-					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
-					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+					Camera_OrthonormalBasis(&CamFront, &CamUp, &fOut, &CamRight, &uOut);
+					CamFront = CVector(fOut.x, fOut.y, fOut.z);
+					CamUp = CVector(uOut.x, uOut.y, uOut.z);
 				}
 			}
 			FOV = m_fFOVWhenInterPol;
@@ -466,25 +460,20 @@ CCamera::Process(void)
 			if(Cams[ActiveCam].Mode == CCam::MODE_TOPDOWN || Cams[ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
 				// Delegate the top-down camera basis to the C implementation
 				{
-					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
-					float fOut[3], rOut[3], uOut[3];
+					CVector fOut;
 
-					Camera_TopDownBasis(fIn, fOut, rOut, uOut);
-					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
-					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
-					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+					Camera_TopDownBasis(&CamFront, &fOut, &CamRight, &CamUp);
+					CamFront = CVector(fOut.x, fOut.y, fOut.z);
 				}
 			}else{
 				// Delegate the camera basis to the C implementation
 				{
-					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
-					float uIn[3] = { CamUp.x, CamUp.y, CamUp.z };
-					float fOut[3], rOut[3], uOut[3];
+					CVector fOut;
+					CVector uOut;
 
-					Camera_OrthonormalBasis(fIn, uIn, fOut, rOut, uOut);
-					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
-					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
-					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+					Camera_OrthonormalBasis(&CamFront, &CamUp, &fOut, &CamRight, &uOut);
+					CamFront = CVector(fOut.x, fOut.y, fOut.z);
+					CamUp = CVector(uOut.x, uOut.y, uOut.z);
 				}
 			}
 #ifndef FIX_BUGS
@@ -532,7 +521,7 @@ CCamera::Process(void)
 		if(!m_bLookingAtVector && m_bLookingAtPlayer && !CullZones_CamStairsForPlayer() && !m_bPlayerIsInGarage){
 			CEntity *entity = nil;
 			CColPoint colPoint;
-			if(CWorld::ProcessLineOfSight(pTargetEntity->GetPosition(), CamSource, colPoint, entity, true, false, false, true, false, true, true)){
+			if(World_ProcessLineOfSight(pTargetEntity->GetPosition(), CamSource, colPoint, entity, true, false, false, true, false, true, true)){
 				CamSource = CollisionVector_ToNative(colPoint.point);
 				RwCameraSetNearClipPlane(Scene.camera, 0.05f);
 			}
@@ -587,11 +576,11 @@ CCamera::Process(void)
 	float shakeStrength = Camera_ShakeStrength(m_fCamShakeForce, m_uiCamShakeStart, (*Timer_GetTimeInMilliseconds()));
 	int shakeRand = General_GetRandomNumber();
 	// Delegate the offsets of the shake to the C implementation
-	float shakeOffsets[3];
-	Camera_ShakeOffsets(shakeStrength, shakeRand, shakeOffsets);
-	GetMatrix().GetPosition().x += shakeOffsets[0];
-	GetMatrix().GetPosition().y += shakeOffsets[1];
-	GetMatrix().GetPosition().z += shakeOffsets[2];
+	CVector shakeOffsets;
+	Camera_ShakeOffsets(shakeStrength, shakeRand, &shakeOffsets);
+	GetMatrix().GetPosition().x += shakeOffsets.x;
+	GetMatrix().GetPosition().y += shakeOffsets.y;
+	GetMatrix().GetPosition().z += shakeOffsets.z;
 
 	float shakeOffset = shakeStrength*0.1f;
 	if(shakeOffset > 0.0f && m_BlurType != MOTION_BLUR_SNIPER)
@@ -640,10 +629,10 @@ CCamera::Process(void)
 	UpdateSoundDistances();
 
 	if(((*Timer_GetFrameCounter())&0xF) == 3)
-		DistanceToWater = CWaterLevel::CalcDistanceToWater(GetPosition().x, GetPosition().y);
+		DistanceToWater = WaterLevel_CalcDistanceToWater(GetPosition().x, GetPosition().y);
 
 	// LOD dist
-	if(!Cutscene_IsRunning() || CCutsceneMgr::UseLodMultiplier()){ // rouz edit (ChatGPT)
+	if(!Cutscene_IsRunning() || CutsceneMgr_UseLodMultiplier()){ // rouz edit (ChatGPT)
 		bool highAltitude = false;
 
 		if(GetPosition().z > 55.0f && FindPlayerVehicle() && FindPlayerVehicle()->pHandling->Flags & (HANDLING_IS_HELI|HANDLING_IS_PLANE) ||
@@ -659,7 +648,7 @@ CCamera::Process(void)
 	}else
 		LODDistMultiplier = 1.0f;
 	GenerationDistMultiplier = LODDistMultiplier;
-	LODDistMultiplier *= CRenderer::ms_lodDistScale;
+	LODDistMultiplier *= Renderer_ms_lodDistScale;
 
 	Draw_SetNearClipZ(RwCameraGetNearClipPlane(m_pRwCamera));
 	Draw_SetFarClipZ(RwCameraGetFarClipPlane(m_pRwCamera));
@@ -804,7 +793,7 @@ CCamera::CamControl(void)
 						if(stairsZone)
 							stairs = true;
 					}
-					if(CGarages::IsPointInAGarageCameraZone(pTargetEntity->GetPosition()) || stairs){
+					if(Garages_IsPointInAGarageCameraZone(pTargetEntity->GetPosition()) || stairs){
 						if(!m_bGarageFixedCamPositionSet && m_bLookingAtPlayer ||
 						   WhoIsInControlOfTheCamera == CAMCONTROL_OBBE){
 							if(pToGarageWeAreIn || stairsZone){
@@ -852,9 +841,9 @@ CCamera::CamControl(void)
 											zoneDim = stairsZone->maxy - stairsZone->miny;
 										zoneDim *= 2.0f;
 										CVector posOutside = pTargetEntity->GetPosition() + zoneDim*dirOutside;
-										if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true)){
+										if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true)){
 											posOutside = pTargetEntity->GetPosition() - zoneDim*dirOutside;
-											if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true))
+											if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true))
 												bClearViewOutside = false;
 										}
 										if(bClearViewOutside)
@@ -877,7 +866,7 @@ CCamera::CamControl(void)
 								else
 									garageCenterToDoor = garageDoorPos2 - garageCenter;
 								targetPos = pTargetEntity->GetPosition();
-								ground = CWorld::FindGroundZFor3DCoord(targetPos.x, targetPos.y, targetPos.z, &foundGround);
+								ground = World_FindGroundZFor3DCoord(targetPos.x, targetPos.y, targetPos.z, &foundGround);
 								if(!foundGround)
 									ground = targetPos.z - 0.2f;
 								garageCenterToDoor.z = 0.0f;
@@ -898,7 +887,7 @@ CCamera::CamControl(void)
 							}
 						}
 
-						if(CGarages::CameraShouldBeOutside() && m_bGarageFixedCamPositionSet &&
+						if(Garages_CameraShouldBeOutside() && m_bGarageFixedCamPositionSet &&
 						   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE)){
 							if(pToGarageWeAreIn){
 								ReqMode = CCam::MODE_FIXED;
@@ -1101,7 +1090,7 @@ CCamera::CamControl(void)
 				if(stairsZone)
 					stairs = true;
 			}
-			if(CGarages::IsPointInAGarageCameraZone(pTargetEntity->GetPosition()) && !m_bUseMouse3rdPerson || stairs){
+			if(Garages_IsPointInAGarageCameraZone(pTargetEntity->GetPosition()) && !m_bUseMouse3rdPerson || stairs){
 				if(!m_bGarageFixedCamPositionSet && m_bLookingAtPlayer){
 					if(pToGarageWeAreIn || stairs){
 						float ground;
@@ -1152,9 +1141,9 @@ CCamera::CamControl(void)
 										zoneDim = stairsZone->maxy - stairsZone->miny;
 									zoneDim *= 2.0f;
 									CVector posOutside = pTargetEntity->GetPosition() + zoneDim*dirOutside;
-									if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true)){
+									if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true)){
 										posOutside = pTargetEntity->GetPosition() - zoneDim*dirOutside;
-										if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true))
+										if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), posOutside, true, false, false, false, false, false, true))
 											bClearViewOutside = false;
 									}
 									if(bClearViewOutside)
@@ -1177,7 +1166,7 @@ CCamera::CamControl(void)
 						else
 							garageCenterToDoor = garageDoorPos2 - garageCenter;
 						targetPos = pTargetEntity->GetPosition();
-						ground = CWorld::FindGroundZFor3DCoord(targetPos.x, targetPos.y, targetPos.z, &foundGround);
+						ground = World_FindGroundZFor3DCoord(targetPos.x, targetPos.y, targetPos.z, &foundGround);
 						if(!foundGround)
 							ground = targetPos.z - 0.2f;
 						garageCenterToDoor.z = 0.0f;
@@ -1208,7 +1197,7 @@ CCamera::CamControl(void)
 					}
 				}
 
-				if((CGarages::CameraShouldBeOutside() || stairs) && m_bLookingAtPlayer && m_bGarageFixedCamPositionSet){
+				if((Garages_CameraShouldBeOutside() || stairs) && m_bLookingAtPlayer && m_bGarageFixedCamPositionSet){
 					if(pToGarageWeAreIn || stairs){
 						ReqMode = CCam::MODE_FIXED;
 						m_bPlayerIsInGarage = true;
@@ -1327,7 +1316,7 @@ CCamera::CamControl(void)
 								fixedPos.x += orbitX;
 								fixedPos.y += orbitY;
 								fixedPos.z += 1.15f;
-								if(CWorld::ProcessLineOfSight(pTargetEntity->GetPosition(), fixedPos, colPoint, entity, true, false, false, true, false, true, true))
+								if(World_ProcessLineOfSight(pTargetEntity->GetPosition(), fixedPos, colPoint, entity, true, false, false, true, false, true, true))
 									SetCamPositionForFixedMode(CollisionVector_ToNative(colPoint.point), CVector(0.0f, 0.0f, 0.0f));
 								else
 									SetCamPositionForFixedMode(fixedPos, CVector(0.0f, 0.0f, 0.0f));
@@ -1611,7 +1600,7 @@ CCamera::CamControl(void)
 			}
 		}
 #ifdef GTA_SCENE_EDIT
-		if(CSceneEdit::m_bEditOn)
+		if(SceneEdit_m_bEditOn)
 			ReqMode = CCam::MODE_EDITOR;
 #endif
 
@@ -1879,7 +1868,7 @@ CCamera::UpdateSoundDistances(void)
 	n = (*Timer_GetFrameCounter()) % 12;
 	if(n == 0){
 		SoundDistUpAsReadOld = SoundDistUpAsRead;
-		if(CWorld::ProcessVerticalLine(center, center.z+SOUND_DIST, colPoint, entity, true, false, false, false, true, false, nil))
+		if(World_ProcessVerticalLine(center, center.z+SOUND_DIST, colPoint, entity, true, false, false, false, true, false, nil))
 			SoundDistUpAsRead = colPoint.point.z - center.z;
 		else
 			SoundDistUpAsRead = SOUND_DIST;
@@ -1941,21 +1930,21 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 	m_vecClearGeometryVec = CVector(0.0f, 0.0f, 0.0f);
 	// Delegate the direction to the target to the C implementation
 	float fDist;
-	float frontXYZ[3];
-	Camera_AvoidFront(vDist.x, vDist.y, vDist.z, GetForward().x, GetForward().y, frontXYZ, &fDist);
-	CVector Front(frontXYZ[0], frontXYZ[1], frontXYZ[2]);
+	CVector frontXYZ;
+	Camera_AvoidFront(vDist.x, vDist.y, vDist.z, GetForward().x, GetForward().y, &frontXYZ, &fDist);
+	CVector Front(frontXYZ.x, frontXYZ.y, frontXYZ.z);
 	NewSource = TargetPos - Front*fDist;
 	Front.Normalise();
 
 	// Clip camera source
 	CColPoint point;
 	CEntity *entity = nil;
-	CWorld::pIgnoreEntity = pTargetEntity;
-	if(CWorld::ProcessLineOfSight(TargetPos, NewSource, point, entity, true, false, false, true, false, false, true)){
+	World_pIgnoreEntity = pTargetEntity;
+	if(World_ProcessLineOfSight(TargetPos, NewSource, point, entity, true, false, false, true, false, false, true)){
 		CVector ClipPoint1 = CollisionVector_ToNative(point.point);
 		NewSource = CollisionVector_ToNative(point.point);
 		if(!bAvoidTest1){
-			if(CWorld::ProcessLineOfSight(NewSource, TargetPos, point, entity, false, true, true, true, false, false, true)){
+			if(World_ProcessLineOfSight(NewSource, TargetPos, point, entity, false, true, true, true, false, false, true)){
 				if((NewSource - CollisionVector_ToNative(point.point)).Magnitude() < RwCameraGetNearClipPlane(Scene.camera))
 					NewSource = CollisionVector_ToNative(point.point);
 				else if((NewSource - ClipPoint1).Magnitude() < RwCameraGetNearClipPlane(Scene.camera))
@@ -1963,7 +1952,7 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 			}
 		}
 	}
-	CWorld::pIgnoreEntity = nil;
+	World_pIgnoreEntity = nil;
 
 
 	vDist = TargetPos - NewSource;
@@ -1980,7 +1969,7 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 	float ViewPlaneWidth = Camera_AvoidViewPlaneWidth(FOV, Draw_CalculateAspectRatio(), fAvoidTweakFOV);
 	CVector Center = NewSource + Front*Near;
 	float fClearGeomTarget = 0.0f;
-	if(CWorld::TestSphereAgainstWorld(Center, ViewPlaneWidth, nil, true, false, false, true, false, true)){
+	if(World_TestSphereAgainstWorld(Center, ViewPlaneWidth, nil, true, false, false, true, false, true)){
 		CVector CamToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - NewSource;
 		float FrontDist = DotProduct(CamToCol, Front);
 		CVector CenterToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - Center;
@@ -2583,7 +2572,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 				return true;
 			if(veh->GetModelIndex() == MI_RHINO)
 				return true;
-			if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
 				return true;
 		}
 		if((*Timer_GetTimeInMilliseconds()) > t+5000)
@@ -2593,7 +2582,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 	case OBBE_1:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return true;
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2604,7 +2593,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 	case OBBE_2:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return true;
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2621,7 +2610,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_3:
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2636,7 +2625,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 	case OBBE_5:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return true;
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2653,7 +2642,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 	case OBBE_COPCAR_WHEEL:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat())
 			return true;
-		if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
 			return true;
 		if((*Timer_GetTimeInMilliseconds()) > t+1000)
 			return true;
@@ -2662,7 +2651,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 
 	// Ped modes
 	case OBBE_9:
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2673,7 +2662,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_10:
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2684,7 +2673,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_11:
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2695,7 +2684,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_12:
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 			return true;
 
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
@@ -2711,12 +2700,12 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 	// Heli modes
 	case OBBE_14:
 		if(FindPlayerVehicle())
-			if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
 				return true;
 		return (*Timer_GetTimeInMilliseconds()) > t+8000;
 	case OBBE_15:
 		if(FindPlayerVehicle()){
-			if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 				return true;
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
@@ -2728,7 +2717,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		return false;
 	case OBBE_16:
 		if(FindPlayerVehicle()){
-			if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 				return true;
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
@@ -2740,7 +2729,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		return false;
 	case OBBE_17:
 		if(FindPlayerVehicle()){
-			if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 				return true;
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
@@ -2752,7 +2741,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		return false;
 	case OBBE_18:
 		if(FindPlayerVehicle()){
-			if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 				return true;
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 
@@ -2763,7 +2752,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		return false;
 	case OBBE_19:
 		if(FindPlayerVehicle()){
-			if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
+			if(!World_GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
 				return true;
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
@@ -2784,23 +2773,19 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 static CVector
 ScriptCamAheadPosition(const CVector &coors, const CVector &speed, float ahead)
 {
-	float c[3] = { coors.x, coors.y, coors.z };
-	float sp[3] = { speed.x, speed.y, speed.z };
-	float out[3];
+	CVector out;
 
-	Camera_AheadPosition(c, sp, ahead, out);
-	return CVector(out[0], out[1], out[2]);
+	Camera_AheadPosition(&coors, &speed, ahead, &out);
+	return CVector(out.x, out.y, out.z);
 }
 
 static CVector
 ScriptCamAheadAndSidePosition(const CVector &coors, const CVector &speed, float ahead, float side)
 {
-	float c[3] = { coors.x, coors.y, coors.z };
-	float sp[3] = { speed.x, speed.y, speed.z };
-	float out[3];
+	CVector out;
 
-	Camera_AheadAndSidePosition(c, sp, ahead, side, out);
-	return CVector(out[0], out[1], out[2]);
+	Camera_AheadAndSidePosition(&coors, &speed, ahead, side, &out);
+	return CVector(out.x, out.y, out.z);
 }
 
 bool
@@ -2822,7 +2807,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			return false;
 		target = Multiply3x3(FindPlayerVehicle()->GetMatrix(), CVector(-1.4f, -2.3f, 0.3f));
 		target += FindPlayerVehicle()->GetPosition();
-		if(!CWorld::GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
 			return false;
 		TakeControl(veh, CCam::MODE_WHEELCAM, JUMP_CUT, CAMCONTROL_OBBE);
 		return true;
@@ -2833,15 +2818,15 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
 
-		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 1.5f;
 		else{
-			ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
+			ground = World_FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
 			if(foundGround)
 				camPos.z = ground + 1.5f;
 		}
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
@@ -2862,15 +2847,15 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the position ahead of and beside the player to the C implementation
 		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 16.0f, 2.5f);
 
-		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 0.5f;
 		else{
-			ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
+			ground = World_FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
 			if(foundGround)
 				camPos.z = ground + 0.5f;
 		}
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
@@ -2889,7 +2874,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the position ahead of and beside the player to the C implementation
 		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 30.0f, 8.0f);
 
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
@@ -2903,15 +2888,15 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the position ahead of and beside the player to the C implementation
 		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 30.0f, 6.0f);
 
-		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 3.5f;
 		else{
-			ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
+			ground = World_FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
 			if(foundGround)
 				camPos.z = ground + 3.5f;
 		}
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
@@ -2932,10 +2917,10 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
 				// Access raw storage through the C store or pool API
-		i = CPool_GetSize(CPools::GetVehiclePool());
+		i = CPool_GetSize(Pools_GetVehiclePool());
 				while(--i >= 0){
 						// Access raw storage through the C store or pool API
-			veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			veh = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 						if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
 				float dx = veh->GetPosition().x - FindPlayerCoors().x;
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
@@ -2961,10 +2946,10 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
 				// Access raw storage through the C store or pool API
-		i = CPool_GetSize(CPools::GetVehiclePool());
+		i = CPool_GetSize(Pools_GetVehiclePool());
 				while(--i >= 0){
 						// Access raw storage through the C store or pool API
-			veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			veh = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 						if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
 				float dx = veh->GetPosition().x - FindPlayerCoors().x;
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
@@ -2973,7 +2958,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 					if(Camera_CopCarFollowsPlayer(dx, dy, FindPlayerVehicle()->GetForward().x, FindPlayerVehicle()->GetForward().y, veh->GetForward().x, veh->GetForward().y)){
 						target = Multiply3x3(veh->GetMatrix(), CVector(-1.4f, -2.3f, 0.3f));
 						target += veh->GetPosition();
-						if(!CWorld::GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
+						if(!World_GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
 							return false;
 						TakeControl(veh, CCam::MODE_WHEELCAM, JUMP_CUT, CAMCONTROL_OBBE);
 						return true;
@@ -2989,15 +2974,15 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 15.0f);
 		camPos += CVector(2.0f, 1.0f, 0.0f);
 
-		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 0.5f;
 		else{
-			ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
+			ground = World_FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z-5.0f, &foundGround);
 			if(foundGround)
 				camPos.z = ground + 0.5f;
 		}
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
@@ -3009,7 +2994,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 5.0f);
 		camPos += CVector(2.0f, 1.0f, 0.5f);
 
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
@@ -3021,7 +3006,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 20.0f);
 		camPos += CVector(2.0f, 1.0f, 20.0f);
 
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
@@ -3033,7 +3018,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 5.0f);
 		camPos += CVector(2.0f, 1.0f, 10.5f);
 
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
@@ -3054,7 +3039,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			return false;
 		target = Multiply3x3(FindPlayerVehicle()->GetMatrix(), CVector(-1.4f, -2.3f, 0.3f));
 		target += FindPlayerVehicle()->GetPosition();
-		if(!veh->IsBoat() && !CWorld::GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
+		if(!veh->IsBoat() && !World_GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
 			return false;
 		TakeControl(veh, CCam::MODE_WHEELCAM, JUMP_CUT, CAMCONTROL_OBBE);
 		return true;
@@ -3068,7 +3053,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle()->IsBoat())
 			camPos.z += 1.0f;
 
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
@@ -3090,21 +3075,21 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
 		{
-			float obbeDir[3];
-			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(60.0f), true, obbeDir);
-			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+			CVector obbeDir;
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(60.0f), true, &obbeDir);
+			playerSpeed = CVector(obbeDir.x, obbeDir.y, obbeDir.z);
 		}
 		camPos += 30.0f*playerSpeed;
 		camPos.z = FindPlayerCoors().z - 5.5f;
 
 		foundGround = false;
-		ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 0.5f;
-		else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground))
+		else if(WaterLevel_GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground))
 			// Delegate the raising above the water to the C implementation
 			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
@@ -3124,21 +3109,21 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
 		{
-			float obbeDir[3];
-			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(190.0f), true, obbeDir);
-			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+			CVector obbeDir;
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(190.0f), true, &obbeDir);
+			playerSpeed = CVector(obbeDir.x, obbeDir.y, obbeDir.z);
 		}
 		camPos += 25.0f*playerSpeed;
 		camPos.z = FindPlayerCoors().z - 1.0f;
 
 		foundGround = false;
-		ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 0.5f;
-		else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground))
+		else if(WaterLevel_GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground))
 			// Delegate the raising above the water to the C implementation
 			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
@@ -3162,14 +3147,14 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
 		{
-			float obbeDir[3];
-			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(145.0f), false, obbeDir);
-			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+			CVector obbeDir;
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(145.0f), false, &obbeDir);
+			playerSpeed = CVector(obbeDir.x, obbeDir.y, obbeDir.z);
 		}
 		camPos += 15.0f*playerSpeed;
 
 		foundGround = false;
-		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 #ifdef FIX_BUGS
 		if(foundGround)
 #else
@@ -3178,11 +3163,11 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		{
 			// Delegate the raising above the ground to the C implementation
 			camPos.z = Camera_RaisedAboveGround(camPos.z, ground);
-		}else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
+		}else if(WaterLevel_GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
 			// Delegate the raising above the water to the C implementation
 			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 		}
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
@@ -3204,14 +3189,14 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
 		{
-			float obbeDir[3];
-			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(28.0f), false, obbeDir);
-			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+			CVector obbeDir;
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(28.0f), false, &obbeDir);
+			playerSpeed = CVector(obbeDir.x, obbeDir.y, obbeDir.z);
 		}
 		camPos += 12.5f*playerSpeed;
 
 		foundGround = false;
-		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
+		ground = World_FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 #ifdef FIX_BUGS
 		if(foundGround)
 #else
@@ -3220,11 +3205,11 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		{
 			// Delegate the raising above the ground to the C implementation
 			camPos.z = Camera_RaisedAboveGround(camPos.z, ground);
-		}else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
+		}else if(WaterLevel_GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
 			// Delegate the raising above the water to the C implementation
 			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 		}
-		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
+		if(!World_GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;

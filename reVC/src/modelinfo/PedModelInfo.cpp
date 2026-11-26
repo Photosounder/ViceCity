@@ -27,7 +27,7 @@ CPedModelInfo::~CPedModelInfo(void)
 		ColModel_Destroy(m_hitColModel);
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetColModelPool(), m_hitColModel);
+		CPool_Delete(Pools_GetColModelPool(), m_hitColModel);
 		//- rouz edit (ChatGPT)
 	}
 }
@@ -45,7 +45,7 @@ CPedModelInfo::DeleteRwObject(void)
 		ColModel_Destroy(m_hitColModel);
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetColModelPool(), m_hitColModel);
+		CPool_Delete(Pools_GetColModelPool(), m_hitColModel);
 		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
@@ -122,7 +122,7 @@ CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 	// Construct the hit collision model in pool storage without invoking C++ new.
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CColModel *colmodel = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+	CColModel *colmodel = ((CColModel*)CPool_New(Pools_GetColModelPool()));
 	//- rouz edit (ChatGPT)
 	assert(colmodel);
 	// Invoke the complete C collision owner at the original native lifetime or operation boundary

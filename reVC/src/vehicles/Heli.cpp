@@ -238,7 +238,7 @@ CHeli::ProcessControl(void)
 		}
 
 		// Delegate the height the helicopter flies to to the C implementation
-		float groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
+		float groundZ = World_FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
 		m_fTargetZ = Heli_TargetZ(m_heliStatus, groundZ, m_fTargetZ, m_fTargetOffset);
 
 		// Move up if too low
@@ -265,7 +265,7 @@ CHeli::ProcessControl(void)
 		// Delegate the distance that makes the helicopter hover to the C implementation
 		float targetHeight = Heli_ChaseTargetHeight(m_heliType == HELI_TYPE_CATALINA, m_nHeliId);
 		if(fTargetDist < 1.0f ||
-		   fTargetDist < targetHeight && CWorld::GetIsLineOfSightClear(GetPosition(), FindPlayerCoors(), true, false, false, false, false, false))
+		   fTargetDist < targetHeight && World_GetIsLineOfSightClear(GetPosition(), FindPlayerCoors(), true, false, false, false, false, false))
 			m_heliStatus = HELI_STATUS_HOVER;
 		}
 		break;
@@ -284,7 +284,7 @@ CHeli::ProcessControl(void)
 	if(m_heliStatus == HELI_STATUS_HOVER2 || m_heliStatus == HELI_STATUS_SHOT_DOWN){
 		bool force = !!(((*Timer_GetFrameCounter()) + m_randomSeed) & 8);
 		if(m_bTestRight){
-			if(force || CWorld::TestSphereAgainstWorld(GetPosition() + 4.0f*GetRight(), 2.0f, this, true, false, false, false, false, false) == nil){
+			if(force || World_TestSphereAgainstWorld(GetPosition() + 4.0f*GetRight(), 2.0f, this, true, false, false, false, false, false) == nil){
 				if(m_heliStatus == HELI_STATUS_SHOT_DOWN){
 					m_fTargetOffset -= (*Timer_GetTimeStep())*0.05f;
 					targetSpeed.x -= -vTargetDist.x*0.15f;
@@ -301,7 +301,7 @@ CHeli::ProcessControl(void)
 					m_fTargetOffset -= 5.0f;
 			}
 		}else{
-			if(force || CWorld::TestSphereAgainstWorld(GetPosition() - 4.0f*GetRight(), 2.0f, this, true, false, false, false, false, false) == nil){
+			if(force || World_TestSphereAgainstWorld(GetPosition() - 4.0f*GetRight(), 2.0f, this, true, false, false, false, false, false) == nil){
 				if(m_heliStatus == HELI_STATUS_SHOT_DOWN){
 					m_fTargetOffset -= (*Timer_GetTimeStep())*0.05f;
 					targetSpeed.x += -vTargetDist.x*0.15f;
@@ -323,8 +323,8 @@ CHeli::ProcessControl(void)
 			m_fTargetOffset = 30.0f;
 
 		if(m_heliStatus == HELI_STATUS_SHOT_DOWN && force){
-			if(CWorld::TestSphereAgainstWorld(GetPosition() + 1.5f*GetForward(), 2.0f, this, true, false, false, false, false, false) ||
-			   CWorld::TestSphereAgainstWorld(GetPosition() - 1.5f*GetForward(), 2.0f, this, true, false, false, false, false, false))
+			if(World_TestSphereAgainstWorld(GetPosition() + 1.5f*GetForward(), 2.0f, this, true, false, false, false, false, false) ||
+			   World_TestSphereAgainstWorld(GetPosition() - 1.5f*GetForward(), 2.0f, this, true, false, false, false, false, false))
 				m_nExplosionTimer = Timer_GetPreviousTimeInMilliseconds();
 		}
 	}else
@@ -410,7 +410,7 @@ CHeli::ProcessControl(void)
 				// Check if line of sight is clear
 				if ((*Timer_GetTimeInMilliseconds()) > m_nShootTimer + shootTimeout &&
 					Timer_GetPreviousTimeInMilliseconds() <= m_nShootTimer + shootTimeout) {
-					if (CWorld::GetIsLineOfSightClear(GetPosition(), FindPlayerCoors(), true, false, false, false, false, false)) {
+					if (World_GetIsLineOfSightClear(GetPosition(), FindPlayerCoors(), true, false, false, false, false, false)) {
 						if (m_heliStatus == HELI_STATUS_HOVER2)
 							m_heliStatus = HELI_STATUS_HOVER;
 					}
@@ -558,7 +558,7 @@ CHeli::SpawnFlyingComponent(int32 component)
 		return nil;
 
 	// Allocate the flying component object without invoking C++ new.
-	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObjectPool *objectPool = Pools_GetObjectPool();
 		// Access raw storage through the C store or pool API
 	obj = ((CObject*)CPool_New(objectPool));
 	#ifdef FIX_BUGS
@@ -570,7 +570,7 @@ CHeli::SpawnFlyingComponent(int32 component)
 					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
 								// Access raw storage through the C store or pool API
 				int32 handle = CPool_GetIndex(objectPool, existing);
-								CWorld::Remove(existing);
+								World_Remove(existing);
 				existing->~CObject();
 								// Access raw storage through the C store or pool API
 				CPool_Delete(objectPool, existing);
@@ -633,7 +633,7 @@ CHeli::SpawnFlyingComponent(int32 component)
 
 	obj->bRenderScorched = true;
 
-	CWorld::Add(obj);
+	World_Add(obj);
 
 	atomic = nil;
 	RwFrameForAllObjects(m_aHeliNodes[component], GetHeliAtomicObjectCB, &atomic);
@@ -662,10 +662,10 @@ CHeli::SendDownSwat(void)
 	CMatrix mat(GetMatrix());
 	CVector pos = Multiply3x3(mat, FindSwatPositionRelativeToHeli(m_numSwat-1)) + GetPosition();
 
-	float groundZ = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, nil);
+	float groundZ = World_FindGroundZFor3DCoord(pos.x, pos.y, pos.z, nil);
 	// Enter the C rope algorithm with the original owner expressions
 	if(General_AbsDiffBelow(FindPlayerCoors().z, groundZ, 2.5f) && Ropes_RegisterRope((uintptr)this + m_numSwat-1, Ropes_BackendCopyVector(pos), false)){
-		CCopPed *swat = (CCopPed*)CPopulation::AddPed(PEDTYPE_COP, COP_HELI_SWAT, pos);
+		CCopPed *swat = (CCopPed*)Population_AddPed(PEDTYPE_COP, COP_HELI_SWAT, pos);
 		swat->bUsesCollision = false;
 		swat->m_pRopeEntity = this;
 		RegisterReference(&swat->m_pRopeEntity);
@@ -692,7 +692,7 @@ CHeli::InitHelis(void)
 	for(i = 0; i < NUM_HELIS; i++)
 		pHelis[i] = nil;
 
-	((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_CHOPPER)))->SetColModel(&CTempColModels::ms_colModelPed1); // rouz edit (ChatGPT)
+	((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_CHOPPER)))->SetColModel(&TempColModels_ms_colModelPed1); // rouz edit (ChatGPT)
 }
 
 CHeli*
@@ -707,7 +707,7 @@ CHeli::GenerateHeli(bool catalina)
 	else {
 		// Allocate the heli from the vehicle pool without invoking C++ new.
 				// Access raw storage through the C store or pool API
-		heli = (CHeli*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		heli = (CHeli*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 				assert(heli);
 		std::allocator<CHeli>().construct(heli, MI_CHOPPER, PERMANENT_VEHICLE);
 	}
@@ -739,7 +739,7 @@ CHeli::GenerateHeli(bool catalina)
 	}
 	heli->m_nHeliId = id;
 
-	CWorld::Add(heli);
+	World_Add(heli);
 
 	return heli;
 }
@@ -758,7 +758,7 @@ CHeli::UpdateHelis(void)
 		Replay_IsPlayingBack() ? 0 : // rouz edit (ChatGPT)
 #endif
 		Wanted_NumOfHelisRequired(FindPlayerPed()->m_pWanted);
-	if(CullZones_PlayerNoRain() || CGame::IsInInterior())
+	if(CullZones_PlayerNoRain() || Game_IsInInterior())
 		numHelisRequired = 0;
 	if(Streaming_HasModelLoaded(MI_CHOPPER) && (*Timer_GetTimeInMilliseconds()) > TestForNewRandomHelisTimer){ // rouz edit (ChatGPT)
 		// Spawn a police heli
@@ -791,11 +791,11 @@ CHeli::UpdateHelis(void)
 	// Delete helis that we no longer need
 	for(i = 0; i < NUM_HELIS; i++)
 		if(pHelis[i] && pHelis[i]->m_heliStatus == HELI_STATUS_FLY_AWAY && pHelis[i]->GetPosition().z > 150.0f){
-			CWorld::Remove(pHelis[i]);
+			World_Remove(pHelis[i]);
 			// Destroy and release the heli without invoking C++ delete.
 			pHelis[i]->~CHeli();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pHelis[i]);
+			CPool_Delete(Pools_GetVehiclePool(), pHelis[i]);
 						pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
 				NumRandomHelis--;
@@ -841,11 +841,11 @@ CHeli::UpdateHelis(void)
 			pHelis[i]->SpawnFlyingComponent(HELI_TOPROTOR);
 
 			Darkel_RegisterCarBlownUpByPlayer(pHelis[i]);
-			CWorld::Remove(pHelis[i]);
+			World_Remove(pHelis[i]);
 			// Destroy and release the heli without invoking C++ delete.
 			pHelis[i]->~CHeli();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pHelis[i]);
+			CPool_Delete(Pools_GetVehiclePool(), pHelis[i]);
 						pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
 				NumRandomHelis--;
@@ -854,9 +854,9 @@ CHeli::UpdateHelis(void)
 
 			Stats_PeopleKilledByPlayer += 2;
 			Stats_PedsKilledOfThisType[PEDTYPE_COP] += 2;
-			CWorld::Players[CWorld::PlayerInFocus].m_nMoney += 250;
-			pos = CWorld::Players[CWorld::PlayerInFocus].m_pPed->GetPosition();
-			Wanted_RegisterCrime_Immediately(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted,CRIME_SHOOT_HELI,Wanted_ReferenceNative(pos),i + 19843,false);
+			World_Players[World_PlayerInFocus].m_nMoney += 250;
+			pos = World_Players[World_PlayerInFocus].m_pPed->GetPosition();
+			Wanted_RegisterCrime_Immediately(World_Players[World_PlayerInFocus].m_pPed->m_pWanted,CRIME_SHOOT_HELI,Wanted_ReferenceNative(pos),i + 19843,false);
 
 			TestForNewRandomHelisTimer = (*Timer_GetTimeInMilliseconds()) + 50000;
 		}else if(pHelis[i] && pHelis[i]->m_heliStatus == HELI_STATUS_SHOT_DOWN && (*Timer_GetTimeInMilliseconds())+7000 > pHelis[i]->m_nExplosionTimer){
@@ -924,7 +924,7 @@ CHeli::TestBulletCollision(CVector *line0, CVector *line1, CVector *bulletPos, i
 	bool hit = false;
 
 	for(i = 0; i < NUM_HELIS; i++)
-		if(pHelis[i] && !pHelis[i]->bBulletProof && CCollision::DistToLine(line0, line1, &pHelis[i]->GetPosition()) < 5.0f){
+		if(pHelis[i] && !pHelis[i]->bBulletProof && Collision_DistToLine(line0, line1, &pHelis[i]->GetPosition()) < 5.0f){
 			// Find the bullet position in C
 			Heli_BulletPosition(&line0->x, &line1->x, &pHelis[i]->GetPosition().x, &bulletPos->x);
 
@@ -945,7 +945,7 @@ CHeli::TestSniperCollision(CVector *line0, CVector *line1)
 	for(i = 0; i < NUM_HELIS; i++){
 		if(pHelis[i] && !pHelis[i]->bBulletProof) {
 			CVector pilotPos = pHelis[i]->GetMatrix() * CVector(-0.43f, 1.49f, 1.5f);
-			if(CCollision::DistToLine(line0, line1, &pilotPos) < 0.8f){
+			if(Collision_DistToLine(line0, line1, &pilotPos) < 0.8f){
 				Heli_ShootDown(pHelis[i], General_GetRandomTrueFalse(), (*Timer_GetTimeInMilliseconds()) + 9999999);
 				pHelis[i]->m_numSwat = 0;
 
@@ -967,11 +967,11 @@ CHeli::RemoveCatalinaHeli(void)
 {
 	CatalinaHeliOn = false;
 	if(pHelis[HELI_CATALINA]){
-		CWorld::Remove(pHelis[HELI_CATALINA]);
+		World_Remove(pHelis[HELI_CATALINA]);
 		// Destroy and release Catalina's heli without invoking C++ delete.
 		pHelis[HELI_CATALINA]->~CHeli();
 				// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetVehiclePool(), pHelis[HELI_CATALINA]);
+		CPool_Delete(Pools_GetVehiclePool(), pHelis[HELI_CATALINA]);
 				pHelis[HELI_CATALINA] = nil;
 	}
 }

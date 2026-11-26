@@ -22,22 +22,22 @@
 #include "Occlusion.h"
 #include "SaveBuf.h"
 
-uint8 CTheCarGenerators::ProcessCounter;
-uint32 CTheCarGenerators::NumOfCarGenerators;
-CCarGenerator CTheCarGenerators::CarGeneratorArray[NUM_CARGENS];
-uint8 CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter;
-uint32 CTheCarGenerators::CurrentActiveCount;
+uint8 TheCarGenerators_ProcessCounter;
+uint32 TheCarGenerators_NumOfCarGenerators;
+CCarGenerator TheCarGenerators_CarGeneratorArray[NUM_CARGENS];
+uint8 TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter;
+uint32 TheCarGenerators_CurrentActiveCount;
 
 void CCarGenerator::SwitchOff()
 {
 	// Delegate to the C implementation
-	CarGen_SwitchOff(this, &CTheCarGenerators::CurrentActiveCount);
+	CarGen_SwitchOff(this, &TheCarGenerators_CurrentActiveCount);
 }
 
 void CCarGenerator::SwitchOn()
 {
 	// Delegate to the C implementation
-	CarGen_SwitchOn(this, &CTheCarGenerators::CurrentActiveCount, (*Timer_GetTimeInMilliseconds()));
+	CarGen_SwitchOn(this, &TheCarGenerators_CurrentActiveCount, (*Timer_GetTimeInMilliseconds()));
 }
 
 uint32 CCarGenerator::CalcNextGen()
@@ -49,7 +49,7 @@ uint32 CCarGenerator::CalcNextGen()
 void CCarGenerator::DoInternalProcessing()
 {
 	int mi;
-	if (CCarCtrl::NumParkedCars >= 10)
+	if (CarCtrl_NumParkedCars >= 10)
 		return;
 	if (m_nModelIndex >= 0) {
 		if (CheckForBlockage(m_nModelIndex)) {
@@ -65,7 +65,7 @@ void CCarGenerator::DoInternalProcessing()
 			CZoneInfo pZone;
 			CVector pos = FindPlayerCoors();
 			Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &pZone);
-			mi = CCarCtrl::ChooseCarModel(CCarCtrl::ChooseCarRating(&pZone));
+			mi = CarCtrl_ChooseCarModel(CarCtrl_ChooseCarRating(&pZone));
 			if (mi < 0)
 				return;
 			m_nModelIndex = -mi;
@@ -87,7 +87,7 @@ void CCarGenerator::DoInternalProcessing()
 		// Allocate the parked boat from the vehicle pool without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CBoat* pBoat = (CBoat*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		CBoat* pBoat = (CBoat*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 		//- rouz edit (ChatGPT)
 		assert(pBoat);
 		std::allocator<CBoat>().construct(pBoat, mi, PARKED_VEHICLE);
@@ -95,18 +95,18 @@ void CCarGenerator::DoInternalProcessing()
 		pos = m_vecPos;
 		pVehicle = pBoat;
 		if (pos.z <= -100.0f)
-			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
+			pos.z = World_FindGroundZForCoord(pos.x, pos.y);
 		pBoat->bExtendedRange = true;
 	}else{
 		bool groundFound;
 		pos = m_vecPos;
 		if (pos.z > -100.0f){
-			pos.z = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &groundFound);
+			pos.z = World_FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &groundFound);
 		}else{
 			groundFound = false;
 			CColPoint cp;
 			CEntity* pEntity;
-			groundFound = CWorld::ProcessVerticalLine(CVector(pos.x, pos.y, 1000.0f), -1000.0f,
+			groundFound = World_ProcessVerticalLine(CVector(pos.x, pos.y, 1000.0f), -1000.0f,
 				cp, pEntity, true, false, false, false, false, false, nil);
 			if (groundFound)
 				pos.z = cp.point.z;
@@ -120,7 +120,7 @@ void CCarGenerator::DoInternalProcessing()
 			// Allocate the parked bike from the vehicle pool without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CBike* pBike = (CBike*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			CBike* pBike = (CBike*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 			//- rouz edit (ChatGPT)
 			assert(pBike);
 			std::allocator<CBike>().construct(pBike, mi, PARKED_VEHICLE);
@@ -133,7 +133,7 @@ void CCarGenerator::DoInternalProcessing()
 			// Allocate the parked automobile from the vehicle pool without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
-			CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
 			//- rouz edit (ChatGPT)
 			assert(pCar);
 			std::allocator<CAutomobile>().construct(pCar, mi, PARKED_VEHICLE);
@@ -150,7 +150,7 @@ void CCarGenerator::DoInternalProcessing()
 	pVehicle->SetOrientation(0.0f, 0.0f, DEGTORAD(m_fAngle));
 	pVehicle->SetStatus(STATUS_ABANDONED);
 	pVehicle->m_nDoorLock = CARLOCK_UNLOCKED;
-	CWorld::Add(pVehicle);
+	World_Add(pVehicle);
 	if (General_GetRandomNumberInRangeInt(0, 100) < m_nAlarm)
 		pVehicle->m_nAlarmState = -1;
 	if (General_GetRandomNumberInRangeInt(0, 100) < m_nDoorlock)
@@ -166,21 +166,21 @@ void CCarGenerator::DoInternalProcessing()
 	CVisibilityPlugins::SetClumpAlpha(pVehicle->GetClump(), 0);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	m_nVehicleHandle = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+	m_nVehicleHandle = CPool_GetIndex(Pools_GetVehiclePool(), pVehicle);
 	//- rouz edit (ChatGPT)
 	// Use up a spawn and arm the timer in C
-	CarGen_AfterSpawn(this, &CTheCarGenerators::CurrentActiveCount, (*Timer_GetTimeInMilliseconds()));
+	CarGen_AfterSpawn(this, &TheCarGenerators_CurrentActiveCount, (*Timer_GetTimeInMilliseconds()));
 }
 
 void CCarGenerator::Process()
 {
-	if (CarGen_IsDueToSpawn(this, CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter != 0, (*Timer_GetTimeInMilliseconds())) && CheckIfWithinRangeOfAnyPlayers())
+	if (CarGen_IsDueToSpawn(this, TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter != 0, (*Timer_GetTimeInMilliseconds())) && CheckIfWithinRangeOfAnyPlayers())
 		DoInternalProcessing();
 	if (m_nVehicleHandle == -1)
 		return;
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), m_nVehicleHandle));
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(Pools_GetVehiclePool(), m_nVehicleHandle));
 	//- rouz edit (ChatGPT)
 	if (!pVehicle){
 		m_nVehicleHandle = -1;
@@ -203,7 +203,7 @@ bool CCarGenerator::CheckForBlockage(int32 mi)
 	int16 entities;
 	CEntity* pEntities[8];
 	CColModel* pColModel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(mi))); // rouz edit (ChatGPT)
-	CWorld::FindObjectsKindaColliding(CVector(m_vecPos), pColModel->boundingSphere.radius, 1, &entities, 8, pEntities, false, true, true, false, false);
+	World_FindObjectsKindaColliding(CVector(m_vecPos), pColModel->boundingSphere.radius, 1, &entities, 8, pEntities, false, true, true, false, false);
 	for (int i = 0; i < entities; i++) {
 		if (m_vecPos.z + pColModel->boundingBox.min.z < pEntities[i]->GetPosition().z + pEntities[i]->GetColModel()->boundingBox.max.z + 1.0f &&
 			m_vecPos.z + pColModel->boundingBox.max.z > pEntities[i]->GetPosition().z + pEntities[i]->GetColModel()->boundingBox.min.z - 1.0f) {
@@ -218,49 +218,49 @@ static bool CarGenIsVisible(void *context)
 {
 	// The generator position is on screen and not occluded
 	const CVector *pos = (const CVector*)context;
-	return TheCamera.IsSphereVisible(*pos, 0.0f) && !COcclusion::IsPositionOccluded(*pos, 0.0f);
+	return TheCamera.IsSphereVisible(*pos, 0.0f) && !Occlusion_IsPositionOccluded(*pos, 0.0f);
 }
 
 bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 {
 	// Delegate the decision to the C implementation
-	CVector2D direction = FindPlayerCentreOfWorld(CWorld::PlayerInFocus) - m_vecPos;
+	CVector2D direction = FindPlayerCentreOfWorld(World_PlayerInFocus) - m_vecPos;
 	CVector2D speed = CVector2D(FindPlayerSpeed());
 	return CarGen_CheckRange(this, direction.x, direction.y, speed.x, speed.y, TheCamera.GenerationDistMultiplier,
-		m_nModelIndex > 0 && ModelRegistry_IsBoatModel(m_nModelIndex), CarGenIsVisible, &m_vecPos, CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter != 0);
+		m_nModelIndex > 0 && ModelRegistry_IsBoatModel(m_nModelIndex), CarGenIsVisible, &m_vecPos, TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter != 0);
 }
 
-void CTheCarGenerators::Process()
+void TheCarGenerators_Process()
 {
 	if (FindPlayerTrain() || Cutscene_IsProcessing()) // rouz edit (ChatGPT)
 		return;
-	if (++CTheCarGenerators::ProcessCounter == 4)
-		CTheCarGenerators::ProcessCounter = 0;
-	for (uint32 i = ProcessCounter; i < NumOfCarGenerators; i += 4)
-		CTheCarGenerators::CarGeneratorArray[i].Process();
-	if (GenerateEvenIfPlayerIsCloseCounter)
-		GenerateEvenIfPlayerIsCloseCounter--;
+	if (++TheCarGenerators_ProcessCounter == 4)
+		TheCarGenerators_ProcessCounter = 0;
+	for (uint32 i = TheCarGenerators_ProcessCounter; i < TheCarGenerators_NumOfCarGenerators; i += 4)
+		TheCarGenerators_CarGeneratorArray[i].Process();
+	if (TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter)
+		TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter--;
 }
 
-int32 CTheCarGenerators::CreateCarGenerator(float x, float y, float z, float angle, int32 mi, int16 color1, int16 color2, uint8 force, uint8 alarm, uint8 lock, uint16 min_delay, uint16 max_delay)
+int32 TheCarGenerators_CreateCarGenerator(float x, float y, float z, float angle, int32 mi, int16 color1, int16 color2, uint8 force, uint8 alarm, uint8 lock, uint16 min_delay, uint16 max_delay)
 {
-	if (NumOfCarGenerators < NUM_CARGENS)
-		CarGeneratorArray[NumOfCarGenerators++].Setup(x, y, z, angle, mi, color1, color2, force, alarm, lock, min_delay, max_delay);
-	return NumOfCarGenerators - 1;
+	if (TheCarGenerators_NumOfCarGenerators < NUM_CARGENS)
+		TheCarGenerators_CarGeneratorArray[TheCarGenerators_NumOfCarGenerators++].Setup(x, y, z, angle, mi, color1, color2, force, alarm, lock, min_delay, max_delay);
+	return TheCarGenerators_NumOfCarGenerators - 1;
 }
 
-void CTheCarGenerators::Init()
+void TheCarGenerators_Init()
 {
-	GenerateEvenIfPlayerIsCloseCounter = 0;
-	NumOfCarGenerators = 0;
-	ProcessCounter = 0;
-	CurrentActiveCount = 0;
+	TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter = 0;
+	TheCarGenerators_NumOfCarGenerators = 0;
+	TheCarGenerators_ProcessCounter = 0;
+	TheCarGenerators_CurrentActiveCount = 0;
 }
 
-void CTheCarGenerators::SaveAllCarGenerators(uint8 *buffer, uint32 *size)
+void TheCarGenerators_SaveAllCarGenerators(uint8 *buffer, uint32 *size)
 {
-	const uint32 nGeneralDataSize = sizeof(NumOfCarGenerators) + sizeof(CurrentActiveCount) + sizeof(ProcessCounter) + sizeof(GenerateEvenIfPlayerIsCloseCounter) + sizeof(int16);
-	*size = sizeof(int) + nGeneralDataSize + sizeof(uint32) + sizeof(CarGeneratorArray) + SAVE_HEADER_SIZE;
+	const uint32 nGeneralDataSize = sizeof(TheCarGenerators_NumOfCarGenerators) + sizeof(TheCarGenerators_CurrentActiveCount) + sizeof(TheCarGenerators_ProcessCounter) + sizeof(TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter) + sizeof(int16);
+	*size = sizeof(int) + nGeneralDataSize + sizeof(uint32) + sizeof(TheCarGenerators_CarGeneratorArray) + SAVE_HEADER_SIZE;
 INITSAVEBUF
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
@@ -270,10 +270,10 @@ INITSAVEBUF
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buffer, &nGeneralDataSize, sizeof(nGeneralDataSize));
-	WriteSaveBuf(&buffer, &NumOfCarGenerators, sizeof(NumOfCarGenerators));
-	WriteSaveBuf(&buffer, &CurrentActiveCount, sizeof(CurrentActiveCount));
-	WriteSaveBuf(&buffer, &ProcessCounter, sizeof(ProcessCounter));
-	WriteSaveBuf(&buffer, &GenerateEvenIfPlayerIsCloseCounter, sizeof(GenerateEvenIfPlayerIsCloseCounter));
+	WriteSaveBuf(&buffer, &TheCarGenerators_NumOfCarGenerators, sizeof(TheCarGenerators_NumOfCarGenerators));
+	WriteSaveBuf(&buffer, &TheCarGenerators_CurrentActiveCount, sizeof(TheCarGenerators_CurrentActiveCount));
+	WriteSaveBuf(&buffer, &TheCarGenerators_ProcessCounter, sizeof(TheCarGenerators_ProcessCounter));
+	WriteSaveBuf(&buffer, &TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter, sizeof(TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter));
 	{
 		// Materialize the saved value with its original serialized type
 		int16 saveValue = (int16)0;
@@ -281,7 +281,7 @@ INITSAVEBUF
 	}
 	{
 		// Materialize the saved value with its original serialized type
-		uint32 saveValue = (uint32)sizeof(CarGeneratorArray);
+		uint32 saveValue = (uint32)sizeof(TheCarGenerators_CarGeneratorArray);
 		WriteSaveBuf(&buffer, &saveValue, sizeof(saveValue));
 	}
 	//- rouz edit (ChatGPT)
@@ -290,22 +290,22 @@ INITSAVEBUF
 		// Transfer save data through the C buffer API with explicit sizes
 		{
 			// Preserve record assignment semantics and compiler padding behavior
-			*(CCarGenerator*)buffer = CarGeneratorArray[i];
-			SkipSaveBuf(&buffer, sizeof(CarGeneratorArray[i]));
+			*(CCarGenerator*)buffer = TheCarGenerators_CarGeneratorArray[i];
+			SkipSaveBuf(&buffer, sizeof(TheCarGenerators_CarGeneratorArray[i]));
 		}
 		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(*size)
 }
 
-void CTheCarGenerators::LoadAllCarGenerators(uint8* buffer, uint32 size)
+void TheCarGenerators_LoadAllCarGenerators(uint8* buffer, uint32 size)
 {
-	NumOfCarGenerators = 0;
-	GenerateEvenIfPlayerIsCloseCounter = 0;
-	CurrentActiveCount = 0;
-	ProcessCounter = 0;
+	TheCarGenerators_NumOfCarGenerators = 0;
+	TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter = 0;
+	TheCarGenerators_CurrentActiveCount = 0;
+	TheCarGenerators_ProcessCounter = 0;
 
-	const int32 nGeneralDataSize = sizeof(NumOfCarGenerators) + sizeof(CurrentActiveCount) + sizeof(ProcessCounter) + sizeof(GenerateEvenIfPlayerIsCloseCounter) + sizeof(int16);
-	Init();
+	const int32 nGeneralDataSize = sizeof(TheCarGenerators_NumOfCarGenerators) + sizeof(TheCarGenerators_CurrentActiveCount) + sizeof(TheCarGenerators_ProcessCounter) + sizeof(TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter) + sizeof(int16);
+	TheCarGenerators_Init();
 INITSAVEBUF
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
@@ -319,21 +319,21 @@ INITSAVEBUF
 	assert(tmp == nGeneralDataSize);
 	//+ rouz edit (ChatGPT)
 	// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&NumOfCarGenerators, &buffer, sizeof(NumOfCarGenerators));
-	ReadSaveBuf(&CurrentActiveCount, &buffer, sizeof(CurrentActiveCount));
-	ReadSaveBuf(&ProcessCounter, &buffer, sizeof(ProcessCounter));
-	ReadSaveBuf(&GenerateEvenIfPlayerIsCloseCounter, &buffer, sizeof(GenerateEvenIfPlayerIsCloseCounter));
+	ReadSaveBuf(&TheCarGenerators_NumOfCarGenerators, &buffer, sizeof(TheCarGenerators_NumOfCarGenerators));
+	ReadSaveBuf(&TheCarGenerators_CurrentActiveCount, &buffer, sizeof(TheCarGenerators_CurrentActiveCount));
+	ReadSaveBuf(&TheCarGenerators_ProcessCounter, &buffer, sizeof(TheCarGenerators_ProcessCounter));
+	ReadSaveBuf(&TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter, &buffer, sizeof(TheCarGenerators_GenerateEvenIfPlayerIsCloseCounter));
 	SkipSaveBuf(&buffer, 2);
 	ReadSaveBuf(&tmp, &buffer, sizeof(tmp));
 	//- rouz edit (ChatGPT)
-	assert(tmp == sizeof(CarGeneratorArray));
+	assert(tmp == sizeof(TheCarGenerators_CarGeneratorArray));
 	for (int i = 0; i < NUM_CARGENS; i++) 
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
 		{
 			// Preserve record assignment semantics and compiler padding behavior
-			CarGeneratorArray[i] = *(CCarGenerator*)buffer;
-			SkipSaveBuf(&buffer, sizeof(CarGeneratorArray[i]));
+			TheCarGenerators_CarGeneratorArray[i] = *(CCarGenerator*)buffer;
+			SkipSaveBuf(&buffer, sizeof(TheCarGenerators_CarGeneratorArray[i]));
 		}
 		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size)

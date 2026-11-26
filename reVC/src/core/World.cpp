@@ -39,50 +39,50 @@
 
 CColPoint gaTempSphereColPoints[MAX_COLLISION_POINTS];
 
-CPtrList CWorld::ms_bigBuildingsList[NUM_LEVELS];
-int CWorld::ms_bigBuildingsListLifetime=PtrList_InitStaticBlock(&CWorld::ms_bigBuildingsList,NUM_LEVELS,sizeof(CPtrList),0,1);
-CPtrList CWorld::ms_listMovingEntityPtrs;
-int CWorld::ms_movingListLifetime=PtrList_InitStaticBlock(&CWorld::ms_listMovingEntityPtrs,1,sizeof(CPtrList),0,1);
-CSector CWorld::ms_aSectors[NUMSECTORS_Y][NUMSECTORS_X];
-int CWorld::ms_sectorListsLifetime=PtrList_InitStaticBlock(&CWorld::ms_aSectors,NUMSECTORS_Y*NUMSECTORS_X,sizeof(CSector),offsetof(CSector,m_lists),NUMSECTORENTITYLISTS);
-uint16 CWorld::ms_nCurrentScanCode;
+CPtrList World_ms_bigBuildingsList[NUM_LEVELS];
+int World_ms_bigBuildingsListLifetime=PtrList_InitStaticBlock(&World_ms_bigBuildingsList,NUM_LEVELS,sizeof(CPtrList),0,1);
+CPtrList World_ms_listMovingEntityPtrs;
+int World_ms_movingListLifetime=PtrList_InitStaticBlock(&World_ms_listMovingEntityPtrs,1,sizeof(CPtrList),0,1);
+CSector World_ms_aSectors[NUMSECTORS_Y][NUMSECTORS_X];
+int World_ms_sectorListsLifetime=PtrList_InitStaticBlock(&World_ms_aSectors,NUMSECTORS_Y*NUMSECTORS_X,sizeof(CSector),offsetof(CSector,m_lists),NUMSECTORENTITYLISTS);
+uint16 World_ms_nCurrentScanCode;
 
-uint8 CWorld::PlayerInFocus;
-CPlayerInfo CWorld::Players[NUMPLAYERS];
-bool CWorld::bNoMoreCollisionTorque;
-CEntity *CWorld::pIgnoreEntity;
-bool CWorld::bIncludeDeadPeds;
-bool CWorld::bSecondShift;
-bool CWorld::bForceProcessControl;
-bool CWorld::bProcessCutsceneOnly;
+uint8 World_PlayerInFocus;
+CPlayerInfo World_Players[NUMPLAYERS];
+bool World_bNoMoreCollisionTorque;
+CEntity *World_pIgnoreEntity;
+bool World_bIncludeDeadPeds;
+bool World_bSecondShift;
+bool World_bForceProcessControl;
+bool World_bProcessCutsceneOnly;
 
-bool CWorld::bDoingCarCollisions;
-bool CWorld::bIncludeCarTyres;
-bool CWorld::bIncludeBikers;
+bool World_bDoingCarCollisions;
+bool World_bIncludeCarTyres;
+bool World_bIncludeBikers;
 
-CColPoint CWorld::m_aTempColPts[MAX_COLLISION_POINTS];
+CColPoint World_m_aTempColPts[MAX_COLLISION_POINTS];
 
 void
-CWorld::Initialise()
+World_Initialise()
 {
-	pIgnoreEntity = nil;
-	bDoingCarCollisions = false;
-	bSecondShift = false;
-	bNoMoreCollisionTorque = false;
-	bProcessCutsceneOnly = false;
-	bIncludeDeadPeds = false;
-	bForceProcessControl = false;
-	bIncludeCarTyres = false;
-	bIncludeBikers = false;
+	World_pIgnoreEntity = nil;
+	World_bDoingCarCollisions = false;
+	World_bSecondShift = false;
+	World_bNoMoreCollisionTorque = false;
+	World_bProcessCutsceneOnly = false;
+	World_bIncludeDeadPeds = false;
+	World_bForceProcessControl = false;
+	World_bIncludeCarTyres = false;
+	World_bIncludeBikers = false;
 }
 
 void
-CWorld::Add(CEntity *ent)
+World_Add(CEntity *ent)
 {
 	if(ent->IsVehicle() || ent->IsPed()) DMAudio_SetEntityStatus(((CPhysical *)ent)->m_audioEntityId, TRUE);
 
 	if(ent->bIsBIGBuilding)
-		PtrList_InsertItem(&ms_bigBuildingsList[ent->m_level], ent);
+		PtrList_InsertItem(&World_ms_bigBuildingsList[ent->m_level], ent);
 	else
 		ent->Add();
 
@@ -92,12 +92,12 @@ CWorld::Add(CEntity *ent)
 }
 
 void
-CWorld::Remove(CEntity *ent)
+World_Remove(CEntity *ent)
 {
 	if(ent->IsVehicle() || ent->IsPed()) DMAudio_SetEntityStatus(((CPhysical *)ent)->m_audioEntityId, FALSE);
 
 	if(ent->bIsBIGBuilding)
-		PtrList_RemoveItem(&ms_bigBuildingsList[ent->m_level], ent);
+		PtrList_RemoveItem(&World_ms_bigBuildingsList[ent->m_level], ent);
 	else
 		ent->Remove();
 
@@ -107,12 +107,12 @@ CWorld::Remove(CEntity *ent)
 }
 
 void
-CWorld::ClearScanCodes(void)
+World_ClearScanCodes(void)
 {
 	// Delegate to the C implementation
 	for(int i = 0; i < NUMSECTORS_Y; i++)
 		for(int j = 0; j < NUMSECTORS_X; j++) {
-			CSector *s = &ms_aSectors[i][j];
+			CSector *s = &World_ms_aSectors[i][j];
 			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_BUILDINGS]);
 			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_VEHICLES]);
 			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_PEDS]);
@@ -122,34 +122,34 @@ CWorld::ClearScanCodes(void)
 }
 
 void
-CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemoveProjectilesAndTidyUpShadows)
+World_ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemoveProjectilesAndTidyUpShadows)
 {
 	// The C implementation picks the peds and vehicles to remove, the removal stays here
 	{
 		void *selected[NUMPEDS * 2];
-		int numSelected = World_SelectPedsInCircleToClear(CPools::GetPedPool(), pos.x, pos.y, radius, selected, ARRAY_SIZE(selected));
+		int numSelected = World_SelectPedsInCircleToClear(Pools_GetPedPool(), pos.x, pos.y, radius, selected, ARRAY_SIZE(selected));
 		for(int s = 0; s < numSelected; s++)
-			CPopulation::RemovePed((CPed*)selected[s]);
+			Population_RemovePed((CPed*)selected[s]);
 	}
-	CVehiclePool *VehiclePool = CPools::GetVehiclePool();
+	CVehiclePool *VehiclePool = Pools_GetVehiclePool();
 	{
 		void *selected[NUMVEHICLES * 2];
 		int numSelected = World_SelectCarsInCircleToClear(VehiclePool, pos.x, pos.y, radius, selected, ARRAY_SIZE(selected));
 		for(int s = 0; s < numSelected; s++) {
 			CVehicle *pVehicle = (CVehicle*)selected[s];
 			if(pVehicle->pDriver) {
-				CPopulation::RemovePed(pVehicle->pDriver);
+				Population_RemovePed(pVehicle->pDriver);
 				pVehicle->pDriver = nil;
 			}
 			for(int32 j = 0; j < pVehicle->m_nNumMaxPassengers; ++j) {
 				if(pVehicle->pPassengers[j]) {
-					CPopulation::RemovePed(pVehicle->pPassengers[j]);
+					Population_RemovePed(pVehicle->pPassengers[j]);
 					pVehicle->pPassengers[j] = nil;
 					--pVehicle->m_nNumPassengers;
 				}
 			}
-			CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
-			Remove(pVehicle);
+			CarCtrl_RemoveFromInterestingVehicleList(pVehicle);
+			World_Remove(pVehicle);
 			// Destroy and release the vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
 			// Access raw storage through the C store or pool API
@@ -158,7 +158,7 @@ CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemov
 	}
 	CObject::DeleteAllTempObjectsInArea(pos, radius);
 	FireManager_ExtinguishPoint(&gFireManager,Fire_VectorFromNative(pos), radius);
-	ExtinguishAllCarFiresInArea(pos, radius);
+	World_ExtinguishAllCarFiresInArea(pos, radius);
 	// Copy the original by-value position into the C area operation
 	ExplosionPosition explosionPosition = {pos.x,pos.y,pos.z};
 	Explosion_RemoveAllExplosionsInArea(explosionPosition, radius);
@@ -166,18 +166,18 @@ CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemov
 		ProjectileInfo_RemoveAllProjectiles();
 		CShadows::TidyUpShadows();
 	}
-	CPickups::RemoveUnnecessaryPickups(pos, radius);
+	Pickups_RemoveUnnecessaryPickups(pos, radius);
 }
 
 bool
-CWorld::CameraToIgnoreThisObject(CEntity *ent)
+World_CameraToIgnoreThisObject(CEntity *ent)
 {
-	if(CGarages::IsModelIndexADoor(ent->GetModelIndex())) return false;
+	if(Garages_IsModelIndexADoor(ent->GetModelIndex())) return false;
 	return ((CObject *)ent)->m_bCameraToAvoidThisObject != 1;
 }
 
 bool
-CWorld::ProcessLineOfSight(const CVector &point1, const CVector &point2, CColPoint &point, CEntity *&entity,
+World_ProcessLineOfSight(const CVector &point1, const CVector &point2, CColPoint &point, CEntity *&entity,
                            bool checkBuildings, bool checkVehicles, bool checkPeds, bool checkObjects,
                            bool checkDummies, bool ignoreSeeThrough, bool ignoreSomeObjects, bool ignoreShootThrough)
 {
@@ -186,15 +186,15 @@ CWorld::ProcessLineOfSight(const CVector &point1, const CVector &point2, CColPoi
 	int y1, y2;
 	float dist;
 
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	entity = nil;
 	dist = 1.0f;
 
-	xstart = GetSectorIndexX(point1.x);
-	ystart = GetSectorIndexY(point1.y);
-	xend = GetSectorIndexX(point2.x);
-	yend = GetSectorIndexY(point2.y);
+	xstart = World_GetSectorIndexX(point1.x);
+	ystart = World_GetSectorIndexY(point1.y);
+	xend = World_GetSectorIndexX(point2.x);
+	yend = World_GetSectorIndexY(point2.y);
 
 #define LOSARGS                                                                                                        \
 	ColLine_Make(COLLISION_POINT_REF(point1),COLLISION_POINT_REF(point2)), point, dist, entity, checkBuildings, checkVehicles, checkPeds, checkObjects,         \
@@ -202,20 +202,20 @@ CWorld::ProcessLineOfSight(const CVector &point1, const CVector &point2, CColPoi
 
 	if(xstart == xend && ystart == yend) {
 		// Only one sector
-		return ProcessLineOfSightSector(*GetSector(xstart, ystart), LOSARGS);
+		return World_ProcessLineOfSightSector(*World_GetSector(xstart, ystart), LOSARGS);
 	} else if(xstart == xend) {
 		// Only step in y
 		if(ystart < yend)
-			for(y = ystart; y <= yend; y++) ProcessLineOfSightSector(*GetSector(xstart, y), LOSARGS);
+			for(y = ystart; y <= yend; y++) World_ProcessLineOfSightSector(*World_GetSector(xstart, y), LOSARGS);
 		else
-			for(y = ystart; y >= yend; y--) ProcessLineOfSightSector(*GetSector(xstart, y), LOSARGS);
+			for(y = ystart; y >= yend; y--) World_ProcessLineOfSightSector(*World_GetSector(xstart, y), LOSARGS);
 		return dist < 1.0f;
 	} else if(ystart == yend) {
 		// Only step in x
 		if(xstart < xend)
-			for(x = xstart; x <= xend; x++) ProcessLineOfSightSector(*GetSector(x, ystart), LOSARGS);
+			for(x = xstart; x <= xend; x++) World_ProcessLineOfSightSector(*World_GetSector(x, ystart), LOSARGS);
 		else
-			for(x = xstart; x >= xend; x--) ProcessLineOfSightSector(*GetSector(x, ystart), LOSARGS);
+			for(x = xstart; x >= xend; x--) World_ProcessLineOfSightSector(*World_GetSector(x, ystart), LOSARGS);
 		return dist < 1.0f;
 	} else {
 		if(point1.x < point2.x) {
@@ -223,53 +223,53 @@ CWorld::ProcessLineOfSight(const CVector &point1, const CVector &point2, CColPoi
 			float m = (point2.y - point1.y) / (point2.x - point1.x);
 
 			y1 = ystart;
-			y2 = GetSectorIndexY((GetWorldX(xstart + 1) - point1.x) * m + point1.y);
+			y2 = World_GetSectorIndexY((World_GetWorldX(xstart + 1) - point1.x) * m + point1.y);
 			if(y1 < y2)
-				for(y = y1; y <= y2; y++) ProcessLineOfSightSector(*GetSector(xstart, y), LOSARGS);
+				for(y = y1; y <= y2; y++) World_ProcessLineOfSightSector(*World_GetSector(xstart, y), LOSARGS);
 			else
-				for(y = y1; y >= y2; y--) ProcessLineOfSightSector(*GetSector(xstart, y), LOSARGS);
+				for(y = y1; y >= y2; y--) World_ProcessLineOfSightSector(*World_GetSector(xstart, y), LOSARGS);
 
 			for(x = xstart + 1; x < xend; x++) {
 				y1 = y2;
-				y2 = GetSectorIndexY((GetWorldX(x + 1) - point1.x) * m + point1.y);
+				y2 = World_GetSectorIndexY((World_GetWorldX(x + 1) - point1.x) * m + point1.y);
 				if(y1 < y2)
-					for(y = y1; y <= y2; y++) ProcessLineOfSightSector(*GetSector(x, y), LOSARGS);
+					for(y = y1; y <= y2; y++) World_ProcessLineOfSightSector(*World_GetSector(x, y), LOSARGS);
 				else
-					for(y = y1; y >= y2; y--) ProcessLineOfSightSector(*GetSector(x, y), LOSARGS);
+					for(y = y1; y >= y2; y--) World_ProcessLineOfSightSector(*World_GetSector(x, y), LOSARGS);
 			}
 
 			y1 = y2;
 			y2 = yend;
 			if(y1 < y2)
-				for(y = y1; y <= y2; y++) ProcessLineOfSightSector(*GetSector(xend, y), LOSARGS);
+				for(y = y1; y <= y2; y++) World_ProcessLineOfSightSector(*World_GetSector(xend, y), LOSARGS);
 			else
-				for(y = y1; y >= y2; y--) ProcessLineOfSightSector(*GetSector(xend, y), LOSARGS);
+				for(y = y1; y >= y2; y--) World_ProcessLineOfSightSector(*World_GetSector(xend, y), LOSARGS);
 		} else {
 			// Step from right to left
 			float m = (point2.y - point1.y) / (point2.x - point1.x);
 
 			y1 = ystart;
-			y2 = GetSectorIndexY((GetWorldX(xstart) - point1.x) * m + point1.y);
+			y2 = World_GetSectorIndexY((World_GetWorldX(xstart) - point1.x) * m + point1.y);
 			if(y1 < y2)
-				for(y = y1; y <= y2; y++) ProcessLineOfSightSector(*GetSector(xstart, y), LOSARGS);
+				for(y = y1; y <= y2; y++) World_ProcessLineOfSightSector(*World_GetSector(xstart, y), LOSARGS);
 			else
-				for(y = y1; y >= y2; y--) ProcessLineOfSightSector(*GetSector(xstart, y), LOSARGS);
+				for(y = y1; y >= y2; y--) World_ProcessLineOfSightSector(*World_GetSector(xstart, y), LOSARGS);
 
 			for(x = xstart - 1; x > xend; x--) {
 				y1 = y2;
-				y2 = GetSectorIndexY((GetWorldX(x) - point1.x) * m + point1.y);
+				y2 = World_GetSectorIndexY((World_GetWorldX(x) - point1.x) * m + point1.y);
 				if(y1 < y2)
-					for(y = y1; y <= y2; y++) ProcessLineOfSightSector(*GetSector(x, y), LOSARGS);
+					for(y = y1; y <= y2; y++) World_ProcessLineOfSightSector(*World_GetSector(x, y), LOSARGS);
 				else
-					for(y = y1; y >= y2; y--) ProcessLineOfSightSector(*GetSector(x, y), LOSARGS);
+					for(y = y1; y >= y2; y--) World_ProcessLineOfSightSector(*World_GetSector(x, y), LOSARGS);
 			}
 
 			y1 = y2;
 			y2 = yend;
 			if(y1 < y2)
-				for(y = y1; y <= y2; y++) ProcessLineOfSightSector(*GetSector(xend, y), LOSARGS);
+				for(y = y1; y <= y2; y++) World_ProcessLineOfSightSector(*World_GetSector(xend, y), LOSARGS);
 			else
-				for(y = y1; y >= y2; y--) ProcessLineOfSightSector(*GetSector(xend, y), LOSARGS);
+				for(y = y1; y >= y2; y--) World_ProcessLineOfSightSector(*World_GetSector(xend, y), LOSARGS);
 		}
 		return dist < 1.0f;
 	}
@@ -278,57 +278,57 @@ CWorld::ProcessLineOfSight(const CVector &point1, const CVector &point2, CColPoi
 }
 
 bool
-CWorld::ProcessLineOfSightSector(CSector &sector, const CColLine &line, CColPoint &point, float &dist, CEntity *&entity,
+World_ProcessLineOfSightSector(CSector &sector, const CColLine &line, CColPoint &point, float &dist, CEntity *&entity,
                                  bool checkBuildings, bool checkVehicles, bool checkPeds, bool checkObjects,
                                  bool checkDummies, bool ignoreSeeThrough, bool ignoreSomeObjects, bool ignoreShootThrough)
 {
 	float mindist = dist;
-	bool deadPeds = !!bIncludeDeadPeds;
-	bool bikers = !!bIncludeBikers;
-	bIncludeDeadPeds = false;
-	bIncludeBikers = false;
+	bool deadPeds = !!World_bIncludeDeadPeds;
+	bool bikers = !!World_bIncludeBikers;
+	World_bIncludeDeadPeds = false;
+	World_bIncludeBikers = false;
 
 	if(checkBuildings) {
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_BUILDINGS], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_BUILDINGS], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_BUILDINGS_OVERLAP], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_BUILDINGS_OVERLAP], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
 	}
 
 	if(checkVehicles) {
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_VEHICLES], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_VEHICLES], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_VEHICLES_OVERLAP], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_VEHICLES_OVERLAP], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
 	}
 
 	if(checkPeds) {
-		if(deadPeds) bIncludeDeadPeds = true;
-		if(bikers) bIncludeBikers = true;
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_PEDS], line, point, mindist, entity,
+		if(deadPeds) World_bIncludeDeadPeds = true;
+		if(bikers) World_bIncludeBikers = true;
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_PEDS], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_PEDS_OVERLAP], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_PEDS_OVERLAP], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
-		bIncludeDeadPeds = false;
-		bIncludeBikers = false;
+		World_bIncludeDeadPeds = false;
+		World_bIncludeBikers = false;
 	}
 
 	if(checkObjects) {
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_OBJECTS], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_OBJECTS], line, point, mindist, entity,
 		                             ignoreSeeThrough, ignoreSomeObjects, ignoreShootThrough);
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_OBJECTS_OVERLAP], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_OBJECTS_OVERLAP], line, point, mindist, entity,
 		                             ignoreSeeThrough, ignoreSomeObjects, ignoreShootThrough);
 	}
 
 	if(checkDummies) {
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_DUMMIES], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_DUMMIES], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
-		ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_DUMMIES_OVERLAP], line, point, mindist, entity,
+		World_ProcessLineOfSightSectorList(sector.m_lists[ENTITYLIST_DUMMIES_OVERLAP], line, point, mindist, entity,
 		                             ignoreSeeThrough, false, ignoreShootThrough);
 	}
 
-	bIncludeDeadPeds = deadPeds;
-	bIncludeBikers = bikers;
+	World_bIncludeDeadPeds = deadPeds;
+	World_bIncludeBikers = bikers;
 
 	if(mindist < dist) {
 		dist = mindist;
@@ -338,7 +338,7 @@ CWorld::ProcessLineOfSightSector(CSector &sector, const CColLine &line, CColPoin
 }
 
 bool
-CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColPoint &point, float &dist,
+World_ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColPoint &point, float &dist,
                                      CEntity *&entity, bool ignoreSeeThrough, bool ignoreSomeObjects, bool ignoreShootThrough)
 {
 	bool deadPeds = false;
@@ -355,7 +355,7 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 	CColPoint tyreColPoint;
 	float tyreDist;
 
-	if(bIncludeCarTyres && list.first && ((CEntity*)list.first->item)->IsVehicle()){
+	if(World_bIncludeCarTyres && list.first && ((CEntity*)list.first->item)->IsVehicle()){
 		carTyres = true;
 		tyreCol.numTriangles = 0;
 		tyreCol.numBoxes = 0;
@@ -363,16 +363,16 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 		tyreCol.spheres = tyreSpheres;
 		tyreCol.numSpheres = ARRAY_SIZE(tyreSpheres);
 	}
-	if(list.first && bIncludeDeadPeds && ((CEntity *)list.first->item)->IsPed()) deadPeds = true;
-	if(list.first && bIncludeBikers && ((CEntity *)list.first->item)->IsPed()) bikers = true;
+	if(list.first && World_bIncludeDeadPeds && ((CEntity *)list.first->item)->IsPed()) deadPeds = true;
+	if(list.first && World_bIncludeBikers && ((CEntity *)list.first->item)->IsPed()) bikers = true;
 
 	for(node = list.first; node; node = node->next) {
 		e = (CEntity *)node->item;
-		if(e->m_scanCode != GetCurrentScanCode() && e != pIgnoreEntity && (e->bUsesCollision || deadPeds || bikers) &&
-		   !(ignoreSomeObjects && CameraToIgnoreThisObject(e))) {
+		if(e->m_scanCode != World_GetCurrentScanCode() && e != World_pIgnoreEntity && (e->bUsesCollision || deadPeds || bikers) &&
+		   !(ignoreSomeObjects && World_CameraToIgnoreThisObject(e))) {
 			colmodel = nil;
 			tyreDist = mindist;
-			e->m_scanCode = GetCurrentScanCode();
+			e->m_scanCode = World_GetCurrentScanCode();
 
 			if(e->IsPed()) {
 				if(e->bUsesCollision || deadPeds && ((CPed *)e)->m_nPedState == PED_DEAD || bikers && ((CPed*)e)->InVehicle() && (((CPed*)e)->m_pMyVehicle->IsBike() || ((CPed*)e)->m_pMyVehicle->IsBoat())) {
@@ -383,10 +383,10 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 			} else if(e->bUsesCollision)
 				colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 
-			if(colmodel && CCollision::ProcessLineOfSight(line, e->GetMatrix(), *colmodel, point, mindist,
+			if(colmodel && Collision_ProcessLineOfSight(line, e->GetMatrix(), *colmodel, point, mindist,
 			                                              ignoreSeeThrough, ignoreShootThrough))
 				entity = e;
-			if(carTyres && ((CVehicle*)e)->SetUpWheelColModel(&tyreCol) && CCollision::ProcessLineOfSight(line, e->GetMatrix(), tyreCol, tyreColPoint, tyreDist, false, ignoreShootThrough)){
+			if(carTyres && ((CVehicle*)e)->SetUpWheelColModel(&tyreCol) && Collision_ProcessLineOfSight(line, e->GetMatrix(), tyreCol, tyreColPoint, tyreDist, false, ignoreShootThrough)){
 				float dp1 = DotProduct(CollisionVector_ToNative(line.p1) - CollisionVector_ToNative(line.p0), e->GetRight());
 				float dp2 = DotProduct(CollisionVector_ToNative(point.point) - e->GetPosition(), e->GetRight());
 				if(tyreDist < mindist || dp1 < -0.85f && dp2 > 0.0f || dp1 > 0.85f && dp2 < 0.0f){
@@ -412,60 +412,60 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 }
 
 bool
-CWorld::ProcessVerticalLine(const CVector &point1, float z2, CColPoint &point, CEntity *&entity, bool checkBuildings,
+World_ProcessVerticalLine(const CVector &point1, float z2, CColPoint &point, CEntity *&entity, bool checkBuildings,
                             bool checkVehicles, bool checkPeds, bool checkObjects, bool checkDummies,
                             bool ignoreSeeThrough, CStoredCollPoly *poly)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	CVector point2(point1.x, point1.y, z2);
-	int secX = GetSectorIndexX(point1.x);
-	int secY = GetSectorIndexY(point1.y);
+	int secX = World_GetSectorIndexX(point1.x);
+	int secY = World_GetSectorIndexY(point1.y);
 	secX = Clamp(secX, 0, NUMSECTORS_X-1);
 	secY = Clamp(secY, 0, NUMSECTORS_Y-1);
-	return ProcessVerticalLineSector(*GetSector(secX, secY),
+	return World_ProcessVerticalLineSector(*World_GetSector(secX, secY),
 	                                 ColLine_Make(COLLISION_POINT_REF(point1),COLLISION_POINT_REF(point2)), point, entity, checkBuildings, checkVehicles,
 	                                 checkPeds, checkObjects, checkDummies, ignoreSeeThrough, poly);
 }
 
 bool
-CWorld::ProcessVerticalLineSector(CSector &sector, const CColLine &line, CColPoint &point, CEntity *&entity,
+World_ProcessVerticalLineSector(CSector &sector, const CColLine &line, CColPoint &point, CEntity *&entity,
                                   bool checkBuildings, bool checkVehicles, bool checkPeds, bool checkObjects,
                                   bool checkDummies, bool ignoreSeeThrough, CStoredCollPoly *poly)
 {
 	float mindist = 1.0f;
 
 	if(checkBuildings) {
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_BUILDINGS], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_BUILDINGS], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_BUILDINGS_OVERLAP], line, point, mindist,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_BUILDINGS_OVERLAP], line, point, mindist,
 		                              entity, ignoreSeeThrough, poly);
 	}
 
 	if(checkVehicles) {
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_VEHICLES], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_VEHICLES], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_VEHICLES_OVERLAP], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_VEHICLES_OVERLAP], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
 	}
 
 	if(checkPeds) {
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_PEDS], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_PEDS], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_PEDS_OVERLAP], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_PEDS_OVERLAP], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
 	}
 
 	if(checkObjects) {
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_OBJECTS], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_OBJECTS], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_OBJECTS_OVERLAP], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_OBJECTS_OVERLAP], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
 	}
 
 	if(checkDummies) {
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_DUMMIES], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_DUMMIES], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
-		ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_DUMMIES_OVERLAP], line, point, mindist, entity,
+		World_ProcessVerticalLineSectorList(sector.m_lists[ENTITYLIST_DUMMIES_OVERLAP], line, point, mindist, entity,
 		                              ignoreSeeThrough, poly);
 	}
 
@@ -473,7 +473,7 @@ CWorld::ProcessVerticalLineSector(CSector &sector, const CColLine &line, CColPoi
 }
 
 bool
-CWorld::ProcessVerticalLineSectorList(CPtrList &list, const CColLine &line, CColPoint &point, float &dist,
+World_ProcessVerticalLineSectorList(CPtrList &list, const CColLine &line, CColPoint &point, float &dist,
                                       CEntity *&entity, bool ignoreSeeThrough, CStoredCollPoly *poly)
 {
 	float mindist = dist;
@@ -483,11 +483,11 @@ CWorld::ProcessVerticalLineSectorList(CPtrList &list, const CColLine &line, CCol
 
 	for(node = list.first; node; node = node->next) {
 		e = (CEntity *)node->item;
-		if(e->m_scanCode != GetCurrentScanCode() && e->bUsesCollision) {
-			e->m_scanCode = GetCurrentScanCode();
+		if(e->m_scanCode != World_GetCurrentScanCode() && e->bUsesCollision) {
+			e->m_scanCode = World_GetCurrentScanCode();
 
 			colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
-			if(CCollision::ProcessVerticalLine(line, e->GetMatrix(), *colmodel, point, mindist,
+			if(Collision_ProcessVerticalLine(line, e->GetMatrix(), *colmodel, point, mindist,
 			                                   ignoreSeeThrough, false, poly))
 				entity = e;
 		}
@@ -501,7 +501,7 @@ CWorld::ProcessVerticalLineSectorList(CPtrList &list, const CColLine &line, CCol
 }
 
 bool
-CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool checkBuildings, bool checkVehicles,
+World_GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool checkBuildings, bool checkVehicles,
                               bool checkPeds, bool checkObjects, bool checkDummies, bool ignoreSeeThrough,
                               bool ignoreSomeObjects)
 {
@@ -509,12 +509,12 @@ CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool
 	int y, ystart, yend;
 	int y1, y2;
 
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
-	xstart = GetSectorIndexX(point1.x);
-	ystart = GetSectorIndexY(point1.y);
-	xend = GetSectorIndexX(point2.x);
-	yend = GetSectorIndexY(point2.y);
+	xstart = World_GetSectorIndexX(point1.x);
+	ystart = World_GetSectorIndexY(point1.y);
+	xend = World_GetSectorIndexX(point2.x);
+	yend = World_GetSectorIndexY(point2.y);
 
 #define LOSARGS                                                                                                        \
 	ColLine_Make(COLLISION_POINT_REF(point1),COLLISION_POINT_REF(point2)), checkBuildings, checkVehicles, checkPeds, checkObjects, checkDummies,                \
@@ -522,24 +522,24 @@ CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool
 
 	if(xstart == xend && ystart == yend) {
 		// Only one sector
-		return GetIsLineOfSightSectorClear(*GetSector(xstart, ystart), LOSARGS);
+		return World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, ystart), LOSARGS);
 	} else if(xstart == xend) {
 		// Only step in y
 		if(ystart < yend) {
 			for(y = ystart; y <= yend; y++)
-				if(!GetIsLineOfSightSectorClear(*GetSector(xstart, y), LOSARGS)) return false;
+				if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, y), LOSARGS)) return false;
 		} else {
 			for(y = ystart; y >= yend; y--)
-				if(!GetIsLineOfSightSectorClear(*GetSector(xstart, y), LOSARGS)) return false;
+				if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, y), LOSARGS)) return false;
 		}
 	} else if(ystart == yend) {
 		// Only step in x
 		if(xstart < xend) {
 			for(x = xstart; x <= xend; x++)
-				if(!GetIsLineOfSightSectorClear(*GetSector(x, ystart), LOSARGS)) return false;
+				if(!World_GetIsLineOfSightSectorClear(*World_GetSector(x, ystart), LOSARGS)) return false;
 		} else {
 			for(x = xstart; x >= xend; x--)
-				if(!GetIsLineOfSightSectorClear(*GetSector(x, ystart), LOSARGS)) return false;
+				if(!World_GetIsLineOfSightSectorClear(*World_GetSector(x, ystart), LOSARGS)) return false;
 		}
 	} else {
 		if(point1.x < point2.x) {
@@ -547,25 +547,25 @@ CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool
 			float m = (point2.y - point1.y) / (point2.x - point1.x);
 
 			y1 = ystart;
-			y2 = GetSectorIndexY((GetWorldX(xstart + 1) - point1.x) * m + point1.y);
+			y2 = World_GetSectorIndexY((World_GetWorldX(xstart + 1) - point1.x) * m + point1.y);
 			if(y1 < y2) {
 				for(y = y1; y <= y2; y++)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xstart, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, y), LOSARGS)) return false;
 			} else {
 				for(y = y1; y >= y2; y--)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xstart, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, y), LOSARGS)) return false;
 			}
 
 			for(x = xstart + 1; x < xend; x++) {
 				y1 = y2;
-				y2 = GetSectorIndexY((GetWorldX(x + 1) - point1.x) * m + point1.y);
+				y2 = World_GetSectorIndexY((World_GetWorldX(x + 1) - point1.x) * m + point1.y);
 				if(y1 < y2) {
 					for(y = y1; y <= y2; y++)
-						if(!GetIsLineOfSightSectorClear(*GetSector(x, y), LOSARGS))
+						if(!World_GetIsLineOfSightSectorClear(*World_GetSector(x, y), LOSARGS))
 							return false;
 				} else {
 					for(y = y1; y >= y2; y--)
-						if(!GetIsLineOfSightSectorClear(*GetSector(x, y), LOSARGS))
+						if(!World_GetIsLineOfSightSectorClear(*World_GetSector(x, y), LOSARGS))
 							return false;
 				}
 			}
@@ -574,35 +574,35 @@ CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool
 			y2 = yend;
 			if(y1 < y2) {
 				for(y = y1; y <= y2; y++)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xend, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xend, y), LOSARGS)) return false;
 			} else {
 				for(y = y1; y >= y2; y--)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xend, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xend, y), LOSARGS)) return false;
 			}
 		} else {
 			// Step from right to left
 			float m = (point2.y - point1.y) / (point2.x - point1.x);
 
 			y1 = ystart;
-			y2 = GetSectorIndexY((GetWorldX(xstart) - point1.x) * m + point1.y);
+			y2 = World_GetSectorIndexY((World_GetWorldX(xstart) - point1.x) * m + point1.y);
 			if(y1 < y2) {
 				for(y = y1; y <= y2; y++)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xstart, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, y), LOSARGS)) return false;
 			} else {
 				for(y = y1; y >= y2; y--)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xstart, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xstart, y), LOSARGS)) return false;
 			}
 
 			for(x = xstart - 1; x > xend; x--) {
 				y1 = y2;
-				y2 = GetSectorIndexY((GetWorldX(x) - point1.x) * m + point1.y);
+				y2 = World_GetSectorIndexY((World_GetWorldX(x) - point1.x) * m + point1.y);
 				if(y1 < y2) {
 					for(y = y1; y <= y2; y++)
-						if(!GetIsLineOfSightSectorClear(*GetSector(x, y), LOSARGS))
+						if(!World_GetIsLineOfSightSectorClear(*World_GetSector(x, y), LOSARGS))
 							return false;
 				} else {
 					for(y = y1; y >= y2; y--)
-						if(!GetIsLineOfSightSectorClear(*GetSector(x, y), LOSARGS))
+						if(!World_GetIsLineOfSightSectorClear(*World_GetSector(x, y), LOSARGS))
 							return false;
 				}
 			}
@@ -611,10 +611,10 @@ CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool
 			y2 = yend;
 			if(y1 < y2) {
 				for(y = y1; y <= y2; y++)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xend, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xend, y), LOSARGS)) return false;
 			} else {
 				for(y = y1; y >= y2; y--)
-					if(!GetIsLineOfSightSectorClear(*GetSector(xend, y), LOSARGS)) return false;
+					if(!World_GetIsLineOfSightSectorClear(*World_GetSector(xend, y), LOSARGS)) return false;
 			}
 		}
 	}
@@ -625,46 +625,46 @@ CWorld::GetIsLineOfSightClear(const CVector &point1, const CVector &point2, bool
 }
 
 bool
-CWorld::GetIsLineOfSightSectorClear(CSector &sector, const CColLine &line, bool checkBuildings, bool checkVehicles,
+World_GetIsLineOfSightSectorClear(CSector &sector, const CColLine &line, bool checkBuildings, bool checkVehicles,
                                     bool checkPeds, bool checkObjects, bool checkDummies, bool ignoreSeeThrough,
                                     bool ignoreSomeObjects)
 {
 	if(checkBuildings) {
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_BUILDINGS], line, ignoreSeeThrough))
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_BUILDINGS], line, ignoreSeeThrough))
 			return false;
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_BUILDINGS_OVERLAP], line,
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_BUILDINGS_OVERLAP], line,
 		                                    ignoreSeeThrough))
 			return false;
 	}
 
 	if(checkVehicles) {
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_VEHICLES], line, ignoreSeeThrough))
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_VEHICLES], line, ignoreSeeThrough))
 			return false;
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_VEHICLES_OVERLAP], line,
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_VEHICLES_OVERLAP], line,
 		                                    ignoreSeeThrough))
 			return false;
 	}
 
 	if(checkPeds) {
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_PEDS], line, ignoreSeeThrough))
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_PEDS], line, ignoreSeeThrough))
 			return false;
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_PEDS_OVERLAP], line, ignoreSeeThrough))
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_PEDS_OVERLAP], line, ignoreSeeThrough))
 			return false;
 	}
 
 	if(checkObjects) {
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_OBJECTS], line, ignoreSeeThrough,
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_OBJECTS], line, ignoreSeeThrough,
 		                                    ignoreSomeObjects))
 			return false;
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_OBJECTS_OVERLAP], line, ignoreSeeThrough,
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_OBJECTS_OVERLAP], line, ignoreSeeThrough,
 		                                    ignoreSomeObjects))
 			return false;
 	}
 
 	if(checkDummies) {
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_DUMMIES], line, ignoreSeeThrough))
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_DUMMIES], line, ignoreSeeThrough))
 			return false;
-		if(!GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_DUMMIES_OVERLAP], line, ignoreSeeThrough))
+		if(!World_GetIsLineOfSightSectorListClear(sector.m_lists[ENTITYLIST_DUMMIES_OVERLAP], line, ignoreSeeThrough))
 			return false;
 	}
 
@@ -672,7 +672,7 @@ CWorld::GetIsLineOfSightSectorClear(CSector &sector, const CColLine &line, bool 
 }
 
 bool
-CWorld::GetIsLineOfSightSectorListClear(CPtrList &list, const CColLine &line, bool ignoreSeeThrough,
+World_GetIsLineOfSightSectorListClear(CPtrList &list, const CColLine &line, bool ignoreSeeThrough,
                                         bool ignoreSomeObjects)
 {
 	CPtrNode *node;
@@ -681,15 +681,15 @@ CWorld::GetIsLineOfSightSectorListClear(CPtrList &list, const CColLine &line, bo
 
 	for(node = list.first; node; node = node->next) {
 		e = (CEntity *)node->item;
-		if(e->m_scanCode != GetCurrentScanCode() && e->bUsesCollision) {
+		if(e->m_scanCode != World_GetCurrentScanCode() && e->bUsesCollision) {
 
-			e->m_scanCode = GetCurrentScanCode();
+			e->m_scanCode = World_GetCurrentScanCode();
 
-			if(e != pIgnoreEntity && !(ignoreSomeObjects && CameraToIgnoreThisObject(e))) {
+			if(e != World_pIgnoreEntity && !(ignoreSomeObjects && World_CameraToIgnoreThisObject(e))) {
 
 				colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 
-				if(CCollision::TestLineOfSight(line, e->GetMatrix(), *colmodel, ignoreSeeThrough, false))
+				if(Collision_TestLineOfSight(line, e->GetMatrix(), *colmodel, ignoreSeeThrough, false))
 					return false;
 			}
 		}
@@ -699,64 +699,64 @@ CWorld::GetIsLineOfSightSectorListClear(CPtrList &list, const CColLine &line, bo
 }
 
 void
-CWorld::FindObjectsInRangeSectorList(CPtrList &list, Const CVector &centre, float radius, bool ignoreZ, int16 *numObjects,
+World_FindObjectsInRangeSectorList(CPtrList &list, Const CVector &centre, float radius, bool ignoreZ, int16 *numObjects,
                                      int16 lastObject, CEntity **objects)
 {
 	// Delegate to the C implementation
-	World_FindObjectsInRangeInList(&list, GetCurrentScanCode(), centre.x, centre.y, centre.z, radius, ignoreZ, numObjects, lastObject, (void**)objects);
+	World_FindObjectsInRangeInList(&list, World_GetCurrentScanCode(), centre.x, centre.y, centre.z, radius, ignoreZ, numObjects, lastObject, (void**)objects);
 }
 
 void
-CWorld::FindObjectsInRange(Const CVector &centre, float radius, bool ignoreZ, int16 *numObjects, int16 lastObject,
+World_FindObjectsInRange(Const CVector &centre, float radius, bool ignoreZ, int16 *numObjects, int16 lastObject,
                            CEntity **objects, bool checkBuildings, bool checkVehicles, bool checkPeds,
                            bool checkObjects, bool checkDummies)
 {
-	int minX = GetSectorIndexX(centre.x - radius);
+	int minX = World_GetSectorIndexX(centre.x - radius);
 	if(minX <= 0) minX = 0;
 
-	int minY = GetSectorIndexY(centre.y - radius);
+	int minY = World_GetSectorIndexY(centre.y - radius);
 	if(minY <= 0) minY = 0;
 
-	int maxX = GetSectorIndexX(centre.x + radius);
+	int maxX = World_GetSectorIndexX(centre.x + radius);
 	if(maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
 
-	int maxY = GetSectorIndexY(centre.y + radius);
+	int maxY = World_GetSectorIndexY(centre.y + radius);
 	if(maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
 
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	*numObjects = 0;
 	for(int curY = minY; curY <= maxY; curY++) {
 		for(int curX = minX; curX <= maxX; curX++) {
-			CSector *sector = GetSector(curX, curY);
+			CSector *sector = World_GetSector(curX, curY);
 			if(checkBuildings) {
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_BUILDINGS], centre, radius,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_BUILDINGS], centre, radius,
 				                             ignoreZ, numObjects, lastObject, objects);
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], centre,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], centre,
 				                             radius, ignoreZ, numObjects, lastObject, objects);
 			}
 			if(checkVehicles) {
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_VEHICLES], centre, radius,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_VEHICLES], centre, radius,
 				                             ignoreZ, numObjects, lastObject, objects);
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], centre,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], centre,
 				                             radius, ignoreZ, numObjects, lastObject, objects);
 			}
 			if(checkPeds) {
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_PEDS], centre, radius, ignoreZ,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_PEDS], centre, radius, ignoreZ,
 				                             numObjects, lastObject, objects);
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_PEDS_OVERLAP], centre, radius,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_PEDS_OVERLAP], centre, radius,
 				                             ignoreZ, numObjects, lastObject, objects);
 			}
 			if(checkObjects) {
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_OBJECTS], centre, radius,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_OBJECTS], centre, radius,
 				                             ignoreZ, numObjects, lastObject, objects);
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], centre,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], centre,
 				                             radius, ignoreZ, numObjects, lastObject, objects);
 			}
 			if(checkDummies) {
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_DUMMIES], centre, radius,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_DUMMIES], centre, radius,
 				                             ignoreZ, numObjects, lastObject, objects);
-				FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_DUMMIES_OVERLAP], centre,
+				World_FindObjectsInRangeSectorList(sector->m_lists[ENTITYLIST_DUMMIES_OVERLAP], centre,
 				                             radius, ignoreZ, numObjects, lastObject, objects);
 			}
 		}
@@ -764,20 +764,20 @@ CWorld::FindObjectsInRange(Const CVector &centre, float radius, bool ignoreZ, in
 }
 
 void
-CWorld::FindObjectsOfTypeInRangeSectorList(uint32 modelId, CPtrList &list, const CVector &position, float radius,
+World_FindObjectsOfTypeInRangeSectorList(uint32 modelId, CPtrList &list, const CVector &position, float radius,
                                            bool bCheck2DOnly, int16 *nEntitiesFound, int16 maxEntitiesToFind,
                                            CEntity **aEntities)
 {
 	// Delegate to the C implementation
-	World_FindObjectsOfTypeInRangeInList(modelId, &list, GetCurrentScanCode(), position.x, position.y, position.z, radius, bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, (void**)aEntities);
+	World_FindObjectsOfTypeInRangeInList(modelId, &list, World_GetCurrentScanCode(), position.x, position.y, position.z, radius, bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, (void**)aEntities);
 }
 
 void
-CWorld::FindObjectsOfTypeInRange(uint32 modelId, const CVector &position, float radius, bool bCheck2DOnly,
+World_FindObjectsOfTypeInRange(uint32 modelId, const CVector &position, float radius, bool bCheck2DOnly,
                                  int16 *nEntitiesFound, int16 maxEntitiesToFind, CEntity **aEntities, bool bBuildings,
                                  bool bVehicles, bool bPeds, bool bObjects, bool bDummies)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	*nEntitiesFound = 0;
 	const CVector2D vecSectorStartPos(position.x - radius, position.y - radius);
 	const CVector2D vecSectorEndPos(position.x + radius, position.y + radius);
@@ -786,44 +786,44 @@ CWorld::FindObjectsOfTypeInRange(uint32 modelId, const CVector &position, float 
 	World_SectorRange(vecSectorStartPos.x, vecSectorStartPos.y, vecSectorEndPos.x, vecSectorEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
+			CSector *pSector = World_GetSector(x, y);
 			if(bBuildings) {
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_BUILDINGS], position, radius, bCheck2DOnly,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], position, radius,
 				    bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bVehicles) {
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_VEHICLES], position, radius, bCheck2DOnly,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], position, radius,
 				    bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bPeds) {
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_PEDS], position, radius, bCheck2DOnly,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_PEDS_OVERLAP], position, radius, bCheck2DOnly,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bObjects) {
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_OBJECTS], position, radius, bCheck2DOnly,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], position, radius,
 				    bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bDummies) {
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_DUMMIES], position, radius, bCheck2DOnly,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsOfTypeInRangeSectorList(
+				World_FindObjectsOfTypeInRangeSectorList(
 				    modelId, pSector->m_lists[ENTITYLIST_DUMMIES_OVERLAP], position, radius,
 				    bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
@@ -832,79 +832,79 @@ CWorld::FindObjectsOfTypeInRange(uint32 modelId, const CVector &position, float 
 }
 
 CEntity *
-CWorld::TestSphereAgainstWorld(CVector centre, float radius, CEntity *entityToIgnore, bool checkBuildings,
+World_TestSphereAgainstWorld(CVector centre, float radius, CEntity *entityToIgnore, bool checkBuildings,
                                bool checkVehicles, bool checkPeds, bool checkObjects, bool checkDummies,
                                bool ignoreSomeObjects)
 {
 	CEntity *foundE = nil;
 
-	int minX = GetSectorIndexX(centre.x - radius);
+	int minX = World_GetSectorIndexX(centre.x - radius);
 	if(minX <= 0) minX = 0;
 
-	int minY = GetSectorIndexY(centre.y - radius);
+	int minY = World_GetSectorIndexY(centre.y - radius);
 	if(minY <= 0) minY = 0;
 
-	int maxX = GetSectorIndexX(centre.x + radius);
+	int maxX = World_GetSectorIndexX(centre.x + radius);
 #ifdef FIX_BUGS
 	if(maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
 #else
 	if(maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X;
 #endif
 
-	int maxY = GetSectorIndexY(centre.y + radius);
+	int maxY = World_GetSectorIndexY(centre.y + radius);
 #ifdef FIX_BUGS
 	if(maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
 #else
 	if(maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y;
 #endif
 
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	for(int curY = minY; curY <= maxY; curY++) {
 		for(int curX = minX; curX <= maxX; curX++) {
-			CSector *sector = GetSector(curX, curY);
+			CSector *sector = World_GetSector(curX, curY);
 			if(checkBuildings) {
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_BUILDINGS], centre,
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_BUILDINGS], centre,
 				                                     radius, entityToIgnore, false);
 				if(foundE) return foundE;
 
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP],
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP],
 				                                     centre, radius, entityToIgnore, false);
 				if(foundE) return foundE;
 			}
 			if(checkVehicles) {
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_VEHICLES], centre,
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_VEHICLES], centre,
 				                                     radius, entityToIgnore, false);
 				if(foundE) return foundE;
 
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_VEHICLES_OVERLAP],
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_VEHICLES_OVERLAP],
 				                                     centre, radius, entityToIgnore, false);
 				if(foundE) return foundE;
 			}
 			if(checkPeds) {
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_PEDS], centre, radius,
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_PEDS], centre, radius,
 				                                     entityToIgnore, false);
 				if(foundE) return foundE;
 
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_PEDS_OVERLAP], centre,
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_PEDS_OVERLAP], centre,
 				                                     radius, entityToIgnore, false);
 				if(foundE) return foundE;
 			}
 			if(checkObjects) {
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_OBJECTS], centre,
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_OBJECTS], centre,
 				                                     radius, entityToIgnore, ignoreSomeObjects);
 				if(foundE) return foundE;
 
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_OBJECTS_OVERLAP],
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_OBJECTS_OVERLAP],
 				                                     centre, radius, entityToIgnore, ignoreSomeObjects);
 				if(foundE) return foundE;
 			}
 			if(checkDummies) {
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_DUMMIES], centre,
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_DUMMIES], centre,
 				                                     radius, entityToIgnore, false);
 				if(foundE) return foundE;
 
-				foundE = TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_DUMMIES_OVERLAP],
+				foundE = World_TestSphereAgainstSectorList(sector->m_lists[ENTITYLIST_DUMMIES_OVERLAP],
 				                                     centre, radius, entityToIgnore, false);
 				if(foundE) return foundE;
 			}
@@ -922,7 +922,7 @@ static void DestroyStaticWorldSphereModel(void)
 }
 
 CEntity *
-CWorld::TestSphereAgainstSectorList(CPtrList &list, CVector spherePos, float radius, CEntity *entityToIgnore,
+World_TestSphereAgainstSectorList(CPtrList &list, CVector spherePos, float radius, CEntity *entityToIgnore,
                                     bool ignoreSomeObjects)
 {
 	// Invoke the complete C collision owner at the original native lifetime or operation boundary
@@ -958,18 +958,18 @@ CWorld::TestSphereAgainstSectorList(CPtrList &list, CVector spherePos, float rad
 	for(CPtrNode *node = list.first; node; node = node->next) {
 		CEntity *e = (CEntity *)node->item;
 
-		if(e->m_scanCode != GetCurrentScanCode()) {
-			e->m_scanCode = GetCurrentScanCode();
+		if(e->m_scanCode != World_GetCurrentScanCode()) {
+			e->m_scanCode = World_GetCurrentScanCode();
 
 			if(e != entityToIgnore && e->bUsesCollision &&
-			   !(ignoreSomeObjects && CameraToIgnoreThisObject(e))) {
+			   !(ignoreSomeObjects && World_CameraToIgnoreThisObject(e))) {
 				CVector diff = spherePos - e->GetBoundCentre();
 				float distance = diff.Magnitude();
 
 				if(e->GetBoundRadius() + radius > distance) {
 					CColModel *eCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 					int collidedSpheres =
-					    CCollision::ProcessColModels(sphereMat, worldSphereColModel, e->GetMatrix(), *eCol,
+					    Collision_ProcessColModels(sphereMat, worldSphereColModel, e->GetMatrix(), *eCol,
 					                                 gaTempSphereColPoints, nil, nil);
 
 					if(collidedSpheres != 0 ||
@@ -986,11 +986,11 @@ CWorld::TestSphereAgainstSectorList(CPtrList &list, CVector spherePos, float rad
 }
 
 float
-CWorld::FindGroundZForCoord(float x, float y)
+World_FindGroundZForCoord(float x, float y)
 {
 	CColPoint point;
 	CEntity *ent;
-	if(ProcessVerticalLine(CVector(x, y, 1000.0f), -1000.0f, point, ent, true, false, false, false, true, false,
+	if(World_ProcessVerticalLine(CVector(x, y, 1000.0f), -1000.0f, point, ent, true, false, false, false, true, false,
 	                       nil))
 		return point.point.z;
 	else
@@ -998,11 +998,11 @@ CWorld::FindGroundZForCoord(float x, float y)
 }
 
 float
-CWorld::FindGroundZFor3DCoord(float x, float y, float z, bool *found)
+World_FindGroundZFor3DCoord(float x, float y, float z, bool *found)
 {
 	CColPoint point;
 	CEntity *ent;
-	if(ProcessVerticalLine(CVector(x, y, z), -1000.0f, point, ent, true, false, false, false, false, false, nil)) {
+	if(World_ProcessVerticalLine(CVector(x, y, z), -1000.0f, point, ent, true, false, false, false, false, false, nil)) {
 		if(found) *found = true;
 		return point.point.z;
 	} else {
@@ -1012,11 +1012,11 @@ CWorld::FindGroundZFor3DCoord(float x, float y, float z, bool *found)
 }
 
 float
-CWorld::FindRoofZFor3DCoord(float x, float y, float z, bool *found)
+World_FindRoofZFor3DCoord(float x, float y, float z, bool *found)
 {
 	CColPoint point;
 	CEntity *ent;
-	if(ProcessVerticalLine(CVector(x, y, z), 1000.0f, point, ent, true, false, false, false, true, false, nil)) {
+	if(World_ProcessVerticalLine(CVector(x, y, z), 1000.0f, point, ent, true, false, false, false, true, false, nil)) {
 		if(found) *found = true;
 		return point.point.z;
 	} else {
@@ -1029,28 +1029,28 @@ CWorld::FindRoofZFor3DCoord(float x, float y, float z, bool *found)
 }
 
 void
-CWorld::RemoveReferencesToDeletedObject(CEntity *pDeletedObject)
+World_RemoveReferencesToDeletedObject(CEntity *pDeletedObject)
 {
 	// The ped and object pools are handled by the C implementation
-	World_RemoveRefsToDeletedFromPeds(CPools::GetPedPool(), pDeletedObject);
+	World_RemoveRefsToDeletedFromPeds(Pools_GetPedPool(), pDeletedObject);
 	// Access raw storage through the C store or pool API
-	int32 i = CPool_GetSize(CPools::GetVehiclePool());
+	int32 i = CPool_GetSize(Pools_GetVehiclePool());
 	while(--i >= 0) {
-		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i));
 		if(pVehicle && pVehicle != pDeletedObject) {
 			pVehicle->RemoveRefsToEntity(pDeletedObject);
 			pVehicle->RemoveRefsToVehicle(pDeletedObject);
 		}
 	}
-	World_RemoveRefsToDeletedFromObjects(CPools::GetObjectPool(), pDeletedObject);
+	World_RemoveRefsToDeletedFromObjects(Pools_GetObjectPool(), pDeletedObject);
 }
 
 void
-CWorld::FindObjectsKindaColliding(const CVector &position, float radius, bool bCheck2DOnly, int16 *nCollidingEntities,
+World_FindObjectsKindaColliding(const CVector &position, float radius, bool bCheck2DOnly, int16 *nCollidingEntities,
                                   int16 maxEntitiesToFind, CEntity **aEntities, bool bBuildings, bool bVehicles,
                                   bool bPeds, bool bObjects, bool bDummies)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	*nCollidingEntities = 0;
 	const CVector2D vecSectorStartPos(position.x - radius, position.y - radius);
 	const CVector2D vecSectorEndPos(position.x + radius, position.y + radius);
@@ -1059,44 +1059,44 @@ CWorld::FindObjectsKindaColliding(const CVector &position, float radius, bool bC
 	World_SectorRange(vecSectorStartPos.x, vecSectorStartPos.y, vecSectorEndPos.x, vecSectorEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
+			CSector *pSector = World_GetSector(x, y);
 			if(bBuildings) {
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_BUILDINGS], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
 			}
 			if(bVehicles) {
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
 			}
 			if(bPeds) {
-				FindObjectsKindaCollidingSectorList(pSector->m_lists[ENTITYLIST_PEDS], position,
+				World_FindObjectsKindaCollidingSectorList(pSector->m_lists[ENTITYLIST_PEDS], position,
 				                                            radius, bCheck2DOnly, nCollidingEntities,
 				                                            maxEntitiesToFind, aEntities);
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_PEDS_OVERLAP], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
 			}
 			if(bObjects) {
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
 			}
 			if(bDummies) {
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_DUMMIES], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
-				FindObjectsKindaCollidingSectorList(
+				World_FindObjectsKindaCollidingSectorList(
 				    pSector->m_lists[ENTITYLIST_DUMMIES_OVERLAP], position, radius, bCheck2DOnly,
 				    nCollidingEntities, maxEntitiesToFind, aEntities);
 			}
@@ -1105,63 +1105,63 @@ CWorld::FindObjectsKindaColliding(const CVector &position, float radius, bool bC
 }
 
 void
-CWorld::FindObjectsKindaCollidingSectorList(CPtrList &list, const CVector &position, float radius, bool bCheck2DOnly,
+World_FindObjectsKindaCollidingSectorList(CPtrList &list, const CVector &position, float radius, bool bCheck2DOnly,
                                             int16 *nCollidingEntities, int16 maxEntitiesToFind, CEntity **aEntities)
 {
 	// Delegate to the C implementation
-	World_FindObjectsKindaCollidingInList(&list, GetCurrentScanCode(), position.x, position.y, position.z, radius, bCheck2DOnly, nCollidingEntities, maxEntitiesToFind, (void**)aEntities);
+	World_FindObjectsKindaCollidingInList(&list, World_GetCurrentScanCode(), position.x, position.y, position.z, radius, bCheck2DOnly, nCollidingEntities, maxEntitiesToFind, (void**)aEntities);
 }
 
 void
-CWorld::FindObjectsIntersectingCube(const CVector &vecStartPos, const CVector &vecEndPos, int16 *nIntersecting,
+World_FindObjectsIntersectingCube(const CVector &vecStartPos, const CVector &vecEndPos, int16 *nIntersecting,
                                     int16 maxEntitiesToFind, CEntity **aEntities, bool bBuildings, bool bVehicles,
                                     bool bPeds, bool bObjects, bool bDummies)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	*nIntersecting = 0;
 	// Delegate to the C implementation
 	int32 nStartX, nStartY, nEndX, nEndY;
 	World_SectorRange(vecStartPos.x, vecStartPos.y, vecStartPos.x, vecStartPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
+			CSector *pSector = World_GetSector(x, y);
 			if(bBuildings) {
-				FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_BUILDINGS],
+				World_FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_BUILDINGS],
 				                                              vecStartPos, vecEndPos, nIntersecting,
 				                                              maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingCubeSectorList(
+				World_FindObjectsIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], vecStartPos, vecEndPos,
 				    nIntersecting, maxEntitiesToFind, aEntities);
 			}
 			if(bVehicles) {
-				FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_VEHICLES],
+				World_FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_VEHICLES],
 				                                              vecStartPos, vecEndPos, nIntersecting,
 				                                              maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingCubeSectorList(
+				World_FindObjectsIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], vecStartPos, vecEndPos,
 				    nIntersecting, maxEntitiesToFind, aEntities);
 			}
 			if(bPeds) {
-				FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_PEDS],
+				World_FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_PEDS],
 				                                              vecStartPos, vecEndPos, nIntersecting,
 				                                              maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_PEDS_OVERLAP],
+				World_FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_PEDS_OVERLAP],
 				                                              vecStartPos, vecEndPos, nIntersecting,
 				                                              maxEntitiesToFind, aEntities);
 			}
 			if(bObjects) {
-				FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_OBJECTS],
+				World_FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_OBJECTS],
 				                                              vecStartPos, vecEndPos, nIntersecting,
 				                                              maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingCubeSectorList(
+				World_FindObjectsIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities);
 			}
 			if(bDummies) {
-				FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_DUMMIES],
+				World_FindObjectsIntersectingCubeSectorList(pSector->m_lists[ENTITYLIST_DUMMIES],
 				                                              vecStartPos, vecEndPos, nIntersecting,
 				                                              maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingCubeSectorList(
+				World_FindObjectsIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_DUMMIES_OVERLAP], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities);
 			}
@@ -1170,67 +1170,65 @@ CWorld::FindObjectsIntersectingCube(const CVector &vecStartPos, const CVector &v
 }
 
 void
-CWorld::FindObjectsIntersectingCubeSectorList(CPtrList &list, const CVector &vecStartPos, const CVector &vecEndPos,
+World_FindObjectsIntersectingCubeSectorList(CPtrList &list, const CVector &vecStartPos, const CVector &vecEndPos,
                                               int16 *nIntersecting, int16 maxEntitiesToFind, CEntity **aEntities)
 {
 	// Delegate to the C implementation
-	float start[3] = {vecStartPos.x, vecStartPos.y, vecStartPos.z};
-	float end[3] = {vecEndPos.x, vecEndPos.y, vecEndPos.z};
-	World_FindObjectsIntersectingCubeInList(&list, GetCurrentScanCode(), start, end, nIntersecting, maxEntitiesToFind, (void**)aEntities);
+	World_FindObjectsIntersectingCubeInList(&list, World_GetCurrentScanCode(), &vecStartPos, &vecEndPos, nIntersecting, maxEntitiesToFind, (void**)aEntities);
 }
 
 void
-CWorld::FindObjectsIntersectingAngledCollisionBox(const CBox &boundingBox, const CMatrix &matrix,
+World_FindObjectsIntersectingAngledCollisionBox(const CBox &boundingBox, const CMatrix &matrix,
                                                   const CVector &position, float fStartX, float fStartY, float fEndX,
                                                   float fEndY, int16 *nEntitiesFound, int16 maxEntitiesToFind,
                                                   CEntity **aEntities, bool bBuildings, bool bVehicles, bool bPeds,
                                                   bool bObjects, bool bDummies)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	*nEntitiesFound = 0;
 	// Delegate to the C implementation
 	int32 nStartX, nStartY, nEndX, nEndY;
 	World_SectorRange(fStartX, fStartY, fEndX, fEndY, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
+			CSector *pSector = World_GetSector(x, y);
 			if(bBuildings) {
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_BUILDINGS], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bVehicles) {
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bPeds) {
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_PEDS], boundingBox, matrix, position, nEntitiesFound,
 				    maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_PEDS_OVERLAP], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bObjects) {
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS], boundingBox, matrix, position, nEntitiesFound,
 				    maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
 			if(bDummies) {
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_DUMMIES], boundingBox, matrix, position, nEntitiesFound,
 				    maxEntitiesToFind, aEntities);
-				FindObjectsIntersectingAngledCollisionBoxSectorList(
+				World_FindObjectsIntersectingAngledCollisionBoxSectorList(
 				    pSector->m_lists[ENTITYLIST_DUMMIES_OVERLAP], boundingBox, matrix, position,
 				    nEntitiesFound, maxEntitiesToFind, aEntities);
 			}
@@ -1239,20 +1237,20 @@ CWorld::FindObjectsIntersectingAngledCollisionBox(const CBox &boundingBox, const
 }
 
 void
-CWorld::FindObjectsIntersectingAngledCollisionBoxSectorList(CPtrList &list, const CBox &boundingBox,
+World_FindObjectsIntersectingAngledCollisionBoxSectorList(CPtrList &list, const CBox &boundingBox,
                                                             const CMatrix &matrix, const CVector &position,
                                                             int16 *nEntitiesFound, int16 maxEntitiesToFind,
                                                             CEntity **aEntities)
 {
 	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
 		CEntity *pEntity = (CEntity *)pNode->item;
-		if(pEntity->m_scanCode != GetCurrentScanCode()) {
-			pEntity->m_scanCode = GetCurrentScanCode();
+		if(pEntity->m_scanCode != World_GetCurrentScanCode()) {
+			pEntity->m_scanCode = World_GetCurrentScanCode();
 			CColSphere sphere;
 			CVector vecDistance = pEntity->GetPosition() - position;
 			sphere.bounds.radius = pEntity->GetBoundRadius();
 			sphere.bounds.center = CollisionVector_FromNative(Multiply3x3(vecDistance, matrix));
-			if(CCollision::TestSphereBox(sphere.bounds, boundingBox) && *nEntitiesFound < maxEntitiesToFind) {
+			if(Collision_TestSphereBox(sphere.bounds, boundingBox) && *nEntitiesFound < maxEntitiesToFind) {
 				if(aEntities) aEntities[*nEntitiesFound] = pEntity;
 				++*nEntitiesFound;
 			}
@@ -1261,39 +1259,39 @@ CWorld::FindObjectsIntersectingAngledCollisionBoxSectorList(CPtrList &list, cons
 }
 
 void
-CWorld::FindMissionEntitiesIntersectingCube(const CVector &vecStartPos, const CVector &vecEndPos, int16 *nIntersecting,
+World_FindMissionEntitiesIntersectingCube(const CVector &vecStartPos, const CVector &vecEndPos, int16 *nIntersecting,
                                             int16 maxEntitiesToFind, CEntity **aEntities, bool bVehicles, bool bPeds,
                                             bool bObjects)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	*nIntersecting = 0;
 	// Delegate to the C implementation
 	int32 nStartX, nStartY, nEndX, nEndY;
 	World_SectorRange(vecStartPos.x, vecStartPos.y, vecEndPos.x, vecEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
+			CSector *pSector = World_GetSector(x, y);
 			if(bVehicles) {
-				FindMissionEntitiesIntersectingCubeSectorList(
+				World_FindMissionEntitiesIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities, true, false);
-				FindMissionEntitiesIntersectingCubeSectorList(
+				World_FindMissionEntitiesIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], vecStartPos, vecEndPos,
 				    nIntersecting, maxEntitiesToFind, aEntities, true, false);
 			}
 			if(bPeds) {
-				FindMissionEntitiesIntersectingCubeSectorList(
+				World_FindMissionEntitiesIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_PEDS], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities, false, true);
-				FindMissionEntitiesIntersectingCubeSectorList(
+				World_FindMissionEntitiesIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_PEDS_OVERLAP], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities, false, true);
 			}
 			if(bObjects) {
-				FindMissionEntitiesIntersectingCubeSectorList(
+				World_FindMissionEntitiesIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities, false, false);
-				FindMissionEntitiesIntersectingCubeSectorList(
+				World_FindMissionEntitiesIntersectingCubeSectorList(
 				    pSector->m_lists[ENTITYLIST_OBJECTS_OVERLAP], vecStartPos, vecEndPos, nIntersecting,
 				    maxEntitiesToFind, aEntities, false, false);
 			}
@@ -1302,39 +1300,37 @@ CWorld::FindMissionEntitiesIntersectingCube(const CVector &vecStartPos, const CV
 }
 
 void
-CWorld::FindMissionEntitiesIntersectingCubeSectorList(CPtrList &list, const CVector &vecStartPos,
+World_FindMissionEntitiesIntersectingCubeSectorList(CPtrList &list, const CVector &vecStartPos,
                                                       const CVector &vecEndPos, int16 *nIntersecting,
                                                       int16 maxEntitiesToFind, CEntity **aEntities, bool bIsVehicleList,
                                                       bool bIsPedList)
 {
 	// Delegate to the C implementation
-	float start[3] = {vecStartPos.x, vecStartPos.y, vecStartPos.z};
-	float end[3] = {vecEndPos.x, vecEndPos.y, vecEndPos.z};
-	World_FindMissionEntitiesIntersectingCubeInList(&list, GetCurrentScanCode(), start, end, nIntersecting, maxEntitiesToFind, (void**)aEntities, bIsVehicleList, bIsPedList);
+	World_FindMissionEntitiesIntersectingCubeInList(&list, World_GetCurrentScanCode(), &vecStartPos, &vecEndPos, nIntersecting, maxEntitiesToFind, (void**)aEntities, bIsVehicleList, bIsPedList);
 }
 
 void
-CWorld::ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
+World_ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
 {
-	CVehiclePool *pVehiclePool = CPools::GetVehiclePool();
+	CVehiclePool *pVehiclePool = Pools_GetVehiclePool();
 	// The C implementation picks the vehicles, their removal stays here
 	void *selected[NUMVEHICLES * 2];
 	int numSelected = World_SelectCarsToClearFromArea(pVehiclePool, x1, y1, z1, x2, y2, z2, selected, ARRAY_SIZE(selected));
 	for(int32 s = 0; s < numSelected; s++) {
 		CVehicle *pVehicle = (CVehicle*)selected[s];
 		if(pVehicle->pDriver) {
-			CPopulation::RemovePed(pVehicle->pDriver);
+			Population_RemovePed(pVehicle->pDriver);
 			pVehicle->pDriver = nil;
 		}
 		for(int32 j = 0; j < pVehicle->m_nNumMaxPassengers; ++j) {
 			if(pVehicle->pPassengers[j]) {
-				CPopulation::RemovePed(pVehicle->pPassengers[j]);
+				Population_RemovePed(pVehicle->pPassengers[j]);
 				pVehicle->pPassengers[j] = nil;
 				--pVehicle->m_nNumPassengers;
 			}
 		}
-		CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
-		Remove(pVehicle);
+		CarCtrl_RemoveFromInterestingVehicleList(pVehicle);
+		World_Remove(pVehicle);
 		// Destroy and release the vehicle without invoking C++ delete.
 		pVehicle->~CVehicle();
 		// Access raw storage through the C store or pool API
@@ -1343,20 +1339,20 @@ CWorld::ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, floa
 }
 
 void
-CWorld::ClearPedsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
+World_ClearPedsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
 {
-	CPedPool *pPedPool = CPools::GetPedPool();
+	CPedPool *pPedPool = Pools_GetPedPool();
 	// The C implementation picks the peds, their removal stays here
 	void *selected[NUMPEDS * 2];
 	int numSelected = World_SelectPedsToClearFromArea(pPedPool, x1, y1, z1, x2, y2, z2, selected, ARRAY_SIZE(selected));
 	for(int32 s = 0; s < numSelected; s++)
-		CPopulation::RemovePed((CPed*)selected[s]);
+		Population_RemovePed((CPed*)selected[s]);
 }
 
 void
-CWorld::CallOffChaseForArea(float x1, float y1, float x2, float y2)
+World_CallOffChaseForArea(float x1, float y1, float x2, float y2)
 {
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	float fStartX = x1 - 10.0f;
 	float fStartY = y1 - 10.0f;
 	float fEndX = x2 + 10.0f;
@@ -1366,32 +1362,32 @@ CWorld::CallOffChaseForArea(float x1, float y1, float x2, float y2)
 	World_SectorRange(fStartX, fStartY, fEndX, fEndY, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
-			CallOffChaseForAreaSectorListVehicles(pSector->m_lists[ENTITYLIST_VEHICLES], x1, y1, x2,
+			CSector *pSector = World_GetSector(x, y);
+			World_CallOffChaseForAreaSectorListVehicles(pSector->m_lists[ENTITYLIST_VEHICLES], x1, y1, x2,
 			                                              y2, fStartX, fStartY, fEndX, fEndY);
-			CallOffChaseForAreaSectorListVehicles(pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], x1,
+			World_CallOffChaseForAreaSectorListVehicles(pSector->m_lists[ENTITYLIST_VEHICLES_OVERLAP], x1,
 			                                              y1, x2, y2, fStartX, fStartY, fEndX, fEndY);
-			CallOffChaseForAreaSectorListPeds(pSector->m_lists[ENTITYLIST_PEDS], x1, y1, x2, y2);
-			CallOffChaseForAreaSectorListPeds(pSector->m_lists[ENTITYLIST_PEDS_OVERLAP], x1, y1, x2,
+			World_CallOffChaseForAreaSectorListPeds(pSector->m_lists[ENTITYLIST_PEDS], x1, y1, x2, y2);
+			World_CallOffChaseForAreaSectorListPeds(pSector->m_lists[ENTITYLIST_PEDS_OVERLAP], x1, y1, x2,
 			                                          y2);
 		}
 	}
 }
 
 void
-CWorld::CallOffChaseForAreaSectorListVehicles(CPtrList &list, float x1, float y1, float x2, float y2, float fStartX,
+World_CallOffChaseForAreaSectorListVehicles(CPtrList &list, float x1, float y1, float x2, float y2, float fStartX,
                                               float fStartY, float fEndX, float fEndY)
 {
 	// Delegate to the C implementation
-	World_CallOffChaseForVehiclesInList(&list, GetCurrentScanCode(), x1, y1, x2, y2, fStartX, fStartY, fEndX, fEndY, FindPlayerVehicle(), (*Timer_GetTimeInMilliseconds()));
+	World_CallOffChaseForVehiclesInList(&list, World_GetCurrentScanCode(), x1, y1, x2, y2, fStartX, fStartY, fEndX, fEndY, FindPlayerVehicle(), (*Timer_GetTimeInMilliseconds()));
 }
 
 void
-CWorld::CallOffChaseForAreaSectorListPeds(CPtrList &list, float x1, float y1, float x2, float y2)
+World_CallOffChaseForAreaSectorListPeds(CPtrList &list, float x1, float y1, float x2, float y2)
 {
 	// The C implementation picks the peds, calling off their pursuit stays here
 	void *selected[NUMPEDS * 2];
-	int numSelected = World_SelectPedsToCallOffChase(&list, GetCurrentScanCode(), x1, y1, x2, y2, FindPlayerPed(), FindPlayerVehicle(), selected, ARRAY_SIZE(selected));
+	int numSelected = World_SelectPedsToCallOffChase(&list, World_GetCurrentScanCode(), x1, y1, x2, y2, FindPlayerPed(), FindPlayerVehicle(), selected, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++) {
 		CPed *pPed = (CPed*)selected[s];
 		if(pPed->IsPedInControl()) {
@@ -1408,48 +1404,48 @@ CWorld::CallOffChaseForAreaSectorListPeds(CPtrList &list, float x1, float y1, fl
 }
 
 void
-CWorld::RemoveEntityInsteadOfProcessingIt(CEntity *ent)
+World_RemoveEntityInsteadOfProcessingIt(CEntity *ent)
 {
 	if(ent->IsPed()) {
 		if(FindPlayerPed() == ent)
-			Remove(ent);
+			World_Remove(ent);
 		else
-			CPopulation::RemovePed((CPed *)ent);
+			Population_RemovePed((CPed *)ent);
 	} else {
-		Remove(ent);
+		World_Remove(ent);
 		// Destroy and release the entity without invoking C++ delete.
 		if(ent->IsVehicle()) {
 			ent->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), (CVehicle *)ent);
+			CPool_Delete(Pools_GetVehiclePool(), (CVehicle *)ent);
 					} else if(ent->IsObject()) {
 			ent->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), (CObject *)ent);
+			CPool_Delete(Pools_GetObjectPool(), (CObject *)ent);
 					} else if(ent->IsBuilding()) {
 			bool isTreadable = ((CBuilding *)ent)->GetIsATreadable();
 			ent->~CEntity();
 			if(isTreadable)
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)ent);
+				CPool_Delete(Pools_GetTreadablePool(), (CTreadable *)ent);
 							else
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)ent);
+				CPool_Delete(Pools_GetBuildingPool(), (CBuilding *)ent);
 						} else if(ent->IsDummy()) {
 			ent->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetDummyPool(), (CDummy *)ent);
+			CPool_Delete(Pools_GetDummyPool(), (CDummy *)ent);
 					}
 	}
 }
 
 void
-CWorld::RemoveFallenPeds(void)
+World_RemoveFallenPeds(void)
 {
 	// The C implementation picks the peds and what to do with them, the effects stay here
 	void *selected[NUMPEDS * 2];
 	int action[NUMPEDS * 2];
-	int numSelected = World_SelectFallenPeds(CPools::GetPedPool(), MAP_Z_LOW_LIMIT, selected, action, ARRAY_SIZE(selected));
+	int numSelected = World_SelectFallenPeds(Pools_GetPedPool(), MAP_Z_LOW_LIMIT, selected, action, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++) {
 		CPed *ped = (CPed*)selected[s];
 		if(action[s] == 1) {
@@ -1460,18 +1456,18 @@ CWorld::RemoveFallenPeds(void)
 			ped->Teleport(newPos);
 			ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 		} else {
-			CPopulation::RemovePed(ped);
+			Population_RemovePed(ped);
 		}
 	}
 }
 
 void
-CWorld::RemoveFallenCars(void)
+World_RemoveFallenCars(void)
 {
 	// The C implementation picks the vehicles and what to do with them, the effects stay here
 	void *selected[NUMVEHICLES * 2];
 	int action[NUMVEHICLES * 2];
-	int numSelected = World_SelectFallenCars(CPools::GetVehiclePool(), MAP_Z_LOW_LIMIT, FindPlayerVehicle(), selected, action, ARRAY_SIZE(selected));
+	int numSelected = World_SelectFallenCars(Pools_GetVehiclePool(), MAP_Z_LOW_LIMIT, FindPlayerVehicle(), selected, action, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++) {
 		CVehicle *veh = (CVehicle*)selected[s];
 		if(action[s] == 1) {
@@ -1482,35 +1478,35 @@ CWorld::RemoveFallenCars(void)
 			veh->Teleport(newPos);
 			veh->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 		} else {
-			Remove(veh);
+			World_Remove(veh);
 			// Destroy and release the fallen vehicle without invoking C++ delete.
 			veh->~CVehicle();
 			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), veh);
+			CPool_Delete(Pools_GetVehiclePool(), veh);
 		}
 	}
 }
 
 void
-CWorld::StopAllLawEnforcersInTheirTracks(void)
+World_StopAllLawEnforcersInTheirTracks(void)
 {
 	// Delegate to the C implementation
-	World_StopAllLawEnforcersInTheirTracks(CPools::GetVehiclePool());
+	WorldLogic_StopAllLawEnforcersInTheirTracks(Pools_GetVehiclePool());
 }
 
 void
-CWorld::SetAllCarsCanBeDamaged(bool toggle)
+World_SetAllCarsCanBeDamaged(bool toggle)
 {
 	// Delegate to the C implementation
-	World_SetAllCarsCanBeDamaged(CPools::GetVehiclePool(), toggle);
+	WorldLogic_SetAllCarsCanBeDamaged(Pools_GetVehiclePool(), toggle);
 }
 
 void
-CWorld::ExtinguishAllCarFiresInArea(CVector point, float range)
+World_ExtinguishAllCarFiresInArea(CVector point, float range)
 {
 	// The C implementation picks the vehicles, extinguishing stays here
 	void *selected[NUMVEHICLES * 2];
-	int numSelected = World_SelectCarsInRangeOfPoint(CPools::GetVehiclePool(), point.x, point.y, point.z, range, selected, ARRAY_SIZE(selected));
+	int numSelected = World_SelectCarsInRangeOfPoint(Pools_GetVehiclePool(), point.x, point.y, point.z, range, selected, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++)
 		((CVehicle*)selected[s])->ExtinguishCarFire();
 }
@@ -1526,11 +1522,11 @@ AddSteamsFromGround(CPtrList& list)
 }
 
 void
-CWorld::AddParticles(void)
+World_AddParticles(void)
 {
 	for(int32 y = 0; y < NUMSECTORS_Y; y++) {
 		for(int32 x = 0; x < NUMSECTORS_X; x++) {
-			CSector *pSector = GetSector(x, y);
+			CSector *pSector = World_GetSector(x, y);
 			AddSteamsFromGround(pSector->m_lists[ENTITYLIST_BUILDINGS]);
 			AddSteamsFromGround(pSector->m_lists[ENTITYLIST_DUMMIES]);
 		}
@@ -1538,54 +1534,54 @@ CWorld::AddParticles(void)
 }
 
 void
-CWorld::ShutDown(void)
+World_ShutDown(void)
 {
 	for(int i = 0; i < NUMSECTORS_X * NUMSECTORS_Y; i++) {
-		CSector *pSector = GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
+		CSector *pSector = World_GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the building without invoking C++ delete.
 			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
 			pEntity->~CEntity();
 			if(isTreadable)
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)pEntity);
+				CPool_Delete(Pools_GetTreadablePool(), (CTreadable *)pEntity);
 							else
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)pEntity);
+				CPool_Delete(Pools_GetBuildingPool(), (CBuilding *)pEntity);
 						}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_VEHICLES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the vehicle without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), (CVehicle *)pEntity);
+			CPool_Delete(Pools_GetVehiclePool(), (CVehicle *)pEntity);
 					}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_PEDS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the ped without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetPedPool(), (CPed *)pEntity);
+			CPool_Delete(Pools_GetPedPool(), (CPed *)pEntity);
 					}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_OBJECTS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the object without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), (CObject *)pEntity);
+			CPool_Delete(Pools_GetObjectPool(), (CObject *)pEntity);
 					}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_DUMMIES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the dummy without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetDummyPool(), (CDummy *)pEntity);
+			CPool_Delete(Pools_GetDummyPool(), (CDummy *)pEntity);
 					}
 #ifndef FIX_BUGS
 		PtrList_Flush(&pSector->m_lists[ENTITYLIST_BUILDINGS]);
@@ -1595,7 +1591,7 @@ CWorld::ShutDown(void)
 #endif
 	}
 	for(int32 i = 0; i < NUM_LEVELS; i++) {
-		for(CPtrNode *pNode = ms_bigBuildingsList[i].first; pNode; pNode = pNode->next) {
+		for(CPtrNode *pNode = World_ms_bigBuildingsList[i].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			// Maybe remove from world here?
 			// Destroy and release the big building without invoking C++ delete.
@@ -1603,15 +1599,15 @@ CWorld::ShutDown(void)
 			pEntity->~CEntity();
 			if(isTreadable)
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)pEntity);
+				CPool_Delete(Pools_GetTreadablePool(), (CTreadable *)pEntity);
 							else
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)pEntity);
+				CPool_Delete(Pools_GetBuildingPool(), (CBuilding *)pEntity);
 						}
-		PtrList_Flush(&ms_bigBuildingsList[i]);
+		PtrList_Flush(&World_ms_bigBuildingsList[i]);
 	}
 	for(int i = 0; i < NUMSECTORS_X * NUMSECTORS_Y; i++) {
-		CSector *pSector = GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
+		CSector *pSector = World_GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
 #ifdef FIX_BUGS
 		PtrList_Flush(&pSector->m_lists[ENTITYLIST_BUILDINGS]);
 		PtrList_Flush(&pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
@@ -1647,63 +1643,63 @@ CWorld::ShutDown(void)
 			PtrList_Flush(&pSector->m_lists[ENTITYLIST_DUMMIES_OVERLAP]);
 		}
 	}
-	PtrList_Flush(&ms_listMovingEntityPtrs);
+	PtrList_Flush(&World_ms_listMovingEntityPtrs);
 }
 
 void
-CWorld::ClearForRestart(void)
+World_ClearForRestart(void)
 {
-	if(CCutsceneMgr::HasLoaded()) CCutsceneMgr::DeleteCutsceneData();
+	if(CutsceneMgr_HasLoaded()) CutsceneMgr_DeleteCutsceneData();
 	ProjectileInfo_RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
 	CObject::DeleteAllMissionObjects();
-	CPopulation::ConvertAllObjectsToDummyObjects();
+	Population_ConvertAllObjectsToDummyObjects();
 	for(int i = 0; i < NUMSECTORS_X * NUMSECTORS_Y; i++) {
-		CSector *pSector = GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
+		CSector *pSector = World_GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_PEDS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the ped without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetPedPool(), (CPed *)pEntity);
+			CPool_Delete(Pools_GetPedPool(), (CPed *)pEntity);
 					}
-		for(CPtrNode *pNode = GetBigBuildingList(LEVEL_GENERIC).first; pNode; pNode = pNode->next) {
+		for(CPtrNode *pNode = World_GetBigBuildingList(LEVEL_GENERIC).first; pNode; pNode = pNode->next) {
 			CVehicle *pVehicle = (CVehicle *)pNode->item;
 			if(pVehicle && pVehicle->IsVehicle() && pVehicle->IsPlane()) {
-				Remove(pVehicle);
+				World_Remove(pVehicle);
 				// Destroy and release the plane without invoking C++ delete.
 				pVehicle->~CVehicle();
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				CPool_Delete(Pools_GetVehiclePool(), pVehicle);
 							}
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_VEHICLES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the vehicle without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), (CVehicle *)pEntity);
+			CPool_Delete(Pools_GetVehiclePool(), (CVehicle *)pEntity);
 					}
 	}
-	CPools::CheckPoolsEmpty();
+	Pools_CheckPoolsEmpty();
 }
 
 void
-CWorld::RepositionCertainDynamicObjects()
+World_RepositionCertainDynamicObjects()
 {
 		// Access raw storage through the C store or pool API
-	int32 i = CPool_GetSize(CPools::GetDummyPool());
+	int32 i = CPool_GetSize(Pools_GetDummyPool());
 		while(--i >= 0) {
 				// Access raw storage through the C store or pool API
-		CDummy *dummy = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
-				if(dummy) { RepositionOneObject(dummy); }
+		CDummy *dummy = ((CDummy*)CPool_GetSlot(Pools_GetDummyPool(), i));
+				if(dummy) { World_RepositionOneObject(dummy); }
 	}
 }
 
 void
-CWorld::RepositionOneObject(CEntity *pEntity)
+World_RepositionOneObject(CEntity *pEntity)
 {
 	int16 modelId = pEntity->GetModelIndex();
 	if (modelId == MI_PARKINGMETER || modelId == MI_PHONEBOOTH1 || modelId == MI_WASTEBIN ||
@@ -1718,7 +1714,7 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 		float fBoundingBoxMinZ = pColModel->boundingBox.min.z;
 		float fHeight = pColModel->boundingBox.max.z - pColModel->boundingBox.min.z;
 		if (fHeight < OBJECT_REPOSITION_OFFSET_Z) fHeight = OBJECT_REPOSITION_OFFSET_Z;
-		position.z = FindGroundZFor3DCoord(position.x, position.y,
+		position.z = World_FindGroundZFor3DCoord(position.x, position.y,
 			position.z + fHeight, nil) -
 			fBoundingBoxMinZ;
 		pEntity->GetMatrix().UpdateRW();
@@ -1743,7 +1739,7 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 			if (position.z < 1000.0f)
 				position = pEntity->GetMatrix() * position;
 		}
-		pEntity->GetMatrix().GetPosition().z = FindGroundZFor3DCoord(position.x, position.y, pEntity->GetMatrix().GetPosition().z + fHeight, nil) - fBoundingBoxMinZ;
+		pEntity->GetMatrix().GetPosition().z = World_FindGroundZFor3DCoord(position.x, position.y, pEntity->GetMatrix().GetPosition().z + fHeight, nil) - fBoundingBoxMinZ;
 		pEntity->GetMatrix().UpdateRW();
 		pEntity->UpdateRwFrame();
 		
@@ -1751,7 +1747,7 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 	if(modelId == MI_BUOY) {
 		bool bFound = true;
 		const CVector &position = pEntity->GetPosition();
-		float fGroundZ = FindGroundZFor3DCoord(position.x, position.y,
+		float fGroundZ = World_FindGroundZFor3DCoord(position.x, position.y,
 		                                               position.z + OBJECT_REPOSITION_OFFSET_Z, &bFound);
 		CColModel *pColModel = pEntity->GetColModel();
 		float fHeight = pColModel->boundingBox.max.z - pColModel->boundingBox.min.z;
@@ -1760,21 +1756,21 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 }
 
 void
-CWorld::SetCarsOnFire(float x, float y, float z, float radius, CEntity *reason)
+World_SetCarsOnFire(float x, float y, float z, float radius, CEntity *reason)
 {
 	// The C implementation picks the vehicles, starting the fire stays here
 	void *selected[NUMVEHICLES * 2];
-	int numSelected = World_SelectCarsToSetOnFire(CPools::GetVehiclePool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
+	int numSelected = World_SelectCarsToSetOnFire(Pools_GetVehiclePool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++)
 		FireManager_StartFireOn(&gFireManager, (CVehicle*)selected[s], reason, 0.8f, true);
 }
 
 void
-CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
+World_SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
 {
 	// The C implementation picks the peds, their reaction stays here
 	void *selected[NUMPEDS * 2];
-	int numSelected = World_SelectPedsToChoke(CPools::GetPedPool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
+	int numSelected = World_SelectPedsToChoke(Pools_GetPedPool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++) {
 		CPed *pPed = (CPed*)selected[s];
 		if (!pPed->IsPlayer())
@@ -1788,48 +1784,48 @@ CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
 }
 
 void
-CWorld::SetPedsOnFire(float x, float y, float z, float radius, CEntity *reason)
+World_SetPedsOnFire(float x, float y, float z, float radius, CEntity *reason)
 {
 	// The C implementation picks the peds, starting the fire stays here
 	void *selected[NUMPEDS * 2];
-	int numSelected = World_SelectPedsToSetOnFire(CPools::GetPedPool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
+	int numSelected = World_SelectPedsToSetOnFire(Pools_GetPedPool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
 	for(int s = 0; s < numSelected; s++)
 		FireManager_StartFireOn(&gFireManager, (CPed*)selected[s], reason, 0.8f, true);
 }
 
 void
-CWorld::RemoveStaticObjects()
+World_RemoveStaticObjects()
 {
 	for(int i = 0; i < NUMSECTORS_X * NUMSECTORS_Y; i++) {
-		CSector *pSector = GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
+		CSector *pSector = World_GetSector(i % NUMSECTORS_X, i / NUMSECTORS_Y);
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the static building without invoking C++ delete.
 			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
 			pEntity->~CEntity();
 			if(isTreadable)
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)pEntity);
+				CPool_Delete(Pools_GetTreadablePool(), (CTreadable *)pEntity);
 							else
 								// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)pEntity);
+				CPool_Delete(Pools_GetBuildingPool(), (CBuilding *)pEntity);
 						}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_OBJECTS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the static object without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), (CObject *)pEntity);
+			CPool_Delete(Pools_GetObjectPool(), (CObject *)pEntity);
 					}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_DUMMIES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
-			Remove(pEntity);
+			World_Remove(pEntity);
 			// Destroy and release the static dummy without invoking C++ delete.
 			pEntity->~CEntity();
 						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetDummyPool(), (CDummy *)pEntity);
+			CPool_Delete(Pools_GetDummyPool(), (CDummy *)pEntity);
 					}
 		PtrList_Flush(&pSector->m_lists[ENTITYLIST_BUILDINGS]);
 		PtrList_Flush(&pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
@@ -1839,13 +1835,13 @@ CWorld::RemoveStaticObjects()
 }
 
 void
-CWorld::Process(void)
+World_Process(void)
 {
 	if(!((*Timer_GetFrameCounter()) & 63)) References_PruneAllReferencesInWorld();
 
-	if(bProcessCutsceneOnly) {
+	if(World_bProcessCutsceneOnly) {
 		for(int i = 0; i < NUMCUTSCENEOBJECTS; i++) {
-			CCutsceneObject *csObj = CCutsceneMgr::GetCutsceneObject(i);
+			CCutsceneObject *csObj = CutsceneMgr_GetCutsceneObject(i);
 			if(csObj && csObj->m_entryInfoList.first) {
 				if(csObj->m_rwObject && RwObjectGetType(csObj->m_rwObject) == rpCLUMP &&
 				   RpAnimBlendClumpGetFirstAssociation(csObj->GetClump())) {
@@ -1867,7 +1863,7 @@ CWorld::Process(void)
 		RecordChase_ProcessControlCars(); // rouz edit (ChatGPT)
 		RecordChase_SaveOrRetrieveCarPositions(); // rouz edit (ChatGPT)
 	} else {
-		for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+		for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 			CEntity *movingEnt = (CEntity *)node->item;
 			if(!movingEnt->bRemoveFromWorld && movingEnt->m_rwObject && RwObjectGetType(movingEnt->m_rwObject) == rpCLUMP &&
 			   RpAnimBlendClumpGetFirstAssociation(movingEnt->GetClump())) {
@@ -1881,38 +1877,38 @@ CWorld::Process(void)
 				}
 			}
 		}
-		for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+		for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 			CPhysical *movingEnt = (CPhysical *)node->item;
 			if(movingEnt->bRemoveFromWorld) {
-				RemoveEntityInsteadOfProcessingIt(movingEnt);
+				World_RemoveEntityInsteadOfProcessingIt(movingEnt);
 			} else {
 				movingEnt->ProcessControl();
 				if(movingEnt->GetIsStatic()) { movingEnt->RemoveFromMovingList(); }
 			}
 		}
-		bForceProcessControl = true;
-		for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+		World_bForceProcessControl = true;
+		for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 			CPhysical *movingEnt = (CPhysical *)node->item;
 			if(movingEnt->bWasPostponed) {
 				if(movingEnt->bRemoveFromWorld) {
-					RemoveEntityInsteadOfProcessingIt(movingEnt);
+					World_RemoveEntityInsteadOfProcessingIt(movingEnt);
 				} else {
 					movingEnt->ProcessControl();
 					if(movingEnt->GetIsStatic()) { movingEnt->RemoveFromMovingList(); }
 				}
 			}
 		}
-		bForceProcessControl = false;
+		World_bForceProcessControl = false;
 		if(Replay_IsPlayingBack()) { // rouz edit (ChatGPT)
-			for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+			for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 				CEntity *movingEnt = (CEntity *)node->item;
 				movingEnt->bIsInSafePosition = true;
 				movingEnt->GetMatrix().UpdateRW();
 				movingEnt->UpdateRwFrame();
 			}
 		} else {
-			bNoMoreCollisionTorque = false;
-			for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+			World_bNoMoreCollisionTorque = false;
+			for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 				CEntity *movingEnt = (CEntity *)node->item;
 				if(!movingEnt->bIsInSafePosition) {
 					movingEnt->ProcessCollision();
@@ -1920,9 +1916,9 @@ CWorld::Process(void)
 					movingEnt->UpdateRwFrame();
 				}
 			}
-			bNoMoreCollisionTorque = true;
+			World_bNoMoreCollisionTorque = true;
 			for(int i = 0; i < 4; i++) {
-				for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+				for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 					CEntity *movingEnt = (CEntity *)node->item;
 					if(!movingEnt->bIsInSafePosition) {
 						movingEnt->ProcessCollision();
@@ -1931,7 +1927,7 @@ CWorld::Process(void)
 					}
 				}
 			}
-			for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+			for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 				CEntity *movingEnt = (CEntity *)node->item;
 				if(!movingEnt->bIsInSafePosition) {
 					movingEnt->bIsStuck = true;
@@ -1941,8 +1937,8 @@ CWorld::Process(void)
 					if(!movingEnt->bIsInSafePosition) { movingEnt->bIsStuck = true; }
 				}
 			}
-			bSecondShift = false;
-			for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+			World_bSecondShift = false;
+			for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 				CEntity *movingEnt = (CEntity *)node->item;
 				if(!movingEnt->bIsInSafePosition) {
 					movingEnt->ProcessShift();
@@ -1951,8 +1947,8 @@ CWorld::Process(void)
 					if(!movingEnt->bIsInSafePosition) { movingEnt->bIsStuck = true; }
 				}
 			}
-			bSecondShift = true;
-			for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+			World_bSecondShift = true;
+			for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 				CPhysical *movingEnt = (CPhysical *)node->item;
 				if(!movingEnt->bIsInSafePosition) {
 					movingEnt->ProcessShift();
@@ -1970,7 +1966,7 @@ CWorld::Process(void)
 				}
 			}
 		}
-		for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
+		for(CPtrNode *node = World_ms_listMovingEntityPtrs.first; node; node = node->next) {
 			CPed *movingPed = (CPed *)node->item;
 			if(movingPed->IsPed()) {
 								// Re-sync vehicle-carried peds after all vehicle collision movement has finished.
@@ -2033,18 +2029,18 @@ CWorld::Process(void)
 			}
 		}
 		Messages_Process();
-		Players[PlayerInFocus].Process();
+		World_Players[World_PlayerInFocus].Process();
 		RecordChase_SaveOrRetrieveCarPositions(); // rouz edit (ChatGPT)
 		if(((*Timer_GetFrameCounter()) & 7) == 1) {
-			RemoveFallenPeds();
+			World_RemoveFallenPeds();
 		} else if(((*Timer_GetFrameCounter()) & 7) == 5) {
-			RemoveFallenCars();
+			World_RemoveFallenCars();
 		}
 	}
 }
 
 void
-CWorld::TriggerExplosion(const CVector &position, float fRadius, float fPower, CEntity *pCreator,
+World_TriggerExplosion(const CVector &position, float fRadius, float fPower, CEntity *pCreator,
                          bool bProcessVehicleBombTimer)
 {
 	CVector2D vecStartPos(position.x - fRadius, position.y - fRadius);
@@ -2054,19 +2050,19 @@ CWorld::TriggerExplosion(const CVector &position, float fRadius, float fPower, C
 	World_SectorRangeClamped(vecStartPos.x, vecStartPos.y, vecEndPos.x, vecEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
-			CSector *pSector = GetSector(x, y);
-			TriggerExplosionSectorList(pSector->m_lists[ENTITYLIST_VEHICLES], position, fRadius,
+			CSector *pSector = World_GetSector(x, y);
+			World_TriggerExplosionSectorList(pSector->m_lists[ENTITYLIST_VEHICLES], position, fRadius,
 			                                   fPower, pCreator, bProcessVehicleBombTimer);
-			TriggerExplosionSectorList(pSector->m_lists[ENTITYLIST_PEDS], position, fRadius, fPower,
+			World_TriggerExplosionSectorList(pSector->m_lists[ENTITYLIST_PEDS], position, fRadius, fPower,
 			                                   pCreator, bProcessVehicleBombTimer);
-			TriggerExplosionSectorList(pSector->m_lists[ENTITYLIST_OBJECTS], position, fRadius,
+			World_TriggerExplosionSectorList(pSector->m_lists[ENTITYLIST_OBJECTS], position, fRadius,
 			                                   fPower, pCreator, bProcessVehicleBombTimer);
 		}
 	}
 }
 
 void
-CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, float fRadius, float fPower,
+World_TriggerExplosionSectorList(CPtrList &list, const CVector &position, float fRadius, float fPower,
                                    CEntity *pCreator, bool bProcessVehicleBombTimer)
 {
 	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
@@ -2083,7 +2079,7 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 					if(pEntity->IsObject()) {
 						if (fPower > pObject->m_fUprootLimit || IsFence(pObject->GetModelIndex())) {
 							if (IsGlass(pObject->GetModelIndex())) {
-								CGlass::WindowRespondsToExplosion(pObject, position);
+								Glass_WindowRespondsToExplosion(pObject, position);
 							} else {
 								pObject->SetIsStatic(false);
 								pObject->AddToMovingList();
@@ -2118,10 +2114,9 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 				if(!pEntity->GetIsStatic()) {
 					// Delegate the damage multiplier and the force of the explosion to the C implementation
 					float fDamageMultiplier = World_ExplosionDamageMultiplier(fRadius, fMagnitude);
-					const float distanceC[3] = { vecDistance.x, vecDistance.y, vecDistance.z };
-					float forceC[3];
-					World_ExplosionForce(distanceC, fPower, pEntity->m_fMass, fDamageMultiplier, fMagnitude, pEntity == FindPlayerPed(), forceC);
-					CVector vecForceDir(forceC[0], forceC[1], forceC[2]);
+					CVector forceC;
+					World_ExplosionForce(&vecDistance, fPower, pEntity->m_fMass, fDamageMultiplier, fMagnitude, pEntity == FindPlayerPed(), &forceC);
+					CVector vecForceDir(forceC.x, forceC.y, forceC.z);
 					pEntity->ApplyMoveForce(vecForceDir);
 					if(!pEntity->bPedPhysics) {
 						float fBoundRadius = pEntity->GetBoundRadius();
@@ -2135,7 +2130,7 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 					case ENTITY_TYPE_VEHICLE:
 						if(pEntity->GetStatus() == STATUS_SIMPLE) {
 							pEntity->SetStatus(STATUS_PHYSICS);
-							CCarCtrl::SwitchVehicleToRealPhysics(pVehicle);
+							CarCtrl_SwitchVehicleToRealPhysics(pVehicle);
 						}
 						pVehicle->InflictDamage(pCreator, WEAPONTYPE_EXPLOSION,
 						                        1100.0f * fDamageMultiplier);
@@ -2173,19 +2168,19 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 }
 
 void
-CWorld::UseDetonator(CEntity *pEntity)
+World_UseDetonator(CEntity *pEntity)
 {
 	// Delegate to the C implementation
-	World_UseDetonator(CPools::GetVehiclePool(), pEntity);
+	WorldLogic_UseDetonator(Pools_GetVehiclePool(), pEntity);
 	ProjectileInfo_RemoveDetonatorProjectiles();
 }
 
 bool
-CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float distance, int maxSteps)
+World_IsWanderPathClear(CVector const& point1, CVector const& point2, float distance, int maxSteps)
 {
 	if (General_AbsDiffAbove(point1.z, point2.z, distance))
 		return false;
-	if (!GetIsLineOfSightClear(point1, point2, true, false, false, false, false, false, false))
+	if (!World_GetIsLineOfSightClear(point1, point2, true, false, false, false, false, false, false))
 		return false;
 	CVector vecBetween = point2 - point1;
 	// Delegate the number of steps to the C implementation
@@ -2197,26 +2192,26 @@ CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float di
 	for (step = 1; step < nSteps; step++) {
 		CVector posThisStep = point1 + vecBetween * step;
 		float level;
-		if (!CWaterLevel::GetWaterLevel(posThisStep, &level, false))
+		if (!WaterLevel_GetWaterLevel(posThisStep, &level, false))
 			continue;
 		posThisStep.z = level;
-		AdvanceCurrentScanCode();
+		World_AdvanceCurrentScanCode();
 
 		CVector vecCheckedPos(posThisStep.x, posThisStep.y, World_HigherZ(point1.z, point2.z));
 		CColPoint colpoint;
 		CEntity* entity;
-		if (!ProcessVerticalLineSector(*GetSector(GetSectorIndexX(posThisStep.x), GetSectorIndexY(posThisStep.y)),
+		if (!World_ProcessVerticalLineSector(*World_GetSector(World_GetSectorIndexX(posThisStep.x), World_GetSectorIndexY(posThisStep.y)),
 			ColLine_Make(COLLISION_POINT_REF(posThisStep),COLLISION_POINT_REF(vecCheckedPos)), colpoint, entity, true, false, false, false, false, false, nil))
 			return false;
 	}
 
 	CVector posThisStep = point1;
-	AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	CVector vecCheckedPos(posThisStep.x, posThisStep.y, point1.z - 5.0f);
 
 	CColPoint colpoint;
 	CEntity* entity;
-	if (!ProcessVerticalLineSector(*GetSector(GetSectorIndexX(posThisStep.x), GetSectorIndexY(posThisStep.y)),
+	if (!World_ProcessVerticalLineSector(*World_GetSector(World_GetSectorIndexX(posThisStep.x), World_GetSectorIndexY(posThisStep.y)),
 		ColLine_Make(COLLISION_POINT_REF(posThisStep),COLLISION_POINT_REF(vecCheckedPos)), colpoint, entity, true, false, false, false, false, false, nil))
 		return false;
 
@@ -2224,9 +2219,9 @@ CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float di
 	for (step = 1; step < nSteps; step++) {
 		CVector posThisStep = point1 + vecBetween * step;
 		posThisStep.z = heightNextStep;
-		AdvanceCurrentScanCode();
+		World_AdvanceCurrentScanCode();
 		CVector vecCheckedPos(posThisStep.x, posThisStep.y, heightNextStep - 2.0f);
-		if (!ProcessVerticalLineSector(*GetSector(GetSectorIndexX(posThisStep.x), GetSectorIndexY(posThisStep.y)),
+		if (!World_ProcessVerticalLineSector(*World_GetSector(World_GetSectorIndexX(posThisStep.x), World_GetSectorIndexY(posThisStep.y)),
 			ColLine_Make(COLLISION_POINT_REF(posThisStep),COLLISION_POINT_REF(vecCheckedPos)), colpoint, entity, true, false, false, false, false, false, nil))
 			return false;
 		if (General_AbsDiffAbove(colpoint.point.z, heightNextStep, 1.0f))

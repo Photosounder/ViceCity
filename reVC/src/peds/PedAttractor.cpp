@@ -835,7 +835,7 @@ bool CPedAttractorManager::IsApproachable(C2dEffect* pEffect, const CMatrix& mat
 	if (pEffect->pedattr.type == ATTRACTOR_SHELTER) {
 		CVector pos;
 		ComputeEffectPos(pEffect, matrix, pos);
-		return CWorld::GetIsLineOfSightClear(pPed->GetPosition(), pos, true, false, false, false, false, false);
+		return World_GetIsLineOfSightClear(pPed->GetPosition(), pos, true, false, false, false, false, false);
 	}
 	CVector vecUseDir, vecEffectPos;
 	ComputeEffectUseDir(pEffect, matrix, vecUseDir);
@@ -844,7 +844,7 @@ bool CPedAttractorManager::IsApproachable(C2dEffect* pEffect, const CMatrix& mat
 	CVector pedPos = pPed->GetPosition();
 	CVector useDir;
 	if (PedAttractor_IsPedOnUsableSide(pEffect->pedattr.type, &vecUseDir.x, &vecEffectPos.x, &pedPos.x, &useDir.x) &&
-		CWorld::IsWanderPathClear(pPed->GetPosition(), vecEffectPos, 2.0f, 0))
+		World_IsWanderPathClear(pPed->GetPosition(), vecEffectPos, 2.0f, 0))
 		return true;
 	return false;
 }

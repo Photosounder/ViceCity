@@ -1071,7 +1071,7 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 			CColPoint point;
 			CEntity *entity;
 			
-			if ( !CWorld::ProcessVerticalLine(
+			if ( !World_ProcessVerticalLine(
 						pParticle->m_vecPosition + CVector(0.0f, 0.0f, 0.5f),
 						-100.0f, point, entity, true, true, false, false, true, false, nil) )
 			{
@@ -1096,7 +1096,7 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 		{
 			bool bZFound = false;
 
-			Z_Ground = CWorld::FindGroundZFor3DCoord(vecPos.x, vecPos.y, vecPos.z, (bool *)&bZFound);
+			Z_Ground = World_FindGroundZFor3DCoord(vecPos.x, vecPos.y, vecPos.z, (bool *)&bZFound);
 
 			if ( bZFound == false )
 				return nil;
@@ -1204,7 +1204,7 @@ void CParticle::Update()
 			
 			if ( psystem->m_Type == PARTICLE_WATERDROP )
 			{
-				if ( CGame::IsInInterior() || clearWaterDrop == true )
+				if ( Game_IsInInterior() || clearWaterDrop == true )
 				{
 					bRemoveParticle = true;
 					continue;
@@ -1320,7 +1320,7 @@ void CParticle::Update()
 				if ( numWaterDropOnScreen < nMaxDrops && numWaterDropOnScreen < 63
 					&& fDistToCam < 10.0f
 					&& clearWaterDrop == false
-					&& !CGame::IsInInterior() )
+					&& !Game_IsInInterior() )
 				{
 					CVector vecWaterdropTarget
 					(
@@ -1558,7 +1558,7 @@ void CParticle::Update()
 					CColPoint point;
 					CEntity *entity;
 
-					if ( CWorld::ProcessVerticalLine(particle->m_vecPosition, vecPos.z, point, entity, 
+					if ( World_ProcessVerticalLine(particle->m_vecPosition, vecPos.z, point, entity, 
 														true, true, false, false, true, false, nil) )
 					{
 						if ( vecPos.z <= point.point.z )
@@ -1658,7 +1658,7 @@ void CParticle::Update()
 						CColPoint point;
 						CEntity *entity;
 			
-						if ( CWorld::ProcessVerticalLine(particle->m_vecPosition, vecPos.z, point, entity,
+						if ( World_ProcessVerticalLine(particle->m_vecPosition, vecPos.z, point, entity,
 														true, false, false, false, true, false, nil) )
 						{
 							if ( vecPos.z <= point.point.z )

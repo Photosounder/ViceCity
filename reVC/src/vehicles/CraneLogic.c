@@ -110,19 +110,19 @@ static uint32_t MilitaryBit(uint32_t mi)
 	}
 }
 
-bool Cranes_DoesMilitaryCraneHaveThisOneAlready(uint32_t collected, uint32_t mi)
+bool CraneLogic_DoesMilitaryCraneHaveThisOneAlready(uint32_t collected, uint32_t mi)
 {
 	// Other models are never collected
 	return (collected & MilitaryBit(mi)) != 0;
 }
 
-void Cranes_RegisterCarForMilitaryCrane(uint32_t *collected, uint32_t mi)
+void CraneLogic_RegisterCarForMilitaryCrane(uint32_t *collected, uint32_t mi)
 {
 	// Set the bit of the model
 	*collected |= MilitaryBit(mi);
 }
 
-bool Cranes_HaveAllCarsBeenCollectedByMilitaryCrane(uint32_t collected)
+bool CraneLogic_HaveAllCarsBeenCollectedByMilitaryCrane(uint32_t collected)
 {
 	// All seven bits
 	return (collected & 0x7F) == 0x7F;

@@ -8,20 +8,20 @@
 void TimeBars_PrepareFont(void)
 {
     // Preserve the original ordered font state setup
-    CFont::SetBackgroundOff();
-    CFont::SetBackgroundColor(CRGBA(0, 0, 0, 128));
-    CFont::SetScale(0.48f, 1.12f);
-    CFont::SetCentreOff();
-    CFont::SetJustifyOff();
-    CFont::SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
-    CFont::SetRightJustifyOff();
-    CFont::SetPropOn();
-    CFont::SetFontStyle(FONT_STANDARD);
+    Font_SetBackgroundOff();
+    Font_SetBackgroundColor(CRGBA(0, 0, 0, 128));
+    Font_SetScale(0.48f, 1.12f);
+    Font_SetCentreOff();
+    Font_SetJustifyOff();
+    Font_SetWrapx(SCREEN_STRETCH_X(DEFAULT_SCREEN_WIDTH));
+    Font_SetRightJustifyOff();
+    Font_SetPropOn();
+    Font_SetFontStyle(FONT_STANDARD);
 }
 void TimeBars_SetTextColor(void)
 {
     // Select the original opaque white text color
-    CFont::SetColor(CRGBA(255, 255, 255, 255));
+    Font_SetColor(CRGBA(255, 255, 255, 255));
 }
 bool TimeBars_IsVisible(void)
 {
@@ -31,7 +31,7 @@ bool TimeBars_IsVisible(void)
 void TimeBars_Print(float y, uint16_t *text)
 {
     // Scale the original screen coordinates at each print
-    CFont::PrintString(RsGlobal.maximumWidth * (4.0f / DEFAULT_SCREEN_WIDTH), RsGlobal.maximumHeight * (y / DEFAULT_SCREEN_HEIGHT), text);
+    Font_PrintString(RsGlobal.maximumWidth * (4.0f / DEFAULT_SCREEN_WIDTH), RsGlobal.maximumHeight * (y / DEFAULT_SCREEN_HEIGHT), text);
 }
 #endif
 //- rouz edit (ChatGPT)

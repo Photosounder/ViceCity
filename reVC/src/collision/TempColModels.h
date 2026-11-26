@@ -2,23 +2,28 @@
 
 #include "ColModel.h"
 
-class CTempColModels
-{
-public:
-	static CColModel ms_colModelPed1;
-	static CColModel ms_colModelPed2;
-	static CColModel ms_colModelBBox;
-	static CColModel ms_colModelBumper1;
-	static CColModel ms_colModelWheel1;	
-	static CColModel ms_colModelPanel1;
-	static CColModel ms_colModelBodyPart2;
-	static CColModel ms_colModelBodyPart1;
-	static CColModel ms_colModelCutObj[5];
-	static CColModel ms_colModelPedGroundHit;
-	static CColModel ms_colModelBoot1;
-	static CColModel ms_colModelDoor1;
-	static CColModel ms_colModelBonnet1;
-	static CColModel ms_colModelWeapon;
-
-	static void Initialise(void);
-};
+//+ rouz edit (Claude)
+// Formerly the static class CTempColModels, now C globals and functions shared with C
+#ifdef __cplusplus
+extern "C" {
+#endif
+void TempColModels_Initialise(void);
+#ifdef __cplusplus
+}
+// Members that C cannot declare yet (references, default arguments, overloads, C++ class values), with C++ linkage
+extern CColModel TempColModels_ms_colModelPed1;
+extern CColModel TempColModels_ms_colModelPed2;
+extern CColModel TempColModels_ms_colModelBBox;
+extern CColModel TempColModels_ms_colModelBumper1;
+extern CColModel TempColModels_ms_colModelWheel1;
+extern CColModel TempColModels_ms_colModelPanel1;
+extern CColModel TempColModels_ms_colModelBodyPart2;
+extern CColModel TempColModels_ms_colModelBodyPart1;
+extern CColModel TempColModels_ms_colModelCutObj[5];
+extern CColModel TempColModels_ms_colModelPedGroundHit;
+extern CColModel TempColModels_ms_colModelBoot1;
+extern CColModel TempColModels_ms_colModelDoor1;
+extern CColModel TempColModels_ms_colModelBonnet1;
+extern CColModel TempColModels_ms_colModelWeapon;
+#endif
+//- rouz edit (Claude)

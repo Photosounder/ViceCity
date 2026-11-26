@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include <stdint.h>
 #include "Lists.h"
@@ -10,18 +11,18 @@ extern "C" {
 #endif
 // World bookkeeping that walks entity lists and pools using the C views of the entity objects
 void World_ClearScanCodesInList(CPtrList *list);
-void World_SetAllCarsCanBeDamaged(const CPool *vehiclePool, bool toggle);
-void World_StopAllLawEnforcersInTheirTracks(const CPool *vehiclePool);
+void WorldLogic_SetAllCarsCanBeDamaged(const CPool *vehiclePool, bool toggle);
+void WorldLogic_StopAllLawEnforcersInTheirTracks(const CPool *vehiclePool);
 // Collect entities of a sector list within a radius, the scan code stops an entity being visited twice per query
 void World_FindObjectsInRangeInList(CPtrList *list, uint16_t scanCode, float cx, float cy, float cz, float radius, bool ignoreZ, int16_t *numObjects, int16_t lastObject, void **objects);
 void World_FindObjectsOfTypeInRangeInList(uint32_t modelId, CPtrList *list, uint16_t scanCode, float px, float py, float pz, float radius, bool check2DOnly, int16_t *numFound, int16_t maxToFind, void **entities);
 
 // Queries that use the bounding radius of the entity model
-void World_FindObjectsIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const float start[3], const float end[3], int16_t *numIntersecting, int16_t maxToFind, void **entities);
+void World_FindObjectsIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const CVector *start, const CVector *end, int16_t *numIntersecting, int16_t maxToFind, void **entities);
 void World_FindObjectsKindaCollidingInList(CPtrList *list, uint16_t scanCode, float px, float py, float pz, float radius, bool check2DOnly, int16_t *numColliding, int16_t maxToFind, void **entities);
 
 // Same as the cube query but only for mission entities of the list kind: vehicles, peds or objects
-void World_FindMissionEntitiesIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const float start[3], const float end[3], int16_t *numIntersecting, int16_t maxToFind, void **entities, bool isVehicleList, bool isPedList);
+void World_FindMissionEntitiesIntersectingCubeInList(CPtrList *list, uint16_t scanCode, const CVector *start, const CVector *end, int16_t *numIntersecting, int16_t maxToFind, void **entities, bool isVehicleList, bool isPedList);
 
 // Selectors for the area and fire loops: they only decide which entities are affected, the caller applies the effects in the returned order
 int World_SelectPedsToClearFromArea(const CPool *pedPool, float x1, float y1, float z1, float x2, float y2, float z2, void **out, int maxOut);
@@ -33,7 +34,7 @@ void World_CallOffChaseForVehiclesInList(CPtrList *list, uint16_t scanCode, floa
 int World_SelectFallenPeds(const CPool *pedPool, float lowLimit, void **out, int *action, int maxOut);
 int World_SelectFallenCars(const CPool *vehiclePool, float lowLimit, const void *playerVehicle, void **out, int *action, int maxOut);
 // Blow up every vehicle whose remote bomb was planted by the entity, the detonator projectiles are removed by the caller
-void World_UseDetonator(const CPool *vehiclePool, void *entity);
+void WorldLogic_UseDetonator(const CPool *vehiclePool, void *entity);
 // Forget every reference peds and objects hold to a deleted entity, the vehicles are handled by the caller
 void World_RemoveRefsToDeletedFromPeds(const CPool *pedPool, void *deleted);
 void World_RemoveRefsToDeletedFromObjects(const CPool *objectPool, void *deleted);
@@ -57,7 +58,7 @@ int World_SectorStreamRing(int32_t dx, int32_t dy);
 // Damage multiplier of an explosion at a distance from its centre, from the radius and the distance: it fades with the distance and is at most 1
 float World_ExplosionDamageMultiplier(float radius, float magnitude);
 // Force an explosion pushes an entity with, from the vector from the centre to the entity, the power, the mass of the entity, the damage multiplier, the distance and whether the entity is the player: it never pulls down and the player is pushed up by at most 1
-void World_ExplosionForce(const float distance[3], float power, float mass, float damageMultiplier, float magnitude, bool isPlayer, float force[3]);
+void World_ExplosionForce(const CVector *distance, float power, float mass, float damageMultiplier, float magnitude, bool isPlayer, CVector *force);
 // Height at which an explosion pushes a body turning it, from the height of the centre above the entity and the bound radius of the entity: limited to the bound radius on either side
 float World_ExplosionTurnPointZ(float distanceZ, float boundRadius);
 // Number of steps used to test a wander path: the larger of the length of the path and the wanted number of steps, truncated

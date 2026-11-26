@@ -38,13 +38,13 @@ int32_t * Wanted_BackendEvaded(void)
 CPool * Wanted_BackendPedPool(void)
 {
     // Access only the original typed native primitive at its original policy access point
-    return CPools::GetPedPool();
+    return Pools_GetPedPool();
 }
 
 CPool * Wanted_BackendVehiclePool(void)
 {
     // Access only the original typed native primitive at its original policy access point
-    return CPools::GetVehiclePool();
+    return Pools_GetVehiclePool();
 }
 
 int16_t Wanted_BackendPedModel(CPed *ped)

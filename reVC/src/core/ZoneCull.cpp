@@ -40,21 +40,21 @@ extern "C" CPool *
 CullZonesHost_BuildingPool(void)
 {
     // Read the original typed game input at its existing access point
-    return CPools::GetBuildingPool();
+    return Pools_GetBuildingPool();
 }
 
 extern "C" CPool *
 CullZonesHost_TreadablePool(void)
 {
     // Read the original typed game input at its existing access point
-    return CPools::GetTreadablePool();
+    return Pools_GetTreadablePool();
 }
 
 extern "C" CPool *
 CullZonesHost_VehiclePool(void)
 {
     // Read the original typed game input at its existing access point
-    return CPools::GetVehiclePool();
+    return Pools_GetVehiclePool();
 }
 
 extern "C" CEntity *

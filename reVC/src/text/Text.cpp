@@ -13,7 +13,7 @@ bool Text_BackendRussianGame(void)
 {
     // Query the original native locale flag only at its original short-circuit position
 #ifdef MORE_LANGUAGES
-    return CGame::russianGame;
+    return Game_russianGame;
 #else
     return false;
 #endif
@@ -22,7 +22,7 @@ bool Text_BackendJapaneseGame(void)
 {
     // Query the original native locale flag only after the original Russian-language test
 #ifdef MORE_LANGUAGES
-    return CGame::japaneseGame;
+    return Game_japaneseGame;
 #else
     return false;
 #endif

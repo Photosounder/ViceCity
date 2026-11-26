@@ -6,17 +6,17 @@
 void VarConsole_BackendColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetColor(CRGBA(r,g,b,a));
+    Font_SetColor(CRGBA(r,g,b,a));
 }
 void VarConsole_BackendStyle(void)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetFontStyle(FONT_STANDARD);
+    Font_SetFontStyle(FONT_STANDARD);
 }
 void VarConsole_BackendScale(float x,float y)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetScale(x,y);
+    Font_SetScale(x,y);
 }
 float VarConsole_BackendScaleX(float value)
 {
@@ -31,27 +31,27 @@ float VarConsole_BackendScaleY(float value)
 void VarConsole_BackendShadowPosition(int16_t position)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetDropShadowPosition(position);
+    Font_SetDropShadowPosition(position);
 }
 void VarConsole_BackendShadowColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetDropColor(CRGBA(r,g,b,a));
+    Font_SetDropColor(CRGBA(r,g,b,a));
 }
 void VarConsole_BackendProp(void)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 void VarConsole_BackendWrap(float x)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetWrapx(x);
+    Font_SetWrapx(x);
 }
 void VarConsole_BackendRightWrap(float x)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetRightJustifyWrap(x);
+    Font_SetRightJustifyWrap(x);
 }
 void VarConsole_BackendUnicode(const char *source,uint16_t *target)
 {
@@ -61,32 +61,32 @@ void VarConsole_BackendUnicode(const char *source,uint16_t *target)
 void VarConsole_BackendRightOn(void)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetRightJustifyOn();
+    Font_SetRightJustifyOn();
 }
 void VarConsole_BackendRightOff(void)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetRightJustifyOff();
+    Font_SetRightJustifyOff();
 }
 void VarConsole_BackendPrint(float x,float y,uint16_t *text)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::PrintString(x,y,text);
+    Font_PrintString(x,y,text);
 }
 void VarConsole_BackendBackgroundOn(void)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetBackgroundOn();
+    Font_SetBackgroundOn();
 }
 void VarConsole_BackendBackgroundOff(void)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 void VarConsole_BackendBackgroundColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
     // Preserve the actual typed native font or second-pad operation
-    CFont::SetBackgroundColor(CRGBA(r,g,b,a));
+    Font_SetBackgroundColor(CRGBA(r,g,b,a));
 }
 bool VarConsole_BackendDPadDownJustDown(void)
 {

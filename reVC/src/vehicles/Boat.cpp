@@ -204,7 +204,7 @@ CBoat::ProcessControl(void)
 	case STATUS_SIMPLE:
 		m_bIsAnchored = false;
 		m_fOrientation = INVALID_ORIENTATION;
-		CCarAI::UpdateCarAI(this);
+		CarAI_UpdateCarAI(this);
 		CPhysical::ProcessControl();
 		bBoatInWater = true;
 		bPropellerInWater = true;
@@ -213,8 +213,8 @@ CBoat::ProcessControl(void)
 	case STATUS_PHYSICS:
 		m_bIsAnchored = false;
 		m_fOrientation = INVALID_ORIENTATION;
-		CCarAI::UpdateCarAI(this);
-		CCarCtrl::SteerAICarWithPhysics(this);
+		CarAI_UpdateCarAI(this);
+		CarCtrl_SteerAICarWithPhysics(this);
 		break;
 	case STATUS_ABANDONED:
 	case STATUS_WRECKED:
@@ -399,7 +399,7 @@ CBoat::ProcessControl(void)
 			float steerSin, steerCos;
 			Boat_SteerSinCos(m_fSteerAngle, steerFactor, &steerSin, &steerCos);
 			float waterLevel;
-			CWaterLevel::GetWaterLevel(propellerWorld, &waterLevel, true);
+			WaterLevel_GetWaterLevel(propellerWorld, &waterLevel, true);
 			if(propellerWorld.z-0.5f < waterLevel){
 				// Delegate the depth of the propeller to the C implementation
 				float propellerDepth = Boat_PropellerDepth(waterLevel, propellerWorld.z);
@@ -560,7 +560,7 @@ CBoat::ProcessControl(void)
 			static float lifeMult = 1000.0f;
 			static float lifeBase = 300.0f;
 			splashDir.z += 0.0003f*m_nDeltaVolumeUnderWater;
-			CWaterLevel::GetWaterLevel(splashPos, &waterLevel, true);
+			WaterLevel_GetWaterLevel(splashPos, &waterLevel, true);
 			if(splashPos.z-waterLevel < 3.0f &&
 			   CVisibilityPlugins::GetDistanceSquaredFromCamera(&splashPos) < SQR(70.0f * TheCamera.GenerationDistMultiplier)){
 				splashPos.z = waterLevel + 0.1f;
@@ -586,7 +586,7 @@ CBoat::ProcessControl(void)
 			if(AutoPilot.m_nCarMission == MISSION_CRUISE)
 				splashDir *= 1.5f;
 			splashDir.z += 0.0003f*m_nDeltaVolumeUnderWater;
-			CWaterLevel::GetWaterLevel(splashPos, &waterLevel, true);
+			WaterLevel_GetWaterLevel(splashPos, &waterLevel, true);
 			if(splashPos.z-waterLevel < 3.0f &&
 			   CVisibilityPlugins::GetDistanceSquaredFromCamera(&splashPos) < SQR(70.0f * TheCamera.GenerationDistMultiplier)){
 				splashPos.z = waterLevel + 0.1f;
@@ -636,7 +636,7 @@ CBoat::ProcessControl(void)
 			CVector splashDir(0.0f, 0.0f, 0.25f*speed);
 			CVector splashPos = GetPosition();
 			float level;
-			CWaterLevel::GetWaterLevel(splashPos, &level, true);
+			WaterLevel_GetWaterLevel(splashPos, &level, true);
 			splashPos.z = level;
 			CParticleObject::AddObject(POBJECT_CAR_WATER_SPLASH, splashPos, splashDir, 0.0f, 65, splashColor, true);
 		}
@@ -780,7 +780,7 @@ CBoat::BlowUpCar(CEntity *culprit)
 		return;
 
 	// Allocate the flying boat component without invoking C++ new.
-	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObjectPool *objectPool = Pools_GetObjectPool();
 		// Access raw storage through the C store or pool API
 	obj = ((CObject*)CPool_New(objectPool));
 	#ifdef FIX_BUGS
@@ -792,7 +792,7 @@ CBoat::BlowUpCar(CEntity *culprit)
 					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
 								// Access raw storage through the C store or pool API
 				int32 handle = CPool_GetIndex(objectPool, existing);
-								CWorld::Remove(existing);
+								World_Remove(existing);
 				existing->~CObject();
 								// Access raw storage through the C store or pool API
 				CPool_Delete(objectPool, existing);
@@ -852,7 +852,7 @@ CBoat::BlowUpCar(CEntity *culprit)
 		dist += GetUp();
 	obj->GetMatrix().GetPosition() += dist;
 
-	CWorld::Add(obj);
+	World_Add(obj);
 
 	atomic = nil;
 	RwFrameForAllObjects(m_aBoatNodes[BOAT_MOVING], GetBoatAtomicObjectCB, &atomic);
@@ -1178,12 +1178,12 @@ CBoat::RenderWaterOutPolys(void)
 void
 CBoat::Teleport(CVector v)
 {
-	CWorld::Remove(this);
+	World_Remove(this);
 	SetPosition(v);
 	SetOrientation(0.0f, 0.0f, 0.0f);
 	SetMoveSpeed(0.0f, 0.0f, 0.0f);
 	SetTurnSpeed(0.0f, 0.0f, 0.0f);
-	CWorld::Add(this);
+	World_Add(this);
 }
 
 // unused
@@ -1274,9 +1274,9 @@ CBoat::FillBoatList()
 	if(camDist > 0.0f)
 		camFwd /= camDist;
 		// Access raw storage through the C store or pool API
-	for (int i = CPool_GetSize(CPools::GetVehiclePool()) - 1; i >= 0; i--) {
+	for (int i = CPool_GetSize(Pools_GetVehiclePool()) - 1; i >= 0; i--) {
 		// Access raw storage through the C store or pool API
-		CBoat *boat = (CBoat *)(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)));
+		CBoat *boat = (CBoat *)(((CVehicle*)CPool_GetSlot(Pools_GetVehiclePool(), i)));
 			if (boat && boat->m_vehType == VEHICLE_TYPE_BOAT) {
 			if (boat->m_nNumWakePoints != 0) {
 				CVector2D camToBoat = CVector2D(boat->GetPosition()) - camPos;

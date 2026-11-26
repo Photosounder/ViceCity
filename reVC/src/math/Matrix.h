@@ -128,6 +128,9 @@ class CCompressedMatrix : public CCompressedMatrixNotAligned
 
 static_assert(sizeof(CMatrix) == sizeof(CMatrixData), "CMatrix must hold no data beyond CMatrixData so C sees the same layout");
 #else
-typedef struct CMatrixData CMatrix;
+// The C view of CMatrix has the same fields as CMatrixData under the struct tag CMatrix, which older C headers already declare
+typedef struct CMatrix {
+	CMATRIXDATA_FIELDS
+} CMatrix;
 #endif
 //- rouz edit (Claude)

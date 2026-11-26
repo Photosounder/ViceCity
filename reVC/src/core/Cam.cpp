@@ -49,22 +49,19 @@ int nPreviousMode = -1;
 static CVector
 NormalisedDifference(const CVector &a, const CVector &b)
 {
-	float aIn[3] = { a.x, a.y, a.z };
-	float bIn[3] = { b.x, b.y, b.z };
-	float out[3];
+	CVector out;
 
-	Camera_NormalisedDifference(aIn, bIn, out);
-	return CVector(out[0], out[1], out[2]);
+	Camera_NormalisedDifference(&a, &b, &out);
+	return CVector(out.x, out.y, out.z);
 }
 
 static CVector
 NormalisedHorizontal(const CVector &v)
 {
-	float in[3] = { v.x, v.y, v.z };
-	float out[3];
+	CVector out;
 
-	General_NormalisedHorizontal(in, out);
-	return CVector(out[0], out[1], out[2]);
+	General_NormalisedHorizontal(&v, &out);
+	return CVector(out.x, out.y, out.z);
 }
 
 void
@@ -414,7 +411,7 @@ CCam::ProcessSpecialHeightRoutines(void)
 	BetaAngle = General_GetATanOfXY(CamToTarget.x, CamToTarget.y);
 	m_bTheHeightFixerVehicleIsATrain = false;
 	// CGeneral::GetATanOfXY(TheCamera.GetForward().x, TheCamera.GetForward().y);
-	Player = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+	Player = World_Players[World_PlayerInFocus].m_pPed;
 
 	if(DistOnGround > 10.0f)
 		DistOnGround = 10.0f;
@@ -498,7 +495,7 @@ CCam::ProcessSpecialHeightRoutines(void)
 				Camera_OrbitOffset(TestDist, BetaAngle, &probeX, &probeY);
 				TestPoint = TestBase - CVector(probeX, probeY, TestDist * 0.0f);
 			}
-			if(CWorld::ProcessLineOfSight(CamTargetEntity->GetPosition(), TestPoint, colPoint, vehicle, false, true, false, false, false, false) &&
+			if(World_ProcessLineOfSight(CamTargetEntity->GetPosition(), TestPoint, colPoint, vehicle, false, true, false, false, false, false) &&
 			   vehicle->IsVehicle()){
 				float height = CollisionVector_ToNative(Box_GetSize(&vehicle->GetColModel()->boundingBox)).z;
 				FoundCar = true;
@@ -513,7 +510,7 @@ CCam::ProcessSpecialHeightRoutines(void)
 				Camera_OrbitOffset(TestDist, BetaAngle+DEGTORAD(28.0f), &probeX, &probeY);
 				TestPoint = TestBase - CVector(probeX, probeY, TestDist * 0.0f);
 			}
-			if(CWorld::ProcessLineOfSight(CamTargetEntity->GetPosition(), TestPoint, colPoint, vehicle, false, true, false, false, false, false) &&
+			if(World_ProcessLineOfSight(CamTargetEntity->GetPosition(), TestPoint, colPoint, vehicle, false, true, false, false, false, false) &&
 			   vehicle->IsVehicle()){
 				float height = CollisionVector_ToNative(Box_GetSize(&vehicle->GetColModel()->boundingBox)).z;
 				if(FoundCar){
@@ -532,7 +529,7 @@ CCam::ProcessSpecialHeightRoutines(void)
 				Camera_OrbitOffset(TestDist, BetaAngle-DEGTORAD(28.0f), &probeX, &probeY);
 				TestPoint = TestBase - CVector(probeX, probeY, TestDist * 0.0f);
 			}
-			if(CWorld::ProcessLineOfSight(CamTargetEntity->GetPosition(), TestPoint, colPoint, vehicle, false, true, false, false, false, false) &&
+			if(World_ProcessLineOfSight(CamTargetEntity->GetPosition(), TestPoint, colPoint, vehicle, false, true, false, false, false, false) &&
 			   vehicle->IsVehicle()){
 				float height = CollisionVector_ToNative(Box_GetSize(&vehicle->GetColModel()->boundingBox)).z;
 				if(FoundCar){
@@ -596,9 +593,8 @@ CCam::LookBehind(void)
 		// Delegate the orientation of the target to the C implementation
 		{
 			CVector tf = CamTargetEntity->GetForward();
-			float tfIn[3] = { tf.x, tf.y, tf.z };
 
-			TargetOrientation = Camera_TargetForwardOrientation(tfIn);
+			TargetOrientation = Camera_TargetForwardOrientation(&tf);
 		}
 		DeltaBeta = TargetOrientation - Beta;
 		// Delegate the wrap of the angle to the C implementation
@@ -688,9 +684,8 @@ CCam::LookLeft(void)
 		// Delegate the orientation of the target to the C implementation
 		{
 			CVector tf = CamTargetEntity->GetForward();
-			float tfIn[3] = { tf.x, tf.y, tf.z };
 
-			TargetOrientation = Camera_TargetForwardOrientation(tfIn);
+			TargetOrientation = Camera_TargetForwardOrientation(&tf);
 		}
 		// Delegate the offset on the orbit to the C implementation
 		{
@@ -739,12 +734,8 @@ CCam::LookLeft(void)
 		{
 			CVector u = CamTargetEntity->GetUp();
 			CVector f = CamTargetEntity->GetForward();
-			float uIn[3] = { u.x, u.y, u.z }, fIn[3] = { f.x, f.y, f.z };
-			float uOut[3], fOut[3];
 
-			Camera_SideFront(uIn, fIn, true, uOut, fOut);
-			Up = CVector(uOut[0], uOut[1], uOut[2]);
-			Front = CVector(fOut[0], fOut[1], fOut[2]);
+			Camera_SideFront(&u, &f, true, &Up, &Front);
 		}
 		if(((CVehicle*)CamTargetEntity)->GetVehicleAppearance() == VEHICLE_APPEARANCE_BIKE)
 			Source -= 1.45f*Front;
@@ -774,9 +765,8 @@ CCam::LookRight(void)
 		// Delegate the orientation of the target to the C implementation
 		{
 			CVector tf = CamTargetEntity->GetForward();
-			float tfIn[3] = { tf.x, tf.y, tf.z };
 
-			TargetOrientation = Camera_TargetForwardOrientation(tfIn);
+			TargetOrientation = Camera_TargetForwardOrientation(&tf);
 		}
 		// Delegate the offset on the orbit to the C implementation
 		{
@@ -825,12 +815,8 @@ CCam::LookRight(void)
 		{
 			CVector u = CamTargetEntity->GetUp();
 			CVector f = CamTargetEntity->GetForward();
-			float uIn[3] = { u.x, u.y, u.z }, fIn[3] = { f.x, f.y, f.z };
-			float uOut[3], fOut[3];
 
-			Camera_SideFront(uIn, fIn, false, uOut, fOut);
-			Up = CVector(uOut[0], uOut[1], uOut[2]);
-			Front = CVector(fOut[0], fOut[1], fOut[2]);
+			Camera_SideFront(&u, &f, false, &Up, &Front);
 		}
 		if(((CVehicle*)CamTargetEntity)->GetVehicleAppearance() == VEHICLE_APPEARANCE_BIKE)
 			Source -= 1.45f*Front;
@@ -849,7 +835,7 @@ CCam::ClipIfPedInFrontOfPlayer(void)
 	// unused: TheCamera.pTargetEntity->GetPosition() - TheCamera.GetGameCamPosition();
 
 	FwdAngle = General_GetATanOfXY(TheCamera.GetForward().x, TheCamera.GetForward().y);
-	Player = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+	Player = World_Players[World_PlayerInFocus].m_pPed;
 	while(ped < Player->m_numNearPeds && !found)
 		if(Player->m_nearPeds[ped] && Player->m_nearPeds[ped]->GetPedState() != PED_DEAD)
 			found = true;
@@ -904,7 +890,7 @@ CCam::IsTargetInWater(const CVector &CamCoors)
 {
 	if(CamTargetEntity){
 		float WaterZ = -6000.0f;
-		CWaterLevel::GetWaterLevel(CamTargetEntity->GetPosition(), &WaterZ, false);
+		WaterLevel_GetWaterLevel(CamTargetEntity->GetPosition(), &WaterZ, false);
 		// Delegate the test to the C implementation
 		if(CamTargetEntity->IsPed()){
 			if(CameraMath_IsTargetUnderWater(((CPed*)CamTargetEntity)->bIsDrowning, ((CPed*)CamTargetEntity)->bIsInWater, CamTargetEntity->GetPosition().z, WaterZ))
@@ -1125,7 +1111,7 @@ CCam::Process_FollowPed(const CVector &CameraTarget, float TargetOrientation, fl
 
 	// Figure out if and where we want to rotate
 
-	if(CPad::GetPad(0)->ForceCameraBehindPlayer() && !CPickups::PlayerOnWeaponPickup || Shooting){
+	if(CPad::GetPad(0)->ForceCameraBehindPlayer() && !Pickups_PlayerOnWeaponPickup || Shooting){
 
 		// Center cam behind player
 
@@ -1158,7 +1144,7 @@ CCam::Process_FollowPed(const CVector &CameraTarget, float TargetOrientation, fl
 
 	int MoveState = ((CPed*)CamTargetEntity)->m_nMoveState;
 	if(MoveState != PEDMOVE_NONE && MoveState != PEDMOVE_STILL &&
-	   !(CPad::GetPad(0)->ForceCameraBehindPlayer() && !CPickups::PlayerOnWeaponPickup) && !Shooting){
+	   !(CPad::GetPad(0)->ForceCameraBehindPlayer() && !Pickups_PlayerOnWeaponPickup) && !Shooting){
 		Rotating = false;
 		if(TheCamera.m_fAvoidTheGeometryProbsTimer <= fAvoidGeomThreshhold)
 			BetaSpeed = 0.0f;
@@ -1470,24 +1456,24 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 
 	// Delegate the direction to the C implementation
 	{
-		float frontXYZ[3];
-		Camera_FrontFromAngles(Alpha, Beta, frontXYZ);
-		Front.x = frontXYZ[0];
-		Front.y = frontXYZ[1];
-		Front.z = frontXYZ[2];
+		CVector frontXYZ;
+		Camera_FrontFromAngles(Alpha, Beta, &frontXYZ);
+		Front.x = frontXYZ.x;
+		Front.y = frontXYZ.y;
+		Front.z = frontXYZ.z;
 	}
 	Source = TargetCoors - Front*CamDist;
 	m_cvecTargetCoorsForFudgeInter = TargetCoors;
 
 	// Clip Source and fix near clip
-	CWorld::pIgnoreEntity = CamTargetEntity;
+	World_pIgnoreEntity = CamTargetEntity;
 	entity = nil;
-	if(CWorld::ProcessLineOfSight(TargetCoors, Source, colPoint, entity, true, true, true, true, false, false, true)){
+	if(World_ProcessLineOfSight(TargetCoors, Source, colPoint, entity, true, true, true, true, false, false, true)){
 		float PedColDist = (TargetCoors - CollisionVector_ToNative(colPoint.point)).Magnitude();
 		float ColCamDist = CamDist - PedColDist;
 		if(entity->IsPed() && ColCamDist > DEFAULT_NEAR + 0.1f){
 			// Ped in the way but not clipping through
-			if(CWorld::ProcessLineOfSight(CollisionVector_ToNative(colPoint.point), Source, colPoint, entity, true, true, true, true, false, false, true)){
+			if(World_ProcessLineOfSight(CollisionVector_ToNative(colPoint.point), Source, colPoint, entity, true, true, true, true, false, false, true)){
 				PedColDist = (TargetCoors - CollisionVector_ToNative(colPoint.point)).Magnitude();
 				Source = CollisionVector_ToNative(colPoint.point);
 				if(PedColDist < DEFAULT_NEAR + 0.3f)
@@ -1501,13 +1487,13 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 				RwCameraSetNearClipPlane(Scene.camera, Camera_NearClipNearPed(PedColDist));
 		}
 	}
-	CWorld::pIgnoreEntity = nil;
+	World_pIgnoreEntity = nil;
 
 	// Delegate the width of the view plane to the C implementation shared with the avoidance of the geometry
 	float ViewPlaneWidth = Camera_AvoidViewPlaneWidth(FOV, Draw_CalculateAspectRatio(), fTweakFOV);
 	float Near = RwCameraGetNearClipPlane(Scene.camera);
 	float radius = ViewPlaneWidth*Near;
-	entity = CWorld::TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
+	entity = World_TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
 	int i = 0;
 	while(entity){
 		CVector CamToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - Source;
@@ -1531,7 +1517,7 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 		radius = ViewPlaneWidth*Near;
 #endif
 		// Keep testing
-		entity = CWorld::TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
+		entity = World_TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
 
 		i++;
 		if(i > 5)
@@ -1706,7 +1692,7 @@ CCam::WorkOutCamHeight(const CVector &TargetCoors, float TargetOrientation, floa
 		CVector Test = Source;
 		// Delegate the height of the test point to the C implementation
 		Test.z = Camera_HeliTestHeight(TargetCoors.z, Length, CarAlpha, AlphaOffset, m_fCloseInCarHeightOffset);
-		if(CWorld::ProcessVerticalLine(Test, CamTargetEntity->GetPosition().z, point, entity, true, false, false, false, false, false, nil)){
+		if(World_ProcessVerticalLine(Test, CamTargetEntity->GetPosition().z, point, entity, true, false, false, false, false, false, nil)){
 			// Delegate the angle above the ground to the C implementation
 			CarAlpha = Camera_AngleAboveGround(point.point.z, TargetCoors.z, m_fCloseInCarHeightOffset, Length, AlphaOffset);
 			if(CarAlpha < 0.0f)
@@ -1875,7 +1861,7 @@ CCam::Process_Cam_On_A_String(const CVector &CameraTarget, float TargetOrientati
 
 	m_cvecTargetCoorsForFudgeInter = TargetCoors;
 	CVector OrigSource = Source;
-	if(CWorld::GetIsLineOfSightClear(CamTargetEntity->GetPosition(), m_cvecTargetCoorsForFudgeInter, true, false, false, true, false, false, true))
+	if(World_GetIsLineOfSightClear(CamTargetEntity->GetPosition(), m_cvecTargetCoorsForFudgeInter, true, false, false, true, false, false, true))
 		TheCamera.AvoidTheGeometry(OrigSource, m_cvecTargetCoorsForFudgeInter, Source, FOV);
 	else
 		TheCamera.AvoidTheGeometry(OrigSource, CamTargetEntity->GetPosition(), Source, FOV);
@@ -1901,11 +1887,9 @@ CCam::Process_Cam_On_A_String(const CVector &CameraTarget, float TargetOrientati
 		Front.Normalise();
 		// Delegate the up vector of the camera to the C implementation
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float upC[3] = { Up.x, Up.y, Up.z };
-			float newUpC[3];
-			Camera_PerpendicularUp(frontC, upC, false, newUpC);
-			Up = CVector(newUpC[0], newUpC[1], newUpC[2]);
+			CVector newUpC;
+			Camera_PerpendicularUp(&Front, &Up, false, &newUpC);
+			Up = CVector(newUpC.x, newUpC.y, newUpC.z);
 		}
 	}else{
 		// Delegate the roll to the C implementation
@@ -1921,19 +1905,15 @@ CCam::Process_Cam_On_A_String(const CVector &CameraTarget, float TargetOrientati
 		WellBufferMe(TargetRoll, &f_Roll, &f_rollSpeed, 0.15f, 0.07f, false);
 		// Delegate the up vector to the C implementation
 		{
-			float rollUp[3];
-			Camera_UpFromRoll(f_Roll, rollUp);
-			Up = CVector(rollUp[0], rollUp[1], rollUp[2]);
+			Camera_UpFromRoll(f_Roll, &Up);
 		}
 		Up.Normalise();
 		Front.Normalise();
 		// Delegate the up vector of the camera to the C implementation
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float upC[3] = { Up.x, Up.y, Up.z };
-			float newUpC[3];
-			Camera_PerpendicularUp(frontC, upC, true, newUpC);
-			Up = CVector(newUpC[0], newUpC[1], newUpC[2]);
+			CVector newUpC;
+			Camera_PerpendicularUp(&Front, &Up, true, &newUpC);
+			Up = CVector(newUpC.x, newUpC.y, newUpC.z);
 		}
 	}
 
@@ -1993,7 +1973,7 @@ CCam::FixCamWhenObscuredByVehicle(const CVector &TargetCoors)
 	CEntity *entity = nil;
 
 	float HeightTarget = 0.0f;
-	if(CWorld::ProcessLineOfSight(TargetCoors, Source, colPoint, entity, false, true, false, false, false, false, false)){
+	if(World_ProcessLineOfSight(TargetCoors, Source, colPoint, entity, false, true, false, false, false, false, false)){
 		CBaseModelInfo *mi = ((CBaseModelInfo*)ModelRegistry_Get(entity->GetModelIndex())); // rouz edit (ChatGPT)
 		HeightTarget = mi->GetColModel()->boundingBox.max.z + 1.0f + TargetCoors.z - Source.z;
 		if(HeightTarget < 0.0f)
@@ -2043,14 +2023,14 @@ CCam::Process_TopDown(const CVector &CameraTarget, float TargetOrientation, floa
 	TestSource = Source;
 	TestTarget = TestSource;
 	TestTarget.z = Target.z;
-	if(CWorld::ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false)){
+	if(World_ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false)){
 		if(Source.z < colPoint.point.z+3.0f)
 			HeightTarget = colPoint.point.z+3.0f - Source.z;
 	}else{
 		TestSource = Source;
 		TestTarget = TestSource;
 		TestTarget.z += 10.0f;
-		if(CWorld::ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false))
+		if(World_ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false))
 			if(Source.z < colPoint.point.z+3.0f)
 				HeightTarget = colPoint.point.z+3.0f - Source.z;
 	}
@@ -2085,7 +2065,7 @@ CCam::AvoidWallsTopDownPed(const CVector &TargetCoors, const CVector &Offset, fl
 	TestPoint2 = TargetCoors + Offset;
 	TestPoint1 = TargetCoors;
 	TestPoint1.z = TestPoint2.z;
-	if(CWorld::ProcessLineOfSight(TestPoint1, TestPoint2, colPoint, entity, true, false, false, false, false, false, false)){
+	if(World_ProcessLineOfSight(TestPoint1, TestPoint2, colPoint, entity, true, false, false, false, false, false, false)){
 		// What is this even?
 		dy = TestPoint1.y - colPoint.point.y;
 		// Delegate to the C implementation
@@ -2177,7 +2157,7 @@ CCam::Process_TopDownPed(const CVector &CameraTarget, float TargetOrientation, f
 	TestSource = TargetCoors + CVector(0.0f, -1.0f, 9.0f);
 	TestTarget = TestSource;
 	TestTarget.z = TargetCoors.z;
-	if(CWorld::ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false)){
+	if(World_ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false)){
 		if(TargetCoors.z+9.0f+HeightTarget < colPoint.point.z+3.0f)
 			HeightTarget = colPoint.point.z+3.0f - (TargetCoors.z+9.0f);
 	}else{
@@ -2185,7 +2165,7 @@ CCam::Process_TopDownPed(const CVector &CameraTarget, float TargetOrientation, f
 		TestTarget = TestSource;
 		TestSource.z += HeightTarget;
 		TestTarget.z = TestSource.z + 10.0f;
-		if(CWorld::ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false)){
+		if(World_ProcessLineOfSight(TestTarget, TestSource, colPoint, entity, true, false, false, false, false, false, false)){
 			if(TargetCoors.z+9.0f+HeightTarget < colPoint.point.z+3.0f)
 				HeightTarget = colPoint.point.z+3.0f - (TargetCoors.z+9.0f);
 		}
@@ -2298,43 +2278,43 @@ CCam::Process_Rocket(const CVector &CameraTarget, float, float, float)
 
 	// Delegate the point in the direction of the look to the C implementation
 	{
-		float lookPoint[3];
-		Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, lookPoint);
-		TargetCoors.x = lookPoint[0];
-		TargetCoors.y = lookPoint[1];
-		TargetCoors.z = lookPoint[2];
+		CVector lookPoint;
+		Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, &lookPoint);
+		TargetCoors.x = lookPoint.x;
+		TargetCoors.y = lookPoint.y;
+		TargetCoors.z = lookPoint.z;
 	}
 	// Delegate the direction to the C implementation
 	Front = NormalisedDifference(TargetCoors, Source);
 	Source += Front*0.4f;
 
 	if(m_bCollisionChecksOn){
-		if(!CWorld::GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
+		if(!World_GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
 			RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 			FailedTestTwelveFramesAgo = true;
 		}else{
 			CVector TestPoint;
 			// Delegate the point in the direction of the look to the C implementation
 			{
-				float lookPoint[3];
-				Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-				TestPoint.x = lookPoint[0];
-				TestPoint.y = lookPoint[1];
-				TestPoint.z = lookPoint[2];
+				CVector lookPoint;
+				Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+				TestPoint.x = lookPoint.x;
+				TestPoint.y = lookPoint.y;
+				TestPoint.z = lookPoint.z;
 			}
-			if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+			if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 				RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 				FailedTestTwelveFramesAgo = true;
 			}else{
 				// Delegate the point in the direction of the look to the C implementation
 				{
-					float lookPoint[3];
-					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-					TestPoint.x = lookPoint[0];
-					TestPoint.y = lookPoint[1];
-					TestPoint.z = lookPoint[2];
+					CVector lookPoint;
+					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+					TestPoint.x = lookPoint.x;
+					TestPoint.y = lookPoint.y;
+					TestPoint.z = lookPoint.z;
 				}
-				if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+				if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 					RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 					FailedTestTwelveFramesAgo = true;
 				}else
@@ -2507,43 +2487,43 @@ CCam::Process_M16_1stPerson(const CVector &CameraTarget, float, float, float)
 
 		// Delegate the point in the direction of the look to the C implementation
 		{
-			float lookPoint[3];
-			Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, lookPoint);
-			TargetCoors.x = lookPoint[0];
-			TargetCoors.y = lookPoint[1];
-			TargetCoors.z = lookPoint[2];
+			CVector lookPoint;
+			Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, &lookPoint);
+			TargetCoors.x = lookPoint.x;
+			TargetCoors.y = lookPoint.y;
+			TargetCoors.z = lookPoint.z;
 		}
 		// Delegate the direction to the C implementation
 		Front = NormalisedDifference(TargetCoors, Source);
 		Source += Front*0.4f;
 
 		if(m_bCollisionChecksOn){
-			if(!CWorld::GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
+			if(!World_GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
 				RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 				FailedTestTwelveFramesAgo = true;
 			}else{
 				CVector TestPoint;
 				// Delegate the point in the direction of the look to the C implementation
 				{
-					float lookPoint[3];
-					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-					TestPoint.x = lookPoint[0];
-					TestPoint.y = lookPoint[1];
-					TestPoint.z = lookPoint[2];
+					CVector lookPoint;
+					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+					TestPoint.x = lookPoint.x;
+					TestPoint.y = lookPoint.y;
+					TestPoint.z = lookPoint.z;
 				}
-				if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+				if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 					RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 					FailedTestTwelveFramesAgo = true;
 				}else{
 					// Delegate the point in the direction of the look to the C implementation
 					{
-						float lookPoint[3];
-						Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-						TestPoint.x = lookPoint[0];
-						TestPoint.y = lookPoint[1];
-						TestPoint.z = lookPoint[2];
+						CVector lookPoint;
+						Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+						TestPoint.x = lookPoint.x;
+						TestPoint.y = lookPoint.y;
+						TestPoint.z = lookPoint.z;
 					}
-					if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+					if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 						RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 						FailedTestTwelveFramesAgo = true;
 					}else
@@ -2639,43 +2619,43 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 
 		// Delegate the point in the direction of the look to the C implementation
 		{
-			float lookPoint[3];
-			Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, lookPoint);
-			TargetCoors.x = lookPoint[0];
-			TargetCoors.y = lookPoint[1];
-			TargetCoors.z = lookPoint[2];
+			CVector lookPoint;
+			Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, &lookPoint);
+			TargetCoors.x = lookPoint.x;
+			TargetCoors.y = lookPoint.y;
+			TargetCoors.z = lookPoint.z;
 		}
 		// Delegate the direction to the C implementation
 		Front = NormalisedDifference(TargetCoors, Source);
 		Source += Front*0.4f;
 
 		if(m_bCollisionChecksOn){
-			if(!CWorld::GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
+			if(!World_GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
 				RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 				FailedTestTwelveFramesAgo = true;
 			}else{
 				CVector TestPoint;
 				// Delegate the point in the direction of the look to the C implementation
 				{
-					float lookPoint[3];
-					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-					TestPoint.x = lookPoint[0];
-					TestPoint.y = lookPoint[1];
-					TestPoint.z = lookPoint[2];
+					CVector lookPoint;
+					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+					TestPoint.x = lookPoint.x;
+					TestPoint.y = lookPoint.y;
+					TestPoint.z = lookPoint.z;
 				}
-				if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+				if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 					RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 					FailedTestTwelveFramesAgo = true;
 				}else{
 					// Delegate the point in the direction of the look to the C implementation
 					{
-						float lookPoint[3];
-						Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-						TestPoint.x = lookPoint[0];
-						TestPoint.y = lookPoint[1];
-						TestPoint.z = lookPoint[2];
+						CVector lookPoint;
+						Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+						TestPoint.x = lookPoint.x;
+						TestPoint.y = lookPoint.y;
+						TestPoint.z = lookPoint.z;
 					}
-					if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+					if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 						RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 						FailedTestTwelveFramesAgo = true;
 					}else
@@ -2805,11 +2785,11 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 
 			// Delegate the point in the direction of the look to the C implementation
 			{
-				float lookPoint[3];
-				Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, lookPoint);
-				TargetCoors.x = lookPoint[0];
-				TargetCoors.y = lookPoint[1];
-				TargetCoors.z = lookPoint[2];
+				CVector lookPoint;
+				Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, &lookPoint);
+				TargetCoors.x = lookPoint.x;
+				TargetCoors.y = lookPoint.y;
+				TargetCoors.z = lookPoint.z;
 			}
 			// Delegate the direction to the C implementation
 			Front = NormalisedDifference(TargetCoors, Source);
@@ -2838,14 +2818,13 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 		Up = matrix->GetUp();
 		Up.Normalise();
 		// Delegate the right and up vectors of the camera to the C implementation
-		float rightC[3], UpC[3];
+		CVector rightC;
+		CVector UpC;
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float inUpC[3] = { Up.x, Up.y, Up.z };
-			Camera_RightAndUp(frontC, inUpC, true, rightC, UpC);
+			Camera_RightAndUp(&Front, &Up, true, &rightC, &UpC);
 		}
-		CVector Right = CVector(rightC[0], rightC[1], rightC[2]);
-		Up = CVector(UpC[0], UpC[1], UpC[2]);
+		CVector Right = CVector(rightC.x, rightC.y, rightC.z);
+		Up = CVector(UpC.x, UpC.y, UpC.z);
 	}
 
 	ResetStatics = false;
@@ -2975,11 +2954,11 @@ CCam::Process_1rstPersonPedOnPC(const CVector&, float TargetOrientation, float, 
 
 		// Delegate the point in the direction of the look to the C implementation
 		{
-			float lookPoint[3];
-			Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, lookPoint);
-			TargetCoors.x = lookPoint[0];
-			TargetCoors.y = lookPoint[1];
-			TargetCoors.z = lookPoint[2];
+			CVector lookPoint;
+			Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, &lookPoint);
+			TargetCoors.x = lookPoint.x;
+			TargetCoors.y = lookPoint.y;
+			TargetCoors.z = lookPoint.z;
 		}
 		// Delegate the direction to the C implementation
 		Front = NormalisedDifference(TargetCoors, Source);
@@ -3095,11 +3074,11 @@ CCam::Process_Sniper(const CVector &CameraTarget, float TargetOrientation, float
 
 	// Delegate the point in the direction of the look to the C implementation
 	{
-		float lookPoint[3];
-		Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, lookPoint);
-		TargetCoors.x = lookPoint[0];
-		TargetCoors.y = lookPoint[1];
-		TargetCoors.z = lookPoint[2];
+		CVector lookPoint;
+		Camera_LookPoint(Alpha, Beta, Source.x, Source.y, Source.z, &lookPoint);
+		TargetCoors.x = lookPoint.x;
+		TargetCoors.y = lookPoint.y;
+		TargetCoors.z = lookPoint.z;
 	}
 
 	UseMouse = false;
@@ -3144,32 +3123,32 @@ CCam::Process_Sniper(const CVector &CameraTarget, float TargetOrientation, float
 	Source += Front*0.4f;
 
 	if(m_bCollisionChecksOn){
-		if(!CWorld::GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
+		if(!World_GetIsLineOfSightClear(TargetCoors, Source, true, true, false, true, false, true, true)){
 			RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 			FailedTestTwelveFramesAgo = true;
 		}else{
 			CVector TestPoint;
 			// Delegate the point in the direction of the look to the C implementation
 			{
-				float lookPoint[3];
-				Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-				TestPoint.x = lookPoint[0];
-				TestPoint.y = lookPoint[1];
-				TestPoint.z = lookPoint[2];
+				CVector lookPoint;
+				Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta + DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+				TestPoint.x = lookPoint.x;
+				TestPoint.y = lookPoint.y;
+				TestPoint.z = lookPoint.z;
 			}
-			if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+			if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 				RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 				FailedTestTwelveFramesAgo = true;
 			}else{
 				// Delegate the point in the direction of the look to the C implementation
 				{
-					float lookPoint[3];
-					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, lookPoint);
-					TestPoint.x = lookPoint[0];
-					TestPoint.y = lookPoint[1];
-					TestPoint.z = lookPoint[2];
+					CVector lookPoint;
+					Camera_LookPoint(Alpha - DEGTORAD(20.0f), Beta - DEGTORAD(35.0f), Source.x, Source.y, Source.z, &lookPoint);
+					TestPoint.x = lookPoint.x;
+					TestPoint.y = lookPoint.y;
+					TestPoint.z = lookPoint.z;
 				}
-				if(!CWorld::GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
+				if(!World_GetIsLineOfSightClear(TestPoint, Source, true, true, false, true, false, true, true)){
 					RwCameraSetNearClipPlane(Scene.camera, 0.4f);
 					FailedTestTwelveFramesAgo = true;
 				}else
@@ -3277,8 +3256,8 @@ CCam::Process_Syphon(const CVector &CameraTarget, float, float, float)
 	if(!PlayerTooClose){
 		CColPoint point;
 		CEntity *entity = nil;
-		CWorld::pIgnoreEntity = CamTargetEntity;
-		if(CWorld::ProcessLineOfSight(TheCamera.m_cvecAimingTargetCoors, Source, point, entity, true, false, false, true, false, false, true)){
+		World_pIgnoreEntity = CamTargetEntity;
+		if(World_ProcessLineOfSight(TheCamera.m_cvecAimingTargetCoors, Source, point, entity, true, false, false, true, false, false, true)){
 			CVector TestFront = TheCamera.m_cvecAimingTargetCoors - Source;
 			TestFront.Normalise();
 			CVector CamToPlayer = CameraTarget - Source;
@@ -3291,7 +3270,7 @@ CCam::Process_Syphon(const CVector &CameraTarget, float, float, float)
 				PlayerToTarget.Normalise();
 				CVector Center = TheCamera.m_cvecAimingTargetCoors - ColDist*PlayerToTarget;
 				float Radius = (CollisionVector_ToNative(point.point) - Center).Magnitude();
-				if(CWorld::TestSphereAgainstWorld(Center, Radius, nil, true, false, false, true, false, true)){
+				if(World_TestSphereAgainstWorld(Center, Radius, nil, true, false, false, true, false, true)){
 					CVector LineToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - Center;
 					LineToCol -= DotProduct(LineToCol, PlayerToTarget)*PlayerToTarget;
 					// unused
@@ -3316,7 +3295,7 @@ CCam::Process_Syphon(const CVector &CameraTarget, float, float, float)
 				}
 			}
 		}
-		CWorld::pIgnoreEntity = nil;
+		World_pIgnoreEntity = nil;
 	}
 
 	Front = TheCamera.m_cvecAimingTargetCoors - Source;
@@ -3428,7 +3407,7 @@ CCam::Process_BehindBoat(const CVector &CameraTarget, float TargetOrientation, f
 	}else if(DirectionWasLooking != LOOKING_FORWARD)
 		Beta = TargetOrientation;
 
-	if(!CWaterLevel::GetWaterLevelNoWaves(TargetCoors.x, TargetCoors.y, TargetCoors.z, &WaterLevel))
+	if(!WaterLevel_GetWaterLevelNoWaves(TargetCoors.x, TargetCoors.y, TargetCoors.z, &WaterLevel))
 		WaterLevel = TargetCoors.z - 0.5f;
 	if(ResetStatics){
 		WaterLevelBuffered = WaterLevel;
@@ -3530,19 +3509,15 @@ CCam::Process_BehindBoat(const CVector &CameraTarget, float TargetOrientation, f
 	WellBufferMe(TargetRoll, &f_Roll, &f_rollSpeed, 0.15f, 0.07f, false);
 	// Delegate the up vector to the C implementation
 	{
-		float rollUp[3];
-		Camera_UpFromRoll(f_Roll, rollUp);
-		Up = CVector(rollUp[0], rollUp[1], rollUp[2]);
+		Camera_UpFromRoll(f_Roll, &Up);
 	}
 	Up.Normalise();
 	Front.Normalise();
 	// Delegate the up vector of the camera to the C implementation
 	{
-		const float frontC[3] = { Front.x, Front.y, Front.z };
-		const float upC[3] = { Up.x, Up.y, Up.z };
-		float newUpC[3];
-		Camera_PerpendicularUp(frontC, upC, true, newUpC);
-		Up = CVector(newUpC[0], newUpC[1], newUpC[2]);
+		CVector newUpC;
+		Camera_PerpendicularUp(&Front, &Up, true, &newUpC);
+		Up = CVector(newUpC.x, newUpC.y, newUpC.z);
 	}
 
 	ResetStatics = false;
@@ -3728,11 +3703,9 @@ CCam::Process_FlyBy(const CVector&, float, float, float)
 		Front = NormalisedDifference(Front, Source);
 		// Delegate the up vector of the camera to the C implementation
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float upC[3] = { Up.x, Up.y, Up.z };
-			float newUpC[3];
-			Camera_PerpendicularUp(frontC, upC, false, newUpC);
-			Up = CVector(newUpC[0], newUpC[1], newUpC[2]);
+			CVector newUpC;
+			Camera_PerpendicularUp(&Front, &Up, false, &newUpC);
+			Up = CVector(newUpC.x, newUpC.y, newUpC.z);
 		}
 	}else if(uiTime >= uiFinishTime){
 		// end
@@ -3759,11 +3732,9 @@ CCam::Process_FlyBy(const CVector&, float, float, float)
 		Front = NormalisedDifference(Front, Source);
 		// Delegate the up vector of the camera to the C implementation
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float upC[3] = { Up.x, Up.y, Up.z };
-			float newUpC[3];
-			Camera_PerpendicularUp(frontC, upC, false, newUpC);
-			Up = CVector(newUpC[0], newUpC[1], newUpC[2]);
+			CVector newUpC;
+			Camera_PerpendicularUp(&Front, &Up, false, &newUpC);
+			Up = CVector(newUpC.x, newUpC.y, newUpC.z);
 		}
 	}
 	FOV = PsuedoFOV;
@@ -3805,14 +3776,13 @@ CCam::Process_WheelCam(const CVector&, float, float, float)
 	}else if(CamTargetEntity->IsVehicle() && ((CVehicle*)CamTargetEntity)->IsBoat()){
 		NewUp = CVector(0.0f, 0.0f, 1.0f);
 		// Delegate the right and up vectors of the camera to the C implementation
-		float rightC[3], NewUpC[3];
+		CVector rightC;
+		CVector NewUpC;
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float inUpC[3] = { NewUp.x, NewUp.y, NewUp.z };
-			Camera_RightAndUp(frontC, inUpC, true, rightC, NewUpC);
+			Camera_RightAndUp(&Front, &NewUp, true, &rightC, &NewUpC);
 		}
-		Right = CVector(rightC[0], rightC[1], rightC[2]);
-		NewUp = CVector(NewUpC[0], NewUpC[1], NewUpC[2]);
+		Right = CVector(rightC.x, rightC.y, rightC.z);
+		NewUp = CVector(NewUpC.x, NewUpC.y, NewUpC.z);
 
 		CVector BoatCamPos(0.0f, 0.0f, 0.0f);
 		if(((CVehicle*)CamTargetEntity)->pDriver){
@@ -3832,14 +3802,13 @@ CCam::Process_WheelCam(const CVector&, float, float, float)
 	}else if(CamTargetEntity->IsVehicle() && ((CVehicle*)CamTargetEntity)->IsBike()){
 		NewUp = CVector(0.0f, 0.0f, 1.0f);
 		// Delegate the right and up vectors of the camera to the C implementation
-		float rightC[3], NewUpC[3];
+		CVector rightC;
+		CVector NewUpC;
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float inUpC[3] = { NewUp.x, NewUp.y, NewUp.z };
-			Camera_RightAndUp(frontC, inUpC, true, rightC, NewUpC);
+			Camera_RightAndUp(&Front, &NewUp, true, &rightC, &NewUpC);
 		}
-		Right = CVector(rightC[0], rightC[1], rightC[2]);
-		NewUp = CVector(NewUpC[0], NewUpC[1], NewUpC[2]);
+		Right = CVector(rightC.x, rightC.y, rightC.z);
+		NewUp = CVector(NewUpC.x, NewUpC.y, NewUpC.z);
 
 		WheelPos.z += fWheelCamCarXOffset - fWheelCamBikeXOffset;
 		Source = CamTargetEntity->GetPosition();
@@ -3849,14 +3818,11 @@ CCam::Process_WheelCam(const CVector&, float, float, float)
 	}else{
 		NewUp = CVector(0.0f, 0.0f, 1.0f);
 		// Delegate the right and up vectors of the camera to the C implementation
-		float rightC[3], NewUpC[3];
+		CVector NewUpC;
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float inUpC[3] = { NewUp.x, NewUp.y, NewUp.z };
-			Camera_RightAndUp(frontC, inUpC, true, rightC, NewUpC);
+			Camera_RightAndUp(&Front, &NewUp, true, &Right, &NewUpC);
 		}
-		Right = CVector(rightC[0], rightC[1], rightC[2]);
-		NewUp = CVector(NewUpC[0], NewUpC[1], NewUpC[2]);
+		NewUp = CVector(NewUpC.x, NewUpC.y, NewUpC.z);
 	}
 
 	// Delegate the roll of the wheel camera to the C implementation
@@ -3866,9 +3832,9 @@ CCam::Process_WheelCam(const CVector&, float, float, float)
 
 	CEntity *entity = nil;
 	CColPoint point;
-	CWorld::pIgnoreEntity = CamTargetEntity;
-	bool blocked = CWorld::ProcessLineOfSight(Source, CamTargetEntity->GetPosition(), point, entity, true, false, false, true, false, false, true);
-	CWorld::pIgnoreEntity = nil;
+	World_pIgnoreEntity = CamTargetEntity;
+	bool blocked = World_ProcessLineOfSight(Source, CamTargetEntity->GetPosition(), point, entity, true, false, false, true, false, false, true);
+	World_pIgnoreEntity = nil;
 	return !blocked;
 }
 
@@ -3890,11 +3856,7 @@ CCam::Process_Fixed(const CVector &CameraTarget, float, float, float)
 
 	// Delegate the up vector of the fixed camera to the C implementation
 	{
-		const float frontC[3] = { Front.x, Front.y, Front.z };
-		const float offsetC[3] = { m_cvecCamFixedModeUpOffSet.x, m_cvecCamFixedModeUpOffSet.y, m_cvecCamFixedModeUpOffSet.z };
-		float upC[3];
-		Camera_FixedModeUp(frontC, offsetC, upC);
-		Up = CVector(upC[0], upC[1], upC[2]);
+		Camera_FixedModeUp(&Front, &m_cvecCamFixedModeUpOffSet, &Up);
 	}
 
 	FOV = DefaultFOV;
@@ -3902,7 +3864,7 @@ CCam::Process_Fixed(const CVector &CameraTarget, float, float, float)
 		FOV = TheCamera.m_fFovForTrain;
 
 	float WaterZ = 0.0f;
-	if(CWaterLevel::GetWaterLevel(Source, &WaterZ, true) && Source.z < WaterZ){
+	if(WaterLevel_GetWaterLevel(Source, &WaterZ, true) && Source.z < WaterZ){
 		// Delegate the luminance of the water to the C implementation
 		float WaterLum = Camera_WaterLuminance(TimeCycle_GetWaterRed(), TimeCycle_GetWaterGreen(), TimeCycle_GetWaterBlue());
 		if(WaterLum > BOAT_UNDERWATER_CAM_COLORMAG_LIMIT){
@@ -3969,11 +3931,7 @@ CCam::Process_LightHouse(const CVector &CameraTarget, float, float, float)
 
 	// Delegate the up vector of the fixed camera to the C implementation
 	{
-		const float frontC[3] = { Front.x, Front.y, Front.z };
-		const float offsetC[3] = { m_cvecCamFixedModeUpOffSet.x, m_cvecCamFixedModeUpOffSet.y, m_cvecCamFixedModeUpOffSet.z };
-		float upC[3];
-		Camera_FixedModeUp(frontC, offsetC, upC);
-		Up = CVector(upC[0], upC[1], upC[2]);
+		Camera_FixedModeUp(&Front, &m_cvecCamFixedModeUpOffSet, &Up);
 	}
 
 	FOV = DefaultFOV;
@@ -3994,7 +3952,7 @@ CCam::Process_Player_Fallen_Water(const CVector &CameraTarget, float TargetOrien
 	m_cvecTargetCoorsForFudgeInter = CameraTarget;
 	// Delegate the direction to the C implementation
 	Front = NormalisedDifference(CameraTarget, Source);
-	if(CWorld::ProcessLineOfSight(CameraTarget, Source, colPoint, entity, true, false, false, true, false, true, true))
+	if(World_ProcessLineOfSight(CameraTarget, Source, colPoint, entity, true, false, false, true, false, true, true))
 		Source = CollisionVector_ToNative(colPoint.point);
 	GetVectorsReadyForRW();
 	// Delegate the direction to the C implementation
@@ -4016,12 +3974,11 @@ CCam::Process_SpecialFixedForSyphon(const CVector &CameraTarget, float, float, f
 
 	// Delegate the up and front vectors of the syphon camera to the C implementation
 	{
-		float upC[3] = { Up.x, Up.y, Up.z };
-		float frontC[3] = { Front.x, Front.y, Front.z };
-		const float offsetC[3] = { m_cvecCamFixedModeUpOffSet.x, m_cvecCamFixedModeUpOffSet.y, m_cvecCamFixedModeUpOffSet.z };
-		Camera_SyphonBasis(upC, offsetC, frontC);
-		Up = CVector(upC[0], upC[1], upC[2]);
-		Front = CVector(frontC[0], frontC[1], frontC[2]);
+		CVector upC(Up.x, Up.y, Up.z);
+		CVector frontC(Front.x, Front.y, Front.z);
+		Camera_SyphonBasis(&upC, &m_cvecCamFixedModeUpOffSet, &frontC);
+		Up = CVector(upC.x, upC.y, upC.z);
+		Front = CVector(frontC.x, frontC.y, frontC.z);
 	}
 	FOV = DefaultFOV;
 }
@@ -4055,11 +4012,11 @@ CCam::Process_Debug(const CVector&, float, float, float)
 
 	// Delegate the point to look at to the C implementation
 	{
-		float debugTarget[3];
-		Camera_DebugTarget(Alpha, Beta, Source.x, Source.y, Source.z, 3.0f, debugTarget);
-		TargetCoors.x = debugTarget[0];
-		TargetCoors.y = debugTarget[1];
-		TargetCoors.z = debugTarget[2];
+		CVector debugTarget;
+		Camera_DebugTarget(Alpha, Beta, Source.x, Source.y, Source.z, 3.0f, &debugTarget);
+		TargetCoors.x = debugTarget.x;
+		TargetCoors.y = debugTarget.y;
+		TargetCoors.z = debugTarget.z;
 	}
 
 	// Delegate the limits of the angle to the C implementation
@@ -4093,17 +4050,17 @@ CCam::Process_Debug(const CVector&, float, float, float)
 		if(FindPlayerVehicle())
 			FindPlayerVehicle()->Teleport(Source);
 		else
-			CWorld::Players[CWorld::PlayerInFocus].m_pPed->SetPosition(Source);
+			World_Players[World_PlayerInFocus].m_pPed->SetPosition(Source);
 	}
 
 	// stay inside sectors
-	while(CWorld::GetSectorX(Source.x) > NUMSECTORS_X-5.0f)
+	while(World_GetSectorX(Source.x) > NUMSECTORS_X-5.0f)
 		Source.x -= 1.0f;
-	while(CWorld::GetSectorX(Source.x) < 5.0f)
+	while(World_GetSectorX(Source.x) < 5.0f)
 		Source.x += 1.0f;
-	while(CWorld::GetSectorY(Source.y) > NUMSECTORS_X-5.0f)
+	while(World_GetSectorY(Source.y) > NUMSECTORS_X-5.0f)
 		Source.y -= 1.0f;
-	while(CWorld::GetSectorY(Source.y) < 5.0f)
+	while(World_GetSectorY(Source.y) < 5.0f)
 		Source.y += 1.0f;
 	GetVectorsReadyForRW();
 
@@ -4118,7 +4075,7 @@ CCam::Process_Debug(const CVector&, float, float, float)
 			12.0f, 0.0f, 0.0f, -12.0f,
 			128, 128, 128, 128, 1000.0f, false, 1.0f, nil, false);
 
-	if(CHud::m_Wants_To_Draw_Hud){
+	if(Hud_m_Wants_To_Draw_Hud){
 		char str[256];
 		sprintf(str, "CamX: %f CamY: %f  CamZ:  %f", Source.x, Source.y, Source.z);
 		sprintf(str, "Frontx: %f, Fronty: %f, Frontz: %f ", Front.x, Front.y, Front.z);
@@ -4139,11 +4096,11 @@ CCam::Process_Debug(const CVector&, float, float, float)
 
 	// Delegate the point to look at to the C implementation
 	{
-		float debugTarget[3];
-		Camera_DebugTarget(Alpha, Beta, Source.x, Source.y, Source.z, 3.0f, debugTarget);
-		TargetCoors.x = debugTarget[0];
-		TargetCoors.y = debugTarget[1];
-		TargetCoors.z = debugTarget[2];
+		CVector debugTarget;
+		Camera_DebugTarget(Alpha, Beta, Source.x, Source.y, Source.z, 3.0f, &debugTarget);
+		TargetCoors.x = debugTarget.x;
+		TargetCoors.y = debugTarget.y;
+		TargetCoors.z = debugTarget.z;
 	}
 
 	// Delegate the limits of the angle to the C implementation
@@ -4163,17 +4120,17 @@ CCam::Process_Debug(const CVector&, float, float, float)
 		if(FindPlayerVehicle())
 			FindPlayerVehicle()->Teleport(Source);
 		else
-			CWorld::Players[CWorld::PlayerInFocus].m_pPed->SetPosition(Source);
+			World_Players[World_PlayerInFocus].m_pPed->SetPosition(Source);
 	}
 
 	// stay inside sectors
-	while(CWorld::GetSectorX(Source.x) > NUMSECTORS_X-5.0f)
+	while(World_GetSectorX(Source.x) > NUMSECTORS_X-5.0f)
 		Source.x -= 1.0f;
-	while(CWorld::GetSectorX(Source.x) < 5.0f)
+	while(World_GetSectorX(Source.x) < 5.0f)
 		Source.x += 1.0f;
-	while(CWorld::GetSectorY(Source.y) > NUMSECTORS_X-5.0f)
+	while(World_GetSectorY(Source.y) > NUMSECTORS_X-5.0f)
 		Source.y -= 1.0f;
-	while(CWorld::GetSectorY(Source.y) < 5.0f)
+	while(World_GetSectorY(Source.y) < 5.0f)
 		Source.y += 1.0f;
 	GetVectorsReadyForRW();
 
@@ -4182,7 +4139,7 @@ CCam::Process_Debug(const CVector&, float, float, float)
 			12.0f, 0.0f, 0.0f, -12.0f,
 			128, 128, 128, 128, 1000.0f, false, 1.0f, nil, 1.0f);
 
-	if(CHud::m_Wants_To_Draw_Hud){
+	if(Hud_m_Wants_To_Draw_Hud){
 		char str[256];
 		sprintf(str, "CamX: %f CamY: %f  CamZ:  %f", Source.x, Source.y, Source.z);
 		sprintf(str, "Frontx: %f, Fronty: %f, Frontz: %f ", Front.x, Front.y, Front.z);
@@ -4209,21 +4166,21 @@ CCam::Process_Editor(const CVector&, float, float, float)
 	Alpha += DEGTORAD(CPad::GetPad(1)->GetLeftStickY()) / 50.0f;
 	Beta  += DEGTORAD(CPad::GetPad(1)->GetLeftStickX()*1.5f) / 19.0f;
 
-	if(CamTargetEntity && CSceneEdit::m_bCameraFollowActor){
+	if(CamTargetEntity && SceneEdit_m_bCameraFollowActor){
 		TargetCoors = CamTargetEntity->GetPosition();
-	}else if(CSceneEdit::m_bRecording){
+	}else if(SceneEdit_m_bRecording){
 		// Delegate the point to look at to the C implementation
 		{
-			float debugTarget[3];
-			Camera_DebugTarget(Alpha, Beta, Source.x, Source.y, Source.z, 7.0f, debugTarget);
-			TargetCoors.x = debugTarget[0];
-			TargetCoors.y = debugTarget[1];
-			TargetCoors.z = debugTarget[2];
+			CVector debugTarget;
+			Camera_DebugTarget(Alpha, Beta, Source.x, Source.y, Source.z, 7.0f, &debugTarget);
+			TargetCoors.x = debugTarget.x;
+			TargetCoors.y = debugTarget.y;
+			TargetCoors.z = debugTarget.z;
 		}
 	}else
-		TargetCoors = CSceneEdit::m_vecCamHeading + Source;
-	CSceneEdit::m_vecCurrentPosition = TargetCoors;
-	CSceneEdit::m_vecCamHeading = TargetCoors - Source;
+		TargetCoors = SceneEdit_m_vecCamHeading + Source;
+	SceneEdit_m_vecCurrentPosition = TargetCoors;
+	SceneEdit_m_vecCamHeading = TargetCoors - Source;
 
 	// Delegate the limits of the angle to the C implementation
 	Alpha = Camera_ClampAlpha(Alpha, 89.5f);
@@ -4242,18 +4199,18 @@ CCam::Process_Editor(const CVector&, float, float, float)
 		if(FindPlayerVehicle())
 			FindPlayerVehicle()->Teleport(Source);
 		else
-			CWorld::Players[CWorld::PlayerInFocus].m_pPed->SetPosition(Source);
+			World_Players[World_PlayerInFocus].m_pPed->SetPosition(Source);
 			
 	}
 
 	// stay inside sectors
-	while(CWorld::GetSectorX(Source.x) > NUMSECTORS_X-5.0f)
+	while(World_GetSectorX(Source.x) > NUMSECTORS_X-5.0f)
 		Source.x -= 1.0f;
-	while(CWorld::GetSectorX(Source.x) < 5.0f)
+	while(World_GetSectorX(Source.x) < 5.0f)
 		Source.x += 1.0f;
-	while(CWorld::GetSectorY(Source.y) > NUMSECTORS_X-5.0f)
+	while(World_GetSectorY(Source.y) > NUMSECTORS_X-5.0f)
 		Source.y -= 1.0f;
-	while(CWorld::GetSectorY(Source.y) < 5.0f)
+	while(World_GetSectorY(Source.y) < 5.0f)
 		Source.y += 1.0f;
 	GetVectorsReadyForRW();
 
@@ -4262,7 +4219,7 @@ CCam::Process_Editor(const CVector&, float, float, float)
 			12.0f, 0.0f, 0.0f, -12.0f,
 			128, 128, 128, 128, 1000.0f, false, 1.0f, nil, false);
 
-	if(CHud::m_Wants_To_Draw_Hud){
+	if(Hud_m_Wants_To_Draw_Hud){
 		char str[256];
 		sprintf(str, "CamX: %f CamY: %f  CamZ:  %f", Source.x, Source.y, Source.z);
 		sprintf(str, "Frontx: %f, Fronty: %f, Frontz: %f ", Front.x, Front.y, Front.z);
@@ -4293,11 +4250,11 @@ CCam::Process_ModelView(const CVector &CameraTarget, float, float, float)
 		Distance = 1.5f;
 
 	// Delegate the direction of the camera to the C implementation
-	float frontXYZ[3];
-	Camera_FixedPitchFront(Angle, frontXYZ);
-	Front.x = frontXYZ[0];
-	Front.y = frontXYZ[1];
-	Front.z = frontXYZ[2];
+	CVector frontXYZ;
+	Camera_FixedPitchFront(Angle, &frontXYZ);
+	Front.x = frontXYZ.x;
+	Front.y = frontXYZ.y;
+	Front.z = frontXYZ.z;
 	Source = CameraTarget - Distance*Front;
 
 	GetVectorsReadyForRW();
@@ -4328,17 +4285,14 @@ CCam::ProcessPedsDeadBaby(void)
 		CamPos = TargetCoors;
 		CamPos.z += DEADCAM_HEIGHT_START;
 		float WaterZ = 0.0f;
-		if(CWaterLevel::GetWaterLevelNoWaves(TargetCoors.x, TargetCoors.y, TargetCoors.z, &WaterZ)){
+		if(WaterLevel_GetWaterLevelNoWaves(TargetCoors.x, TargetCoors.y, TargetCoors.z, &WaterZ)){
 			if(WaterZ + 1.5f > CamPos.z)
 				CamPos.z = WaterZ + 1.5f;
 		}
 		// Delegate the right vector of the dead camera to the C implementation
 		CVector Right;
 		{
-			const float forwardC[3] = { TheCamera.pTargetEntity->GetForward().x, TheCamera.pTargetEntity->GetForward().y, TheCamera.pTargetEntity->GetForward().z };
-			float rightC[3];
-			Camera_DeadCamRight(forwardC, rightC);
-			Right = CVector(rightC[0], rightC[1], rightC[2]);
+			Camera_DeadCamRight(&TheCamera.pTargetEntity->GetForward(), &Right);
 		}
 		// Delegate the direction to the C implementation
 		Front = NormalisedDifference(TargetCoors, CamPos);
@@ -4347,39 +4301,30 @@ CCam::ProcessPedsDeadBaby(void)
 		ResetStatics = false;
 	}else{
 		CamPos = Source;
-		if(CWorld::TestSphereAgainstWorld(CamPos+CVector(0.0f, 0.0f, 0.2f), 0.3f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil)
+		if(World_TestSphereAgainstWorld(CamPos+CVector(0.0f, 0.0f, 0.2f), 0.3f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil)
 			CamPos.z += DEADCAM_HEIGHT_RATE*(*Timer_GetTimeStep());
 		// Delegate the right vector of the dead camera to the C implementation
 		CVector Right;
 		{
-			const float forwardC[3] = { TheCamera.pTargetEntity->GetForward().x, TheCamera.pTargetEntity->GetForward().y, TheCamera.pTargetEntity->GetForward().z };
-			float rightC[3];
-			Camera_DeadCamRight(forwardC, rightC);
-			Right = CVector(rightC[0], rightC[1], rightC[2]);
+			Camera_DeadCamRight(&TheCamera.pTargetEntity->GetForward(), &Right);
 		}
 
 		float Time = (*Timer_GetTimeInMilliseconds()) - TheCamera.m_uiTimeLastChange;
 		// Delegate the offset of the wafting target to the C implementation
 		CVector WaftOffset;
 		{
-			const float rightC[3] = { Right.x, Right.y, Right.z };
-			float offsetC[3];
-			Camera_DeadCamWaftOffset(Time, DEADCAM_WAFT_AMPLITUDE, DEADCAM_WAFT_RATE, rightC, offsetC);
-			WaftOffset = CVector(offsetC[0], offsetC[1], offsetC[2]);
+			Camera_DeadCamWaftOffset(Time, DEADCAM_WAFT_AMPLITUDE, DEADCAM_WAFT_RATE, &Right, &WaftOffset);
 		}
 		CVector WaftPos = TargetCoors + WaftOffset;
 		WaftPos.z = CamPos.z;
 		CVector WaftFront = WaftPos - CamPos;
 		WaftFront.Normalise();
-		if(CWorld::TestSphereAgainstWorld(CamPos+0.2f*WaftFront, 0.3f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil)
+		if(World_TestSphereAgainstWorld(CamPos+0.2f*WaftFront, 0.3f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil)
 			CamPos = WaftPos;
 
 		// Delegate the front vector of the wafting camera to the C implementation
 		{
-			const float rightC[3] = { Right.x, Right.y, Right.z };
-			float frontC[3];
-			Camera_DeadCamFront(Time, DEADCAM_WAFT_RATE, DEADCAM_WAFT_TILT_AMP, rightC, frontC);
-			Front = CVector(frontC[0], frontC[1], frontC[2]);
+			Camera_DeadCamFront(Time, DEADCAM_WAFT_RATE, DEADCAM_WAFT_TILT_AMP, &Right, &Front);
 		}
 		Up = CrossProduct(Right, Front);
 		Up.Normalise();
@@ -4412,14 +4357,10 @@ CCam::GetLookAlongGroundPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, CV
 		return false;
 	// Delegate the position along the ground to the C implementation
 	{
-		const float targetC[3] = { TargetCoors.x, TargetCoors.y, TargetCoors.z };
-		const float copC[3] = { Cop->GetPosition().x, Cop->GetPosition().y, Cop->GetPosition().z };
-		float outC[3];
-		Camera_AlongGroundPos(targetC, copC, ARRESTDIST_ALONG_GROUND, ARRESTDIST_SIDE_GROUND, outC);
-		SourceOut = CVector(outC[0], outC[1], outC[2]);
+		Camera_AlongGroundPos(&TargetCoors, &Cop->GetPosition(), ARRESTDIST_ALONG_GROUND, ARRESTDIST_SIDE_GROUND, &SourceOut);
 	}
 	bool found = false;
-	float ground = CWorld::FindGroundZFor3DCoord(SourceOut.x, SourceOut.y, SourceOut.z, &found);
+	float ground = World_FindGroundZFor3DCoord(SourceOut.x, SourceOut.y, SourceOut.z, &found);
 	if(found)
 		SourceOut.z = ground + ARRESTDIST_ABOVE_GROUND;
 	return true;
@@ -4432,7 +4373,7 @@ CCam::GetLookFromLampPostPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, C
 	int16 NumObjects;
 	CEntity *Objects[16];
 	CEntity *NearestLampPost = nil;
-	CWorld::FindObjectsInRange(TargetCoors, 30.0f, true, &NumObjects, 15, Objects, false, false, false, true, true);
+	World_FindObjectsInRange(TargetCoors, 30.0f, true, &NumObjects, 15, Objects, false, false, false, true, true);
 	float NearestDist = 10000.0f;
 	for(i = 0; i < NumObjects; i++){
 		if(Objects[i]->GetIsStatic() && Objects[i]->GetUp().z > 0.9f && IsLampPost(Objects[i]->GetModelIndex())){
@@ -4443,7 +4384,7 @@ CCam::GetLookFromLampPostPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, C
 				CVector TestEnd = TestStart - TargetCoors;
 				TestEnd.Normalise();
 				TestEnd += TargetCoors;
-				if(CWorld::GetIsLineOfSightClear(TestStart, TestEnd, true, false, false, false, false, true, true)){
+				if(World_GetIsLineOfSightClear(TestStart, TestEnd, true, false, false, false, false, true, true)){
 					NearestDist = Abs(ARRESTCAM_LAMP_BEST_DIST - Dist);
 					NearestLampPost = Objects[i];
 					SourceOut = TestStart;
@@ -4460,11 +4401,7 @@ CCam::GetLookOverShoulderPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, C
 	if(Target == nil || Cop == nil)
 		return false;
 	// Delegate the position over the shoulder of the cop to the C implementation
-	const float copC[3] = { Cop->GetPosition().x, Cop->GetPosition().y, Cop->GetPosition().z };
-	const float targetC[3] = { TargetCoors.x, TargetCoors.y, TargetCoors.z };
-	float outC[3];
-	Camera_OverShoulderPos(copC, targetC, ARRESTDIST_RIGHTOF_COP, ARRESTDIST_BEHIND_COP, ARRESTDIST_MINFROM_PLAYER, outC);
-	SourceOut = CVector(outC[0], outC[1], outC[2]);
+	Camera_OverShoulderPos(&Cop->GetPosition(), &TargetCoors, ARRESTDIST_RIGHTOF_COP, ARRESTDIST_BEHIND_COP, ARRESTDIST_MINFROM_PLAYER, &SourceOut);
 	return true;
 }
 
@@ -4595,14 +4532,13 @@ CCam::ProcessArrestCamOne(void)
 		Front = NormalisedDifference(TargetPos, Source);
 		Up = CVector(0.0f, 0.0f, 1.0f);
 		// Delegate the right and up vectors of the camera to the C implementation
-		float rightC[3], UpC[3];
+		CVector rightC;
+		CVector UpC;
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float inUpC[3] = { Up.x, Up.y, Up.z };
-			Camera_RightAndUp(frontC, inUpC, false, rightC, UpC);
+			Camera_RightAndUp(&Front, &Up, false, &rightC, &UpC);
 		}
-		CVector Right = CVector(rightC[0], rightC[1], rightC[2]);
-		Up = CVector(UpC[0], UpC[1], UpC[2]);
+		CVector Right = CVector(rightC.x, rightC.y, rightC.z);
+		Up = CVector(UpC.x, UpC.y, UpC.z);
 		if(nUsingWhichCamera != 0)
 			ResetStatics = false;
 		return true;
@@ -4632,14 +4568,14 @@ CCam::ProcessArrestCamOne(void)
 		CVector Right = CrossProduct(Front, Up);
 		if(nUsingWhichCamera == ARRESTCAM_ALONGGROUND_LEFT || nUsingWhichCamera == ARRESTCAM_ALONGGROUND_LEFT_UP)
 			Right *= -1.0f;
-		if(CWorld::TestSphereAgainstWorld(CamSource + 0.5f*Right, 0.4f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil){
+		if(World_TestSphereAgainstWorld(CamSource + 0.5f*Right, 0.4f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil){
 			foundPos = true;
 			CamSource += Right*ARRESTCAM_ROTATION_SPEED*(*Timer_GetTimeStep());
 			if(nUsingWhichCamera == ARRESTCAM_ALONGGROUND_RIGHT_UP || nUsingWhichCamera == ARRESTCAM_ALONGGROUND_LEFT_UP){
 				CamSource.z += ARRESTCAM_ROTATION_UP*(*Timer_GetTimeStep());
 			}else{
 				bool found = false;
-				float ground = CWorld::FindGroundZFor3DCoord(CamSource.x, CamSource.y, CamSource.z, &found);
+				float ground = World_FindGroundZFor3DCoord(CamSource.x, CamSource.y, CamSource.z, &found);
 				if(found)
 					CamSource.z = ground + ARRESTDIST_ABOVE_GROUND;
 			}
@@ -4648,14 +4584,9 @@ CCam::ProcessArrestCamOne(void)
 		CamSource = Source;
 		// Delegate the direction of the camera around the lamp post to the C implementation
 		{
-			const float targetC[3] = { TargetPos.x, TargetPos.y, TargetPos.z };
-			const float sourceC[3] = { CamSource.x, CamSource.y, CamSource.z };
-			float frontC[3], upC[3];
-			Camera_LampPostFront(targetC, sourceC, ARRESTCAM_LAMPPOST_ROTATEDIST, frontC, upC);
-			Front = CVector(frontC[0], frontC[1], frontC[2]);
-			Up = CVector(upC[0], upC[1], upC[2]);
+			Camera_LampPostFront(&TargetPos, &CamSource, ARRESTCAM_LAMPPOST_ROTATEDIST, &Front, &Up);
 		}
-		if(CWorld::TestSphereAgainstWorld(CamSource + 0.5f*Front, 0.4f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil){
+		if(World_TestSphereAgainstWorld(CamSource + 0.5f*Front, 0.4f, TheCamera.pTargetEntity, true, true, false, true, false, true) == nil){
 			foundPos = true;
 			CamSource += Front*ARRESTCAM_LAMPPOST_TRANSLATE*(*Timer_GetTimeStep());
 		}
@@ -4669,14 +4600,13 @@ CCam::ProcessArrestCamOne(void)
 		Front = NormalisedDifference(TargetPos, Source);
 		Up = CVector(0.0f, 0.0f, 1.0f);
 		// Delegate the right and up vectors of the camera to the C implementation
-		float rightC[3], UpC[3];
+		CVector rightC;
+		CVector UpC;
 		{
-			const float frontC[3] = { Front.x, Front.y, Front.z };
-			const float inUpC[3] = { Up.x, Up.y, Up.z };
-			Camera_RightAndUp(frontC, inUpC, false, rightC, UpC);
+			Camera_RightAndUp(&Front, &Up, false, &rightC, &UpC);
 		}
-		CVector Right = CVector(rightC[0], rightC[1], rightC[2]);
-		Up = CVector(UpC[0], UpC[1], UpC[2]);
+		CVector Right = CVector(rightC.x, rightC.y, rightC.z);
+		Up = CVector(UpC.x, UpC.y, UpC.z);
 	}else{
 		CVector OrigSource = Source;
 		TheCamera.AvoidTheGeometry(OrigSource, TargetPos, Source, FOV);
@@ -4688,7 +4618,7 @@ CCam::ProcessArrestCamOne(void)
 bool
 CCam::ProcessArrestCamTwo(void)
 {
-	CPed *player = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+	CPed *player = World_Players[World_PlayerInFocus].m_pPed;
 	if(!ResetStatics)
 		return true;
 	ResetStatics = false;
@@ -4722,7 +4652,7 @@ CCam::ProcessArrestCamTwo(void)
 		ToCamera = NormalisedDifference(Source, TargetCoors);
 		TargetCoors.x += 0.4f*ToCamera.x;
 		TargetCoors.y += 0.4f*ToCamera.y;
-		if(CWorld::GetIsLineOfSightClear(Source, TargetCoors, true, true, false, true, false, true, true)){
+		if(World_GetIsLineOfSightClear(Source, TargetCoors, true, true, false, true, false, true, true)){
 			Source.z += 5.5f;
 			TargetCoors += CVector(-0.8f*ToCamera.x, -0.8f*ToCamera.y, 2.2f);
 			m_cvecTargetCoorsForFudgeInter = TargetCoors;
@@ -4773,9 +4703,9 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 
 		// Delegate the direction to the C implementation
 		{
-			float sphericalDir[3];
-			Camera_SphericalDirection(Alpha, Beta, sphericalDir);
-			Dist = MaxDist*CVector(sphericalDir[0], sphericalDir[1], sphericalDir[2]);
+			CVector sphericalDir;
+			Camera_SphericalDirection(Alpha, Beta, &sphericalDir);
+			Dist = MaxDist*CVector(sphericalDir.x, sphericalDir.y, sphericalDir.z);
 		}
 		Source = TargetCoors + Dist;
 
@@ -4784,9 +4714,9 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 
 	// Drag the camera along at the look-down offset
 	// Delegate the distance of the camera to the C implementation
-	float distC[3] = { Dist.x, Dist.y, Dist.z };
-	float CamDist = Camera_DragDistance(distC, MinDist, MaxDist);
-	Dist = CVector(distC[0], distC[1], distC[2]);
+	CVector distC(Dist.x, Dist.y, Dist.z);
+	float CamDist = Camera_DragDistance(&distC, MinDist, MaxDist);
+	Dist = CVector(distC.x, distC.y, distC.z);
 
 	// Beta = 0 is looking east, HALFPI is north, &c.
 	// Alpha positive is looking up
@@ -4871,9 +4801,7 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 
 	// Delegate the direction to the C implementation
 	{
-		float sphericalDir[3];
-		Camera_SphericalDirection(Alpha, Beta, sphericalDir);
-		Front = CVector(sphericalDir[0], sphericalDir[1], sphericalDir[2]);
+		Camera_SphericalDirection(Alpha, Beta, &Front);
 	}
 	Source = TargetCoors - Front*CamDist;
 	TargetCoors.z -= BaseOffset;	// now get back to the real target coors again
@@ -4893,14 +4821,14 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 	CEntity *entity;
 	CColPoint colPoint;
 	// Clip Source and fix near clip
-	CWorld::pIgnoreEntity = CamTargetEntity;
+	World_pIgnoreEntity = CamTargetEntity;
 	entity = nil;
-	if(CWorld::ProcessLineOfSight(TargetCoors, Source, colPoint, entity, true, true, true, true, false, false, true)){
+	if(World_ProcessLineOfSight(TargetCoors, Source, colPoint, entity, true, true, true, true, false, false, true)){
 		float PedColDist = (TargetCoors - CollisionVector_ToNative(colPoint.point)).Magnitude();
 		float ColCamDist = CamDist - PedColDist;
 		if(entity->IsPed() && ColCamDist > DEFAULT_NEAR + 0.1f){
 			// Ped in the way but not clipping through
-			if(CWorld::ProcessLineOfSight(CollisionVector_ToNative(colPoint.point), Source, colPoint, entity, true, true, true, true, false, false, true)){
+			if(World_ProcessLineOfSight(CollisionVector_ToNative(colPoint.point), Source, colPoint, entity, true, true, true, true, false, false, true)){
 				PedColDist = (TargetCoors - CollisionVector_ToNative(colPoint.point)).Magnitude();
 				Source = CollisionVector_ToNative(colPoint.point);
 				if(PedColDist < DEFAULT_NEAR + 0.3f)
@@ -4914,13 +4842,13 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 				RwCameraSetNearClipPlane(Scene.camera, Camera_NearClipNearPed(PedColDist));
 		}
 	}
-	CWorld::pIgnoreEntity = nil;
+	World_pIgnoreEntity = nil;
 
 	// Delegate the width of the view plane to the C implementation shared with the avoidance of the geometry
 	float ViewPlaneWidth = Camera_AvoidViewPlaneWidth(FOV, Draw_CalculateAspectRatio(), fTweakFOV);
 	float Near = RwCameraGetNearClipPlane(Scene.camera);
 	float radius = ViewPlaneWidth*Near;
-	entity = CWorld::TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
+	entity = World_TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
 	int i = 0;
 	while(entity){
 		CVector CamToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - Source;
@@ -4939,7 +4867,7 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 		// Keep testing
 		Near = RwCameraGetNearClipPlane(Scene.camera);
 		radius = ViewPlaneWidth*Near;
-		entity = CWorld::TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
+		entity = World_TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, false);
 
 		i++;
 		if(i > 5)
@@ -5106,11 +5034,11 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 
 		// Delegate the direction to the C implementation
 		{
-			float frontXYZ[3];
-			Camera_FrontFromAngles(Alpha, Beta, frontXYZ);
-			Front.x = frontXYZ[0];
-			Front.y = frontXYZ[1];
-			Front.z = frontXYZ[2];
+			CVector frontXYZ;
+			Camera_FrontFromAngles(Alpha, Beta, &frontXYZ);
+			Front.x = frontXYZ.x;
+			Front.y = frontXYZ.y;
+			Front.z = frontXYZ.z;
 		}
 
 		m_aTargetHistoryPosOne = TargetCoors - nextDistance * Front;
@@ -5306,11 +5234,11 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 
 	// Delegate the direction to the C implementation
 	{
-		float frontXYZ[3];
-		Camera_FrontFromAngles(Alpha, Beta, frontXYZ);
-		Front.x = frontXYZ[0];
-		Front.y = frontXYZ[1];
-		Front.z = frontXYZ[2];
+		CVector frontXYZ;
+		Camera_FrontFromAngles(Alpha, Beta, &frontXYZ);
+		Front.x = frontXYZ.x;
+		Front.y = frontXYZ.y;
+		Front.z = frontXYZ.z;
 	}
 	GetVectorsReadyForRW();
 	TheCamera.m_bCamDirectlyBehind = false;
@@ -5323,16 +5251,16 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 	float nextAlpha = alphaWithSpeedAccounted + zoomModeAlphaOffset;
 	// Delegate the positions behind the target to the C implementation
 	{
-		float historyTarget[3] = { TargetCoors.x, TargetCoors.y, TargetCoors.z };
-		float historyPos[3];
-		Camera_TargetHistoryPos(historyTarget, Beta, nextAlpha, nextDistance, historyPos);
-		m_aTargetHistoryPosOne.x = historyPos[0];
-		m_aTargetHistoryPosOne.y = historyPos[1];
-		m_aTargetHistoryPosOne.z = historyPos[2];
-		Camera_TargetHistoryPos(historyTarget, Beta, nextAlpha, newDistance, historyPos);
-		m_aTargetHistoryPosTwo.x = historyPos[0];
-		m_aTargetHistoryPosTwo.y = historyPos[1];
-		m_aTargetHistoryPosTwo.z = historyPos[2];
+		CVector historyTarget(TargetCoors.x, TargetCoors.y, TargetCoors.z);
+		CVector historyPos;
+		Camera_TargetHistoryPos(&historyTarget, Beta, nextAlpha, nextDistance, &historyPos);
+		m_aTargetHistoryPosOne.x = historyPos.x;
+		m_aTargetHistoryPosOne.y = historyPos.y;
+		m_aTargetHistoryPosOne.z = historyPos.z;
+		Camera_TargetHistoryPos(&historyTarget, Beta, nextAlpha, newDistance, &historyPos);
+		m_aTargetHistoryPosTwo.x = historyPos.x;
+		m_aTargetHistoryPosTwo.y = historyPos.y;
+		m_aTargetHistoryPosTwo.z = historyPos.z;
 	}
 
 	// SA calls SetColVarsVehicle in here
@@ -5350,13 +5278,13 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		// Clip Source and fix near clip
 		CColPoint colPoint;
 		CEntity* entity;
-		CWorld::pIgnoreEntity = CamTargetEntity;
-		if(CWorld::ProcessLineOfSight(TargetCoors, Source, colPoint, entity, true, dontCollideWithCars < 0.1f, false, true, false, true, true) && !IS_TRAFFIC_LIGHT(entity)){
+		World_pIgnoreEntity = CamTargetEntity;
+		if(World_ProcessLineOfSight(TargetCoors, Source, colPoint, entity, true, dontCollideWithCars < 0.1f, false, true, false, true, true) && !IS_TRAFFIC_LIGHT(entity)){
 			float PedColDist = (TargetCoors - CollisionVector_ToNative(colPoint.point)).Magnitude();
 			float ColCamDist = newDistance - PedColDist;
 			if(entity->IsPed() && ColCamDist > DEFAULT_NEAR + 0.1f){
 				// Ped in the way but not clipping through
-				if(CWorld::ProcessLineOfSight(CollisionVector_ToNative(colPoint.point), Source, colPoint, entity, true, dontCollideWithCars < 0.1f, false, true, false, true, true) || IS_TRAFFIC_LIGHT(entity)){
+				if(World_ProcessLineOfSight(CollisionVector_ToNative(colPoint.point), Source, colPoint, entity, true, dontCollideWithCars < 0.1f, false, true, false, true, true) || IS_TRAFFIC_LIGHT(entity)){
 					PedColDist = (TargetCoors - CollisionVector_ToNative(colPoint.point)).Magnitude();
 					Source = CollisionVector_ToNative(colPoint.point);
 					if(PedColDist < DEFAULT_NEAR + 0.3f)
@@ -5371,7 +5299,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 			}
 		}
 		
-		CWorld::pIgnoreEntity = nil;
+		World_pIgnoreEntity = nil;
 
 		// If we're seeing blue hell due to camera intersects some surface, fix it.
 		// SA and LCS have this unrolled.
@@ -5380,7 +5308,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		float ViewPlaneWidth = Camera_AvoidViewPlaneWidth(FOV, Draw_CalculateAspectRatio(), fTweakFOV);
 		float Near = RwCameraGetNearClipPlane(Scene.camera);
 		float radius = ViewPlaneWidth*Near;
-		entity = CWorld::TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, true);
+		entity = World_TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, true);
 		int i = 0;
 		while(entity){
 
@@ -5403,7 +5331,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 			// Keep testing
 			Near = RwCameraGetNearClipPlane(Scene.camera);
 			radius = ViewPlaneWidth*Near;
-			entity = CWorld::TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, true);
+			entity = World_TestSphereAgainstWorld(Source + Front*Near, radius, nil, true, true, false, true, false, true);
 
 			i++;
 			if(i > 5)
@@ -5423,7 +5351,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 	if (CameraTarget.z >= -2.0f) {
 		float level = -6000.0;
 
-		if (CWaterLevel::GetWaterLevelNoWaves(Source.x, Source.y, Source.z, &level)) {
+		if (WaterLevel_GetWaterLevelNoWaves(Source.x, Source.y, Source.z, &level)) {
 			if (Source.z < level)
 				Source.z = level;
 		}

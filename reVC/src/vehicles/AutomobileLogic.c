@@ -1,6 +1,7 @@
 //+ rouz edit (Claude)
 #include <stddef.h>
 #include "AutomobileLogic.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "VectorMath.h"
 #include "ModelIds.h"
 #include "DoorTypes.h"
@@ -496,21 +497,21 @@ float Automobile_WheelSplashSize(float speed)
 	float v = (speed < 0.15f ? 0.25f : 0.75f) * speed;
 	return v < 0.6f ? v : 0.6f;
 }
-void Automobile_FlyingComponentSpeed(const float moveSpeed[3], float upZ, bool isBonnetBootOrWindscreen, float out[3])
+void Automobile_FlyingComponentSpeed(const CVector *moveSpeed, float upZ, bool isBonnetBootOrWindscreen, CVector *out)
 {
-	out[0] = moveSpeed[0];
-	out[1] = moveSpeed[1];
-	out[2] = moveSpeed[2];
-	if (out[2] > 0.0f) {
-		out[2] *= 1.5f;
+	out->x = moveSpeed->x;
+	out->y = moveSpeed->y;
+	out->z = moveSpeed->z;
+	if (out->z > 0.0f) {
+		out->z *= 1.5f;
 	} else if (upZ > 0.0f && isBonnetBootOrWindscreen) {
-		out[2] *= -1.5f;
-		out[2] += 0.04f;
+		out->z *= -1.5f;
+		out->z += 0.04f;
 	} else {
-		out[2] *= 0.25f;
+		out->z *= 0.25f;
 	}
-	out[0] *= 0.75f;
-	out[1] *= 0.75f;
+	out->x *= 0.75f;
+	out->y *= 0.75f;
 }
 int Automobile_BurstWheelSparkCount(float speedSqr, int surface)
 {
@@ -609,11 +610,11 @@ void Automobile_HeliRotorAlpha(float rotorSpeed, int *rotorAlpha, int *blurAlpha
 	*blurAlpha = *blurAlpha < 150 ? *blurAlpha : 150;
 }
 
-void Automobile_CannonDirection(float angleLR, float angleUD, float dir[3])
+void Automobile_CannonDirection(float angleLR, float angleUD, CVector *dir)
 {
-	dir[0] = sinf(angleLR) * cosf(angleUD);
-	dir[1] = cosf(angleLR) * cosf(angleUD);
-	dir[2] = sinf(angleUD);
+	dir->x = sinf(angleLR) * cosf(angleUD);
+	dir->y = cosf(angleLR) * cosf(angleUD);
+	dir->z = sinf(angleUD);
 }
 
 float Automobile_TankTurretAngle(float angle)
@@ -627,17 +628,17 @@ float Automobile_TankTurretAngle(float angle)
 	return angle;
 }
 
-void Automobile_TankGunEnd(float angle, const float baseToEnd[3], const float turretBase[3], float out[3])
+void Automobile_TankGunEnd(float angle, const CVector *baseToEnd, const CVector *turretBase, CVector *out)
 {
 	float c = cosf(angle);
 	float s = sinf(angle);
 
-	out[0] = c * baseToEnd[0] - s * baseToEnd[1];
-	out[1] = s * baseToEnd[0] + c * baseToEnd[1];
-	out[2] = baseToEnd[2] - 1.0f;	// Correct the offset here
-	out[0] += turretBase[0];
-	out[1] += turretBase[1];
-	out[2] += turretBase[2];
+	out->x = c * baseToEnd->x - s * baseToEnd->y;
+	out->y = s * baseToEnd->x + c * baseToEnd->y;
+	out->z = baseToEnd->z - 1.0f;	// Correct the offset here
+	out->x += turretBase->x;
+	out->y += turretBase->y;
+	out->z += turretBase->z;
 }
 
 void Automobile_StrongGrip(bool playerDrivesOtherVehicle, int wantedLevel, int carMission, float playerSpeed, float ownSpeed, float distToPlayer, bool isRCBandit, bool notRemoteControlled, bool *strongGrip1, bool *strongGrip2)
@@ -858,10 +859,10 @@ float Automobile_WheelAdhesion(float adhesiveLimit, float traction, bool isPlaye
 		adhesion *= wetMultiplier;
 	return adhesion;
 }
-void Automobile_SteeredWheelAxes(const float forward[3], const float normal[3], float s, float c, float wheelFwd[3], float wheelRight[3])
+void Automobile_SteeredWheelAxes(const CVector *forward, const CVector *normal, float s, float c, CVector *wheelFwd, CVector *wheelRight)
 {
-	VectorMath3 fwd = { forward[0], forward[1], forward[2] };
-	VectorMath3 n = { normal[0], normal[1], normal[2] };
+	VectorMath3 fwd = { forward->x, forward->y, forward->z };
+	VectorMath3 n = { normal->x, normal->y, normal->z };
 	VectorMath3 right, tmp;
 	float dot = fwd.x * n.x + fwd.y * n.y + fwd.z * n.z;
 
@@ -877,17 +878,17 @@ void Automobile_SteeredWheelAxes(const float forward[3], const float normal[3], 
 	right.x = s * fwd.x + c * right.x;
 	right.y = s * fwd.y + c * right.y;
 	right.z = s * fwd.z + c * right.z;
-	wheelFwd[0] = tmp.x;
-	wheelFwd[1] = tmp.y;
-	wheelFwd[2] = tmp.z;
-	wheelRight[0] = right.x;
-	wheelRight[1] = right.y;
-	wheelRight[2] = right.z;
+	wheelFwd->x = tmp.x;
+	wheelFwd->y = tmp.y;
+	wheelFwd->z = tmp.z;
+	wheelRight->x = right.x;
+	wheelRight->y = right.y;
+	wheelRight->z = right.z;
 }
-void Automobile_SurfaceWheelAxes(const float forward[3], const float normal[3], float wheelFwd[3], float wheelRight[3])
+void Automobile_SurfaceWheelAxes(const CVector *forward, const CVector *normal, CVector *wheelFwd, CVector *wheelRight)
 {
-	VectorMath3 fwd = { forward[0], forward[1], forward[2] };
-	VectorMath3 n = { normal[0], normal[1], normal[2] };
+	VectorMath3 fwd = { forward->x, forward->y, forward->z };
+	VectorMath3 n = { normal->x, normal->y, normal->z };
 	VectorMath3 right;
 	float dot = fwd.x * n.x + fwd.y * n.y + fwd.z * n.z;
 
@@ -897,12 +898,12 @@ void Automobile_SurfaceWheelAxes(const float forward[3], const float normal[3], 
 	VectorMath_Normalise(&fwd);
 	right = VectorMath_Cross(fwd, n);
 	VectorMath_Normalise(&right);
-	wheelFwd[0] = fwd.x;
-	wheelFwd[1] = fwd.y;
-	wheelFwd[2] = fwd.z;
-	wheelRight[0] = right.x;
-	wheelRight[1] = right.y;
-	wheelRight[2] = right.z;
+	wheelFwd->x = fwd.x;
+	wheelFwd->y = fwd.y;
+	wheelFwd->z = fwd.z;
+	wheelRight->x = right.x;
+	wheelRight->y = right.y;
+	wheelRight->z = right.z;
 }
 bool Automobile_RotorSoundCheck(float distSq, float propellerRotation, float bladeRotation)
 {
@@ -935,7 +936,7 @@ float Automobile_Behindness(float dot, float *angle)
 	*angle = fabsf(acosf(behindness));
 	return behindness;
 }
-void Automobile_RoadAlignedMatrix(const float front[2], const float rear[2], float frontZ, float rearZ, float len, float heightAboveRoad, float right[3], float forward[3], float up[3], float pos[3])
+void Automobile_RoadAlignedMatrix(const float front[2], const float rear[2], float frontZ, float rearZ, float len, float heightAboveRoad, CVector *right, CVector *forward, CVector *up, CVector *pos)
 {
 	float angle = atanf((frontZ - rearZ) / len);
 	float cs = cosf(angle);
@@ -949,12 +950,12 @@ void Automobile_RoadAlignedMatrix(const float front[2], const float rear[2], flo
 	f.y = cs * r.x;
 	f.z = sn;
 	u = VectorMath_Cross(r, f);
-	right[0] = r.x; right[1] = r.y; right[2] = r.z;
-	forward[0] = f.x; forward[1] = f.y; forward[2] = f.z;
-	up[0] = u.x; up[1] = u.y; up[2] = u.z;
-	pos[0] = (front[0] + rear[0]) / 2.0f;
-	pos[1] = (front[1] + rear[1]) / 2.0f;
-	pos[2] = (frontZ + rearZ) / 2.0f + heightAboveRoad;
+	right->x = r.x; right->y = r.y; right->z = r.z;
+	forward->x = f.x; forward->y = f.y; forward->z = f.z;
+	up->x = u.x; up->y = u.y; up->z = u.z;
+	pos->x = (front[0] + rear[0]) / 2.0f;
+	pos->y = (front[1] + rear[1]) / 2.0f;
+	pos->z = (frontZ + rearZ) / 2.0f + heightAboveRoad;
 }
 bool Automobile_SpeedAbove(float speed, float limit)
 {
@@ -977,13 +978,13 @@ float Automobile_WheelNudgeForce(float mass, float factor)
 
 	return 50.0f * (1.0f < v ? 1.0f : v);
 }
-void Automobile_RocketLead(float forwardSpeed, const float forward[3], float timeStep, float lead[3])
+void Automobile_RocketLead(float forwardSpeed, const CVector *forward, float timeStep, CVector *lead)
 {
 	float s = forwardSpeed > 0.0f ? forwardSpeed : 0.0f;
 
-	lead[0] = s * forward[0] * timeStep;
-	lead[1] = s * forward[1] * timeStep;
-	lead[2] = s * forward[2] * timeStep;
+	lead->x = s * forward->x * timeStep;
+	lead->y = s * forward->y * timeStep;
+	lead->z = s * forward->z * timeStep;
 }
 
 float Automobile_SafeDistance(float distSq)

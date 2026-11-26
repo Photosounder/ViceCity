@@ -10,7 +10,7 @@ void
 CDummy::Add(void)
 {
 	// Delegate to the C implementation
-	Dummy_Add(this, this, this, CWorld::GetSector(0, 0), &m_entryInfoList);
+	Dummy_Add(this, this, this, World_GetSector(0, 0), &m_entryInfoList);
 }
 
 void
@@ -27,17 +27,17 @@ IsDummyPointerValid(CDummy* pDummy)
 		return false;
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), pDummy);
+	int index = CPool_GetJustIndex_NoFreeAssert(Pools_GetDummyPool(), pDummy);
 	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	if (index < 0 || index >= CPool_GetSize(CPools::GetDummyPool()))
+	if (index < 0 || index >= CPool_GetSize(Pools_GetDummyPool()))
 	//- rouz edit (ChatGPT)
 #else
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	if (index < 0 || index > CPool_GetSize(CPools::GetDummyPool()))
+	if (index < 0 || index > CPool_GetSize(Pools_GetDummyPool()))
 	//- rouz edit (ChatGPT)
 #endif
 		return false;

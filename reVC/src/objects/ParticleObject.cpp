@@ -476,7 +476,7 @@ CParticleObject::UpdateAll(void)
 
 void CParticleObject::UpdateClose(void)
 {
-	if ( !CGame::playingIntro )
+	if ( !Game_playingIntro )
 	{
 		if ( (this->GetPosition() - TheCamera.GetPosition()).MagnitudeSqr2D() > SQR(100.0f) )
 		{

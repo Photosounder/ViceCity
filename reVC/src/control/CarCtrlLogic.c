@@ -31,7 +31,7 @@ CVehicleStruct *CarCtrl_FindClosestRemovableCar(const CPool *vehiclePool, float 
 	return pClosestVehicle;
 }
 
-int32_t CarCtrl_CountCarsOfType(const CPool *vehiclePool, int32_t modelIndex)
+int32_t CarCtrlLogic_CountCarsOfType(const CPool *vehiclePool, int32_t modelIndex)
 {
 	int32_t total = 0;
 	int i;
@@ -52,7 +52,7 @@ void CarCtrl_GetRandomOffsetForVehicle(const CVehicleStruct *vehicle, bool next,
 	out[1] = ((seed >> 3) - 3) * 0.009f;
 	out[2] = 0.0f;
 }
-float CarCtrl_FindSpeedMultiplier(float limitedAngleChange, float minAngle, float maxAngle, float coef)
+float CarCtrlLogic_FindSpeedMultiplier(float limitedAngleChange, float minAngle, float maxAngle, float coef)
 {
 	float angle = fabsf(limitedAngleChange);
 	float n = angle - minAngle;
@@ -68,7 +68,7 @@ float CarCtrl_FindSpeedMultiplier(float limitedAngleChange, float minAngle, floa
 	return mult;
 }
 
-float CarCtrl_FindSpeedMultiplierWithSpeedFromNodes(int type)
+float CarCtrlLogic_FindSpeedMultiplierWithSpeedFromNodes(int type)
 {
 	// Faster road node types
 	switch (type) {
@@ -89,7 +89,7 @@ int CarCtrl_ChooseRatingFromThresholds(int rnd, const int16_t *thresholds, int n
 	}
 	return firstRating + numClasses - 1;
 }
-void CarCtrl_AddToLoadedVehicleArray(int32_t *loadedRow, int32_t *freqRow, int32_t *numLoaded, int32_t mi, int32_t freq)
+void CarCtrlLogic_AddToLoadedVehicleArray(int32_t *loadedRow, int32_t *freqRow, int32_t *numLoaded, int32_t mi, int32_t freq)
 {
 	// Append the model, its sum includes the sum of the model before it
 	loadedRow[*numLoaded] = mi;
@@ -99,7 +99,7 @@ void CarCtrl_AddToLoadedVehicleArray(int32_t *loadedRow, int32_t *freqRow, int32
 	(*numLoaded)++;
 }
 
-void CarCtrl_RemoveFromLoadedVehicleArray(int32_t *loadedRow, int32_t *freqRow, int32_t *numLoaded, int32_t mi)
+void CarCtrlLogic_RemoveFromLoadedVehicleArray(int32_t *loadedRow, int32_t *freqRow, int32_t *numLoaded, int32_t mi)
 {
 	int index = 0;
 	int32_t freq;
@@ -125,7 +125,7 @@ void CarCtrl_RemoveFromLoadedVehicleArray(int32_t *loadedRow, int32_t *freqRow, 
 	--(*numLoaded);
 }
 
-int32_t CarCtrl_ChooseCarModel(const int32_t *loadedRow, const int32_t *freqRow, int32_t numLoaded, int32_t (*randomRange)(int32_t, int32_t))
+int32_t CarCtrlLogic_ChooseCarModel(const int32_t *loadedRow, const int32_t *freqRow, int32_t numLoaded, int32_t (*randomRange)(int32_t, int32_t))
 {
 	int32_t rnd, index = 0;
 
@@ -315,7 +315,7 @@ float CarCtrl_WeaveLengthToEvade(float angleDiff, float otherMaxY, float otherMa
 
 	return (2 * (lenProjection + widthProjection) + widthCoef * 2 * ownMaxX) / distance;
 }
-static float CarCtrl_LimitRadianAngle(float angle)
+static float CarCtrlLogic_LimitRadianAngle(float angle)
 {
 	const float pi = (float)3.14159265358979323846;
 
@@ -328,7 +328,7 @@ static float CarCtrl_LimitRadianAngle(float angle)
 
 void CarCtrl_ApplyWeaveAngles(float angleToObstacle, float lengthToEvade, float *angleToWeaveLeft, float *angleToWeaveRight)
 {
-	float diffToLeftAngle = fabsf(CarCtrl_LimitRadianAngle(angleToObstacle - *angleToWeaveLeft));
+	float diffToLeftAngle = fabsf(CarCtrlLogic_LimitRadianAngle(angleToObstacle - *angleToWeaveLeft));
 	float angleToWeave = lengthToEvade / 2;
 	float diffToRightAngle;
 
@@ -336,7 +336,7 @@ void CarCtrl_ApplyWeaveAngles(float angleToObstacle, float lengthToEvade, float 
 		*angleToWeaveLeft = angleToObstacle - angleToWeave;
 		CarCtrl_WrapAngleUp(angleToWeaveLeft);
 	}
-	diffToRightAngle = fabsf(CarCtrl_LimitRadianAngle(angleToObstacle - *angleToWeaveRight));
+	diffToRightAngle = fabsf(CarCtrlLogic_LimitRadianAngle(angleToObstacle - *angleToWeaveRight));
 	if (diffToRightAngle < angleToWeave) {
 		*angleToWeaveRight = angleToObstacle + angleToWeave;
 		CarCtrl_WrapAngleDown(angleToWeaveRight);
@@ -345,10 +345,10 @@ void CarCtrl_ApplyWeaveAngles(float angleToObstacle, float lengthToEvade, float 
 float CarCtrl_PickWeaveAngle(float angleForward, float angleToTarget, float angleToWeaveLeft, float angleToWeaveRight)
 {
 	const float halfPi = (float)3.14159265358979323846 / 2;
-	float angleDiffFromActualToTarget = CarCtrl_LimitRadianAngle(angleForward - angleToTarget);
-	float angleToBisectActualToTarget = CarCtrl_LimitRadianAngle(angleToTarget + angleDiffFromActualToTarget / 2);
-	float angleDiffLeft = fabsf(CarCtrl_LimitRadianAngle(angleToWeaveLeft - angleToBisectActualToTarget));
-	float angleDiffRight = fabsf(CarCtrl_LimitRadianAngle(angleToWeaveRight - angleToBisectActualToTarget));
+	float angleDiffFromActualToTarget = CarCtrlLogic_LimitRadianAngle(angleForward - angleToTarget);
+	float angleToBisectActualToTarget = CarCtrlLogic_LimitRadianAngle(angleToTarget + angleDiffFromActualToTarget / 2);
+	float angleDiffLeft = fabsf(CarCtrlLogic_LimitRadianAngle(angleToWeaveLeft - angleToBisectActualToTarget));
+	float angleDiffRight = fabsf(CarCtrlLogic_LimitRadianAngle(angleToWeaveRight - angleToBisectActualToTarget));
 
 	if (angleDiffLeft > halfPi && angleDiffRight > halfPi)
 		return angleToBisectActualToTarget;
@@ -485,7 +485,7 @@ float CarCtrl_LinkAngleChange(float angleToTarget, float nodeX, float nodeY, flo
 {
 	float angle = General_GetATanOfXY(testNodeX - nodeX, testNodeY - nodeY);
 
-	angle = CarCtrl_LimitRadianAngle(angle - angleToTarget);
+	angle = CarCtrlLogic_LimitRadianAngle(angle - angleToTarget);
 	return angle < 0 ? -angle : angle;
 }
 int CarCtrl_AllowedDirections(int lane, int lanes)

@@ -314,32 +314,32 @@ CPed::DebugRenderOnePedText(void)
 			float lineHeight = SCREEN_SCALE_Y(Min(height / 100.0f, 0.7f) * 22.0f);
 
 			DefinedState();
-			CFont::SetPropOn();
-			CFont::SetBackgroundOn();
+			Font_SetPropOn();
+			Font_SetBackgroundOn();
 
 			// Originally both of them were being divided by 60.0f.
 			float xScale = Min(width / 240.0f, 0.7f);
 			float yScale = Min(height / 80.0f, 0.7f);
 
-			CFont::SetScale(SCREEN_SCALE_X(xScale), SCREEN_SCALE_Y(yScale));
-			CFont::SetCentreOn();
-			CFont::SetCentreSize(SCREEN_WIDTH);
-			CFont::SetJustifyOff();
-			CFont::SetColor(CRGBA(255, 255, 0, 255));
-			CFont::SetBackGroundOnlyTextOn();
-			CFont::SetFontStyle(1);
+			Font_SetScale(SCREEN_SCALE_X(xScale), SCREEN_SCALE_Y(yScale));
+			Font_SetCentreOn();
+			Font_SetCentreSize(SCREEN_WIDTH);
+			Font_SetJustifyOff();
+			Font_SetColor(CRGBA(255, 255, 0, 255));
+			Font_SetBackGroundOnlyTextOn();
+			Font_SetFontStyle(1);
 			AsciiToUnicode(StateText[m_nPedState], gUString);
-			CFont::PrintString(screenCoords.x, screenCoords.y, gUString);
+			Font_PrintString(screenCoords.x, screenCoords.y, gUString);
 			AsciiToUnicode(ObjectiveText[m_objective], gUString);
-			CFont::PrintString(screenCoords.x, screenCoords.y + lineHeight, gUString);
+			Font_PrintString(screenCoords.x, screenCoords.y + lineHeight, gUString);
 			AsciiToUnicode(PersonalityTypeText[m_pedStats->m_type], gUString);
-			CFont::PrintString(screenCoords.x, screenCoords.y + 2 * lineHeight, gUString);
+			Font_PrintString(screenCoords.x, screenCoords.y + 2 * lineHeight, gUString);
 			AsciiToUnicode(WaitStateText[m_nWaitState], gUString);
-			CFont::PrintString(screenCoords.x, screenCoords.y + 3 * lineHeight, gUString);
+			Font_PrintString(screenCoords.x, screenCoords.y + 3 * lineHeight, gUString);
 			if (m_nPedState == PED_SEEK_POS || m_nPedState == PED_SEEK_ENTITY) {
 				sprintf(gString, "Safe distance to target: %.2f", m_distanceToCountSeekDone);
 				AsciiToUnicode(gString, gUString);
-				CFont::PrintString(screenCoords.x, screenCoords.y + 4 * lineHeight, gUString);
+				Font_PrintString(screenCoords.x, screenCoords.y + 4 * lineHeight, gUString);
 			}
 			DefinedState();
 		}

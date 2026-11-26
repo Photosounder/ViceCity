@@ -2,7 +2,7 @@
 #include <math.h>
 #include "CollisionTests.h"
 
-bool Collision_TestSphereSphere(const CSphere *s1, const CSphere *s2)
+bool CollisionTests_TestSphereSphere(const CSphere *s1, const CSphere *s2)
 {
 	// Closer than the sum of the radii
 	float d = s1->radius + s2->radius;
@@ -12,7 +12,7 @@ bool Collision_TestSphereSphere(const CSphere *s1, const CSphere *s2)
 	return dx*dx + dy*dy + dz*dz < d*d;
 }
 
-bool Collision_TestSphereBox(const CSphere *sph, const CBox *box)
+bool CollisionTests_TestSphereBox(const CSphere *sph, const CBox *box)
 {
 	if(sph->center.x + sph->radius < box->min.x) return false;
 	if(sph->center.x - sph->radius > box->max.x) return false;
@@ -23,7 +23,7 @@ bool Collision_TestSphereBox(const CSphere *sph, const CBox *box)
 	return true;
 }
 
-bool Collision_TestLineBox(const CColLine *line, const CBox *box)
+bool CollisionTests_TestLineBox(const CColLine *line, const CBox *box)
 {
 	float t, x, y, z;
 	// If either line point is in the box, we have a collision
@@ -107,7 +107,7 @@ bool Collision_TestLineBox(const CColLine *line, const CBox *box)
 	return false;
 }
 
-bool Collision_TestVerticalLineBox(const CColLine *line, const CBox *box)
+bool CollisionTests_TestVerticalLineBox(const CColLine *line, const CBox *box)
 {
 	if(line->p0.x <= box->min.x) return false;
 	if(line->p0.y <= box->min.y) return false;
@@ -123,7 +123,7 @@ bool Collision_TestVerticalLineBox(const CColLine *line, const CBox *box)
 	return true;
 }
 
-bool Collision_TestLineSphere(const CColLine *line, const CColSphere *sph)
+bool CollisionTests_TestLineSphere(const CColLine *line, const CColSphere *sph)
 {
 	// Same as the original with the vectors written out
 	float v01[3] = {line->p1.x - line->p0.x, line->p1.y - line->p0.y, line->p1.z - line->p0.z};
@@ -148,7 +148,7 @@ bool Collision_TestLineSphere(const CColLine *line, const CColSphere *sph)
 	return f >= 0.0f && f <= 1.0f;
 }
 
-float Collision_DistToLine(const float *l0, const float *l1, const float *point)
+float CollisionTests_DistToLine(const float *l0, const float *l1, const float *point)
 {
 	float d[3] = {l1[0] - l0[0], l1[1] - l0[1], l1[2] - l0[2]};
 	float pl[3] = {point[0] - l0[0], point[1] - l0[1], point[2] - l0[2]};

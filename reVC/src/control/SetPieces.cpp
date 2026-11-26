@@ -52,27 +52,27 @@ void SetPieces_BackendVehicleStatus(CVehicle *car,uint8_t status)
 void SetPieces_BackendOccupants(CVehicle *car)
 {
     // Access the original typed native operation or canonical named field
-    CCarAI::AddPoliceCarOccupants(car);
+    CarAI_AddPoliceCarOccupants(car);
 }
 void SetPieces_BackendRemoveVehicle(CVehicle *car)
 {
     // Access the original typed native operation or canonical named field
-    CWorld::Remove(car);
+    World_Remove(car);
 }
 void SetPieces_BackendRemoveCop(CCopPed *cop)
 {
     // Access the original typed native operation or canonical named field
-    CWorld::Remove(cop);
+    World_Remove(cop);
 }
 void SetPieces_BackendDestroyVehicle(CVehicle *car)
 {
     // Access the original typed native operation or canonical named field
-    car->~CVehicle();CPool_Delete(CPools::GetVehiclePool(),car);
+    car->~CVehicle();CPool_Delete(Pools_GetVehiclePool(),car);
 }
 void SetPieces_BackendDestroyCop(CCopPed *cop)
 {
     // Access the original typed native operation or canonical named field
-    cop->~CCopPed();CPool_Delete(CPools::GetPedPool(),cop);
+    cop->~CCopPed();CPool_Delete(Pools_GetPedPool(),cop);
 }
 uint8_t * SetPieces_BackendCruiseSpeed(CVehicle *car)
 {
@@ -137,7 +137,7 @@ void SetPieces_BackendMoveSpeed(CVehicle *car,SetPieceVector value)
 float SetPieces_BackendGroundZ(float x,float y)
 {
     // Access the original typed native operation or canonical named field
-    return CWorld::FindGroundZForCoord(x,y);
+    return World_FindGroundZForCoord(x,y);
 }
 void SetPieces_BackendObjectiveCompleted(CCopPed *cop,bool value)
 {
@@ -157,17 +157,17 @@ uint32_t * SetPieces_BackendCopRangeTime(CCopPed *cop)
 CVehicle * SetPieces_BackendConstructVehicle(void)
 {
     // Access the original typed native operation or canonical named field
-    CVehicle *car=(CVehicle*)CPool_New(CPools::GetVehiclePool());assert(car);std::allocator<CAutomobile>().construct((CAutomobile*)car,MI_POLICE,RANDOM_VEHICLE);return car;
+    CVehicle *car=(CVehicle*)CPool_New(Pools_GetVehiclePool());assert(car);std::allocator<CAutomobile>().construct((CAutomobile*)car,MI_POLICE,RANDOM_VEHICLE);return car;
 }
 CCopPed * SetPieces_BackendConstructCop(void)
 {
     // Access the original typed native operation or canonical named field
-    CCopPed *cop=(CCopPed*)((CPed*)CPool_New(CPools::GetPedPool()));assert(cop);std::allocator<CCopPed>().construct(cop,COP_STREET);return cop;
+    CCopPed *cop=(CCopPed*)((CPed*)CPool_New(Pools_GetPedPool()));assert(cop);std::allocator<CCopPed>().construct(cop,COP_STREET);return cop;
 }
 bool SetPieces_BackendVerticalLine(SetPieceVector value,float *height)
 {
     // Access the original typed native operation or canonical named field
-    CVector position(value.x,value.y,value.z);CColPoint point;CEntity *entity;bool hit=CWorld::ProcessVerticalLine(position,-1000.0f,point,entity,true,false,false,false,true,false,nil);
+    CVector position(value.x,value.y,value.z);CColPoint point;CEntity *entity;bool hit=World_ProcessVerticalLine(position,-1000.0f,point,entity,true,false,false,false,true,false,nil);
     if(hit){
         // Copy only the original valid hit-height output before the C controller decides placement
         *height=point.point.z;
@@ -217,7 +217,7 @@ float SetPieces_BackendCopRadius(CCopPed *cop)
 void SetPieces_BackendColliding(SetPieceVector value,float radius,int16_t *total)
 {
     // Access the original typed native operation or canonical named field
-    CVector position(value.x,value.y,value.z);CWorld::FindObjectsKindaColliding(position,radius,false,total,16,nil,false,true,true,false,false);
+    CVector position(value.x,value.y,value.z);World_FindObjectsKindaColliding(position,radius,false,total,16,nil,false,true,true,false,false);
 }
 void SetPieces_BackendLawEnforcer(CVehicle *car,uint8_t enabled)
 {
@@ -227,11 +227,11 @@ void SetPieces_BackendLawEnforcer(CVehicle *car,uint8_t enabled)
 void SetPieces_BackendAddVehicle(CVehicle *car)
 {
     // Access the original typed native operation or canonical named field
-    CWorld::Add(car);
+    World_Add(car);
 }
 void SetPieces_BackendAddCop(CCopPed *cop)
 {
     // Access the original typed native operation or canonical named field
-    CWorld::Add(cop);
+    World_Add(cop);
 }
 //- rouz edit (ChatGPT)

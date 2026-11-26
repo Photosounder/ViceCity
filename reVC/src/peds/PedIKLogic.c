@@ -1,6 +1,7 @@
 //+ rouz edit (Claude)
 #include <math.h>
 #include "PedIKLogic.h"
+#include "Vector.h" // rouz edit (Claude)
 
 #define IK_CLAMP(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
 
@@ -60,17 +61,17 @@ void PedIK_ExtractYawAndPitchWorld(const float right[3], const float up[3], cons
 	if (up[2] > 0.0f) *pitch = -*pitch;
 }
 
-void PedIK_ExtractYawAndPitchLocal(const float right[3], const float up[3], const float at[3], float *yaw, float *pitch)
+void PedIK_ExtractYawAndPitchLocal(const CVector *right, const CVector *up, const CVector *at, float *yaw, float *pitch)
 {
-	float f = at[0] * 0.0f + at[1] * 0.0f + at[2] * 1.0f;
+	float f = at->x * 0.0f + at->y * 0.0f + at->z * 1.0f;
 	f = IK_CLAMP(f, -1.0f, 1.0f);
 	*yaw = acosf(f);
-	if (at[1] > 0.0f) *yaw = -*yaw;
+	if (at->y > 0.0f) *yaw = -*yaw;
 
-	f = right[0] * 1.0f + right[1] * 0.0f + right[2] * 0.0f;
+	f = right->x * 1.0f + right->y * 0.0f + right->z * 0.0f;
 	f = IK_CLAMP(f, -1.0f, 1.0f);
 	*pitch = acosf(f);
-	if (up[0] > 0.0f) *pitch = -*pitch;
+	if (up->x > 0.0f) *pitch = -*pitch;
 }
 float PedIK_PitchFromUp(float upZ)
 {

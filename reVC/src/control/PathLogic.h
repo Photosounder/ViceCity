@@ -21,9 +21,9 @@ void PathLogic_FindNodeCoorsForScript(const CPathNodeData *nodes, const uint16_t
 // Heading in degrees for a car on a node facing the linked node that points most towards a destination, or most away from it when towards is false
 float PathLogic_FindNodeOrientationForCarPlacementFacingDestination(const CPathNodeData *nodes, const uint16_t *connections, int nodeId, float x, float y, bool towards);
 // Take a node out of the cost list it is in, the list ends in a sentinel so there is always a next node
-void PedPath_RemoveNodeFromList(CPedPathNode *node);
+void PathLogic_RemoveNodeFromList(CPedPathNode *node);
 // Put a node in front of the sentinel of a cost list and remember the cost as its id
-void PedPath_AddNodeToList(CPedPathNode *node, int16_t index, CPedPathNode *list);
+void PathLogic_AddNodeToList(CPedPathNode *node, int16_t index, CPedPathNode *list);
 // Whether the road link from a path node to one of its neighbours has traffic lights, false when the nodes are not linked
 bool PathLogic_LinkHasTrafficLight(const CPathNodeData *nodes, const uint16_t *connections, const int16_t *carPathConnections, const CCarPathLinkData *links, int nodeIndex, int neighbour);
 // Compass direction (0 north, 1 north east, 2 east, 3 south east, 4 south, 5 south west, 6 west, 7 north west) a ped that walks along a link goes in, from the normalised direction of the link

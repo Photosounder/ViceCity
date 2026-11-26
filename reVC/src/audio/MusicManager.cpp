@@ -44,13 +44,13 @@ extern "C" int32_t
 MusicAmbienceHost_Area(void)
 {
     // Read the current area at the original ambience selection point
-    return CGame::currArea;
+    return Game_currArea;
 }
 extern "C" uint8_t
 MusicAmbienceHost_RiotIntensity(void)
 {
     // Read the live riot intensity without caching across branches
-    return CTheScripts::RiotIntensity;
+    return TheScripts_RiotIntensity;
 }
 extern "C" uint8_t
 MusicAmbienceHost_AtBeach(void)
@@ -95,7 +95,7 @@ extern "C" uint8_t
 MusicRadioHost_HasMetDebbie(void)
 {
     // Read the existing script flag only for the Kaufman taxi model
-    return CTheScripts::bPlayerHasMetDebbieHarry;
+    return TheScripts_bPlayerHasMetDebbieHarry;
 }
 //- rouz edit (ChatGPT)
 
@@ -211,61 +211,61 @@ extern "C" void
 MusicDisplayFont_JustifyOff(void)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetJustifyOff();
+    Font_SetJustifyOff();
 }
 extern "C" void
 MusicDisplayFont_BackgroundOff(void)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetBackgroundOff();
+    Font_SetBackgroundOff();
 }
 extern "C" void
 MusicDisplayFont_Scale(float x, float y)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetScale(x, y);
+    Font_SetScale(x, y);
 }
 extern "C" void
 MusicDisplayFont_PropOn(void)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetPropOn();
+    Font_SetPropOn();
 }
 extern "C" void
 MusicDisplayFont_Standard(void)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetFontStyle(FONT_STANDARD);
+    Font_SetFontStyle(FONT_STANDARD);
 }
 extern "C" void
 MusicDisplayFont_CentreOn(void)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetCentreOn();
+    Font_SetCentreOn();
 }
 extern "C" void
 MusicDisplayFont_CentreSize(float size)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetCentreSize(size);
+    Font_SetCentreSize(size);
 }
 extern "C" void
 MusicDisplayFont_Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::SetColor(CRGBA(r, g, b, a));
+    Font_SetColor(CRGBA(r, g, b, a));
 }
 extern "C" void
 MusicDisplayFont_Print(float x, float y, uint16_t *text)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::PrintString(x, y, text);
+    Font_PrintString(x, y, text);
 }
 extern "C" void
 MusicDisplayFont_Draw(void)
 {
     // Submit the original font operation with the captured C display arguments
-    CFont::DrawFonts();
+    Font_DrawFonts();
 }
 //- rouz edit (ChatGPT)
 

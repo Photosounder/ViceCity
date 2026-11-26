@@ -471,7 +471,7 @@ CCopPed::CopAI(void)
 
 					CColPoint foundCol;
 					CEntity *foundEnt;
-					if (!CWorld::ProcessLineOfSight(gunPos, playerOrHisVeh->GetPosition(), foundCol, foundEnt,
+					if (!World_ProcessLineOfSight(gunPos, playerOrHisVeh->GetPosition(), foundCol, foundEnt,
 						false, true, false, false, true, false, false)
 						|| foundEnt && foundEnt == playerOrHisVeh) {
 
@@ -539,7 +539,7 @@ CCopPed::CopAI(void)
 
 												if ((GetPosition() - nearPed->GetPosition()).MagnitudeSqr() < sq(5.0f)) {
 
-													if (CWorld::GetIsLineOfSightClear(GetPosition(), nearPed->GetPosition(),
+													if (World_GetIsLineOfSightClear(GetPosition(), nearPed->GetPosition(),
 														true, false, false, false, false, false, false)) {
 														Say(SOUND_PED_COP_ASK_FOR_ID);
 														SetObjective(OBJECTIVE_HASSLE_CHAR, nearPed);
@@ -582,12 +582,12 @@ CCopPed::ProcessControl(void)
 	CPed::ProcessControl();
 
 	if (m_bThrowsSpikeTrap) {
-		if (CGame::currArea != AREA_MALL)
+		if (Game_currArea != AREA_MALL)
 			ProcessStingerCop();
 		return;
 	}
 
-	if (m_pStinger && m_pStinger->bIsDeployed && m_pStinger->m_nSpikeState == STINGERSTATE_DEPLOYED && CGame::currArea != AREA_MALL)
+	if (m_pStinger && m_pStinger->bIsDeployed && m_pStinger->m_nSpikeState == STINGERSTATE_DEPLOYED && Game_currArea != AREA_MALL)
 		m_pStinger->Process();
 
 	if (bWasPostponed)
@@ -673,7 +673,7 @@ CCopPed::ProcessControl(void)
 		if (m_pMyVehicle->pDriver == this && m_pMyVehicle->AutoPilot.m_nCarMission == MISSION_NONE &&
 			CanPedDriveOff() && m_pMyVehicle->VehicleCreatedBy != MISSION_VEHICLE) {
 
-			CCarCtrl::JoinCarWithRoadSystem(m_pMyVehicle);
+			CarCtrl_JoinCarWithRoadSystem(m_pMyVehicle);
 			m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_CRUISE;
 			m_pMyVehicle->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_STOP_FOR_CARS;
 			m_pMyVehicle->AutoPilot.m_nCruiseSpeed = 17;
@@ -747,7 +747,7 @@ CCopPed::ProcessControl(void)
 				CColPoint foundCol;
 				CVector lookPos = GetPosition() + CVector(0.0f, 0.0f, 0.7f);
 				CVector camPos = TheCamera.GetGameCamPosition();
-				CWorld::ProcessLineOfSight(camPos, lookPos, foundCol, foundBuilding,
+				World_ProcessLineOfSight(camPos, lookPos, foundCol, foundBuilding,
 					true, false, false, false, false, false, false);
 
 				// He's at least 15.0 far, in disabled zone, collided into somewhere (that's why m_bStopAndShootDisabledZone set),
@@ -772,7 +772,7 @@ CCopPed::ProcessControl(void)
 
 	if (field_624 >= 2 && m_objective == OBJECTIVE_KILL_CHAR_ON_FOOT) {
 		CVector centre = GetPosition() + CVector(0.f, 0.f, 0.65f);
-		if (CWorld::TestSphereAgainstWorld(centre, 0.35f, this, true, false, false, false, false, false)) {
+		if (World_TestSphereAgainstWorld(centre, 0.35f, this, true, false, false, false, false, false)) {
 			field_624 = 0;
 			m_bStopAndShootDisabledZone = true;
 			ClearPursuit();

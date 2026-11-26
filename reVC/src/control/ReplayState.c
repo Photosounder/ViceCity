@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "ReplayState.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "InputState.h"
 #include <math.h>
 #include "VectorMath.h"
@@ -66,16 +67,16 @@ bool Replay_ShouldStandardCameraBeProcessed(void)
 }
 //- rouz edit (ChatGPT)
 //+ rouz edit (Claude)
-void Replay_LookAroundOffset(float distance, float alpha, float beta, float offset[3])
+void Replay_LookAroundOffset(float distance, float alpha, float beta, CVector *offset)
 {
-	offset[0] = distance * sinf(beta) * cosf(alpha);
-	offset[1] = distance * cosf(beta) * cosf(alpha);
-	offset[2] = distance * sinf(alpha);
+	offset->x = distance * sinf(beta) * cosf(alpha);
+	offset->y = distance * cosf(beta) * cosf(alpha);
+	offset->z = distance * sinf(alpha);
 }
 
-void Replay_LookAroundBasis(const float focus[3], const float cameraPos[3], float forward[3], float right[3], float up[3])
+void Replay_LookAroundBasis(const CVector *focus, const CVector *cameraPos, CVector *forward, CVector *right, CVector *up)
 {
-	VectorMath3 f = { focus[0] - cameraPos[0], focus[1] - cameraPos[1], focus[2] - cameraPos[2] };
+	VectorMath3 f = { focus->x - cameraPos->x, focus->y - cameraPos->y, focus->z - cameraPos->z };
 	VectorMath3 z = { 0.0f, 0.0f, 1.0f };
 	VectorMath3 r, u;
 
@@ -84,9 +85,9 @@ void Replay_LookAroundBasis(const float focus[3], const float cameraPos[3], floa
 	VectorMath_Normalise(&r);
 	u = VectorMath_Cross(f, r);
 	VectorMath_Normalise(&u);
-	forward[0] = f.x; forward[1] = f.y; forward[2] = f.z;
-	right[0] = r.x; right[1] = r.y; right[2] = r.z;
-	up[0] = u.x; up[1] = u.y; up[2] = u.z;
+	forward->x = f.x; forward->y = f.y; forward->z = f.z;
+	right->x = r.x; right->y = r.y; right->z = r.z;
+	up->x = u.x; up->y = u.y; up->z = u.z;
 }
 //- rouz edit (Claude)
 //+ rouz edit (Claude)

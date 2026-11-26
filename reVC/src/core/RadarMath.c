@@ -3,7 +3,7 @@
 #include "RadarMath.h"
 #include "RadarTrace.h"
 
-uint8_t Radar_CalculateBlipAlpha(bool menuMapActive, float dist)
+uint8_t RadarMath_CalculateBlipAlpha(bool menuMapActive, float dist)
 {
 	// The menu map shows everything fully
 	if (menuMapActive)
@@ -49,7 +49,7 @@ static int ClipPolyPlane(const float *in, int nin, float *out, float a, float b,
 	return nout;
 }
 
-int Radar_ClipRadarPoly(float *poly, const float *rect)
+int RadarMath_ClipRadarPoly(float *poly, const float *rect)
 {
 	float tmp[16];
 	int n;
@@ -62,7 +62,7 @@ int Radar_ClipRadarPoly(float *poly, const float *rect)
 	return n;
 }
 
-uint32_t Radar_GetRadarTraceColour(uint32_t color, bool bright)
+uint32_t RadarMath_GetRadarTraceColour(uint32_t color, bool bright)
 {
 	// Dark and bright variant of each named colour
 	switch (color) {
@@ -77,7 +77,7 @@ uint32_t Radar_GetRadarTraceColour(uint32_t color, bool bright)
 	}
 }
 
-float Radar_LimitRadarPoint(float *point, bool menuMapActive)
+float RadarMath_LimitRadarPoint(float *point, bool menuMapActive)
 {
 	float dist = sqrtf(point[0]*point[0] + point[1]*point[1]);
 	float invdist;
@@ -95,7 +95,7 @@ float Radar_LimitRadarPoint(float *point, bool menuMapActive)
 	return dist;
 }
 
-void Radar_TransformRealWorldPointToRadarSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange)
+void RadarMath_TransformRealWorldPointToRadarSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange)
 {
 	// Scale to radar units then rotate
 	float x = (in[0] - origin[0]) * (1.0f / radarRange);
@@ -105,7 +105,7 @@ void Radar_TransformRealWorldPointToRadarSpace(float *out, const float *in, floa
 	out[1] = c * y - s * x;
 }
 
-void Radar_TransformRadarPointToRealWorldSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange)
+void RadarMath_TransformRadarPointToRealWorldSpace(float *out, const float *in, float s, float c, const float *origin, float radarRange)
 {
 	// Rotate back, scale up and move to the origin
 	float ns = -s;
@@ -115,7 +115,7 @@ void Radar_TransformRadarPointToRealWorldSpace(float *out, const float *in, floa
 	out[0] = x * radarRange + origin[0];
 	out[1] = y * radarRange + origin[1];
 }
-int32_t Radar_GetActualBlipArrayIndex(const sRadarTraceData *traces, int32_t handle)
+int32_t RadarMath_GetActualBlipArrayIndex(const sRadarTraceData *traces, int32_t handle)
 {
 	// -1 and handles whose counter no longer matches are invalid
 	if (handle == -1)
@@ -126,7 +126,7 @@ int32_t Radar_GetActualBlipArrayIndex(const sRadarTraceData *traces, int32_t han
 		return (uint16_t)handle;
 }
 
-int32_t Radar_GetNewUniqueBlipIndex(sRadarTraceData *traces, int32_t index)
+int32_t RadarMath_GetNewUniqueBlipIndex(sRadarTraceData *traces, int32_t index)
 {
 	// Count up, skipping zero and the largest value on wrap-around
 	if (traces[index].m_BlipIndex >= UINT16_MAX - 1)

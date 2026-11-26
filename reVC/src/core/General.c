@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "General.h"
+#include "Vector.h" // rouz edit (Claude)
 #include "Random.h"
 #include "VectorMath.h"
 #include <ctype.h>
@@ -334,11 +335,11 @@ float General_AbsDiff(float a, float b)
 }
 //- rouz edit (Claude)
 //+ rouz edit (Claude)
-void General_NormalisedHorizontal(const float v[3], float out[3])
+void General_NormalisedHorizontal(const CVector *v, CVector *out)
 {
-	VectorMath3 n = { v[0], v[1], 0.0f };
+	VectorMath3 n = { v->x, v->y, 0.0f };
 
 	VectorMath_Normalise(&n);
-	out[0] = n.x; out[1] = n.y; out[2] = n.z;
+	out->x = n.x; out->y = n.y; out->z = n.z;
 }
 //- rouz edit (Claude)

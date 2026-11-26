@@ -18,7 +18,7 @@ void ColStore_InitSlot(ColDef *def, const char *name)
 	strcpy(def->name, name);
 }
 
-void ColStore_IncludeModelIndex(ColDef *def, int32_t modelIndex)
+void ColStoreLogic_IncludeModelIndex(ColDef *def, int32_t modelIndex)
 {
 	// Widen the range of models the file holds
 	if (modelIndex < def->minIndex)
@@ -27,7 +27,7 @@ void ColStore_IncludeModelIndex(ColDef *def, int32_t modelIndex)
 		def->maxIndex = modelIndex;
 }
 
-int ColStore_FindColSlot(const CPool *pool, const char *name)
+int ColStoreLogic_FindColSlot(const CPool *pool, const char *name)
 {
 	int i;
 	int size = CPool_GetSize(pool);
@@ -41,7 +41,7 @@ int ColStore_FindColSlot(const CPool *pool, const char *name)
 	return -1;
 }
 
-bool ColStore_HasCollisionLoaded(const CPool *pool, int slotCount, float x, float y)
+bool ColStoreLogic_HasCollisionLoaded(const CPool *pool, int slotCount, float x, float y)
 {
 	int i;
 

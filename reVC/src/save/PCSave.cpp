@@ -168,7 +168,7 @@ C_PcSave::PopulateSlotInfo()
 				}
 				char date[70];
 #ifdef MORE_LANGUAGES
-				if (CGame::japaneseGame)
+				if (Game_japaneseGame)
 					sprintf(date, "%02d %02d %04d %02d:%02d:%02d", st.wDay, st.wMonth, st.wYear, st.wHour, st.wMinute, st.wSecond);
 				else
 #endif // MORE_LANGUAGES

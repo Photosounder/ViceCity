@@ -37,63 +37,63 @@
 #include "SaveBuf.h"
 #include "GameLogicMath.h"
 
-uint8 CGameLogic::ActivePlayers;
-uint8 CGameLogic::ShortCutState;
-CAutomobile* CGameLogic::pShortCutTaxi;
-uint32 CGameLogic::NumAfterDeathStartPoints;
-CVector CGameLogic::ShortCutStart;
-float CGameLogic::ShortCutStartOrientation;
-CVector CGameLogic::ShortCutDestination;
-float CGameLogic::ShortCutDestinationOrientation;
-uint32 CGameLogic::ShortCutTimer;
-CVector CGameLogic::AfterDeathStartPoints[NUM_SHORTCUT_START_POINTS];
-float CGameLogic::AfterDeathStartPointOrientation[NUM_SHORTCUT_START_POINTS];
-CVector CGameLogic::ShortCutDropOffForMission;
-float CGameLogic::ShortCutDropOffOrientationForMission;
-bool CGameLogic::MissionDropOffReadyToBeUsed;
+uint8 GameLogic_ActivePlayers;
+uint8 GameLogic_ShortCutState;
+CAutomobile* GameLogic_pShortCutTaxi;
+uint32 GameLogic_NumAfterDeathStartPoints;
+CVector GameLogic_ShortCutStart;
+float GameLogic_ShortCutStartOrientation;
+CVector GameLogic_ShortCutDestination;
+float GameLogic_ShortCutDestinationOrientation;
+uint32 GameLogic_ShortCutTimer;
+CVector GameLogic_AfterDeathStartPoints[NUM_SHORTCUT_START_POINTS];
+float GameLogic_AfterDeathStartPointOrientation[NUM_SHORTCUT_START_POINTS];
+CVector GameLogic_ShortCutDropOffForMission;
+float GameLogic_ShortCutDropOffOrientationForMission;
+bool GameLogic_MissionDropOffReadyToBeUsed;
 
 #define SHORTCUT_TAXI_COST (9)
 #define TOTAL_BUSTED_AUDIO (28)
 
 void
-CGameLogic::InitAtStartOfGame()
+GameLogic_InitAtStartOfGame()
 {
-	ActivePlayers = 1;
-	ShortCutState = SHORTCUT_NONE;
-	pShortCutTaxi = nil;
-	NumAfterDeathStartPoints = 0;
+	GameLogic_ActivePlayers = 1;
+	GameLogic_ShortCutState = SHORTCUT_NONE;
+	GameLogic_pShortCutTaxi = nil;
+	GameLogic_NumAfterDeathStartPoints = 0;
 }
 
 void
-CGameLogic::PassTime(uint32 time)
+GameLogic_PassTime(uint32 time)
 {
 	int32 minutes, hours, days;
 
 	// Do the clock arithmetic in C
-	GameLogic_PassTime(time, Clock_GetMinutes(), Clock_GetHours(), Stats_DaysPassed, &minutes, &hours, &days);
+	GameLogicMath_PassTime(time, Clock_GetMinutes(), Clock_GetHours(), Stats_DaysPassed, &minutes, &hours, &days);
 	Stats_DaysPassed = days;
 
 	Clock_SetGameClock(hours, minutes);
-	CPickups::PassTime(time * 1000);
+	Pickups_PassTime(time * 1000);
 }
 
 void 
-CGameLogic::SortOutStreamingAndMemory(const CVector &pos)
+GameLogic_SortOutStreamingAndMemory(const CVector &pos)
 {
 	Timer_Stop();
 	Streaming_FlushRequestList(); // rouz edit (ChatGPT)
-	CStreaming::DeleteRwObjectsAfterDeath(pos);
-	CStreaming::RemoveUnusedModelsInLoadedList();
-	CGame::DrasticTidyUpMemory(true);
-	CWorld::Players[CWorld::PlayerInFocus].m_pPed->Undress("player");
-	CStreaming::LoadSceneCollision(pos);
-	CStreaming::LoadScene(pos);
-	CWorld::Players[CWorld::PlayerInFocus].m_pPed->Dress();
+	Streaming_DeleteRwObjectsAfterDeath(pos);
+	Streaming_RemoveUnusedModelsInLoadedList();
+	Game_DrasticTidyUpMemory(true);
+	World_Players[World_PlayerInFocus].m_pPed->Undress("player");
+	Streaming_LoadSceneCollision(pos);
+	Streaming_LoadScene(pos);
+	World_Players[World_PlayerInFocus].m_pPed->Dress();
 	Timer_Update();
 }
 
 void
-CGameLogic::Update()
+GameLogic_Update()
 {
 	CVector vecRestartPos;
 	float fRestartFloat;
@@ -101,7 +101,7 @@ CGameLogic::Update()
 #ifdef MISSION_REPLAY
 	// what a place to check!
 	if (gbTryingPorn4Again) {
-		CRunningScript* pScript = CTheScripts::pActiveScripts;
+		CRunningScript* pScript = TheScripts_pActiveScripts;
 		if (pScript && !General_faststricmp(pScript->m_abScriptName, "porno4"))
 			gbTryingPorn4Again = false;
 	}
@@ -109,8 +109,8 @@ CGameLogic::Update()
 
 	if (Cutscene_IsProcessing()) return; // rouz edit (ChatGPT)
 
-	UpdateShortCut();
-	CPlayerInfo &pPlayerInfo = CWorld::Players[CWorld::PlayerInFocus];
+	GameLogic_UpdateShortCut();
+	CPlayerInfo &pPlayerInfo = World_Players[World_PlayerInFocus];
 
 	switch (pPlayerInfo.m_WBState) {
 	case WBSTATE_PLAYING:
@@ -162,22 +162,22 @@ CGameLogic::Update()
 			ScreenDroplets::Initialise();
 #endif
 			Messages_ClearMessages();
-			CCarCtrl::ClearInterestingVehicleList();
-			CWorld::ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
+			CarCtrl_ClearInterestingVehicleList();
+			World_ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
 			Restart_FindClosestHospitalRestartPoint(&pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat); // rouz edit (ChatGPT)
 			Restart_OverrideHospitalLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
 			Restart_OverridePoliceStationLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
-			PassTime(720);
-			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
-			AfterDeathArrestSetUpShortCutTaxi();
-			SortOutStreamingAndMemory(pPlayerInfo.GetPos());
+			GameLogic_PassTime(720);
+			GameLogic_RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
+			GameLogic_AfterDeathArrestSetUpShortCutTaxi();
+			GameLogic_SortOutStreamingAndMemory(pPlayerInfo.GetPos());
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
 			References_RemoveReferencesToPlayer();
 			Population_countDownToPedsAtStart = 10; // rouz edit (ChatGPT)
-			CCarCtrl::CountDownToCarsAtStart = 10;
-			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
+			CarCtrl_CountDownToCarsAtStart = 10;
+			CPad::GetPad(World_PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
 			if (Restart_bFadeInAfterNextDeath) {  // rouz edit (ChatGPT)
 				TheCamera.SetFadeColour(200, 200, 200);
 				TheCamera.Fade(4.0f, FADE_IN);
@@ -196,7 +196,7 @@ CGameLogic::Update()
 		}
 
 
-		if (!CTheScripts::IsPlayerOnAMission() && pPlayerInfo.m_nBustedAudioStatus == BUSTEDAUDIO_NONE) {
+		if (!TheScripts_IsPlayerOnAMission() && pPlayerInfo.m_nBustedAudioStatus == BUSTEDAUDIO_NONE) {
 			if (General_GetRandomNumberInRangeInt(0, 4) == 0)
 				pPlayerInfo.m_nBustedAudioStatus = BUSTEDAUDIO_DONE;
 			else {
@@ -271,23 +271,23 @@ CGameLogic::Update()
 			ScreenDroplets::Initialise();
 #endif
 			Messages_ClearMessages();
-			CCarCtrl::ClearInterestingVehicleList();
-			CWorld::ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
+			CarCtrl_ClearInterestingVehicleList();
+			World_ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
 			Restart_FindClosestPoliceRestartPoint(&pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat); // rouz edit (ChatGPT)
 			Restart_OverrideHospitalLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
 			Restart_OverridePoliceStationLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
-			PassTime(720);
-			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
-			AfterDeathArrestSetUpShortCutTaxi();
+			GameLogic_PassTime(720);
+			GameLogic_RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
+			GameLogic_AfterDeathArrestSetUpShortCutTaxi();
 			pPlayerInfo.m_pPed->ClearWeapons();
-			SortOutStreamingAndMemory(pPlayerInfo.GetPos());
+			GameLogic_SortOutStreamingAndMemory(pPlayerInfo.GetPos());
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
 			References_RemoveReferencesToPlayer();
 			Population_countDownToPedsAtStart = 10; // rouz edit (ChatGPT)
-			CCarCtrl::CountDownToCarsAtStart = 10;
-			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
+			CarCtrl_CountDownToCarsAtStart = 10;
+			CPad::GetPad(World_PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
 			if (Restart_bFadeInAfterNextArrest) { // rouz edit (ChatGPT)
 				TheCamera.SetFadeColour(0, 0, 0);
 				TheCamera.Fade(4.0f, FADE_IN);
@@ -326,20 +326,20 @@ CGameLogic::Update()
 			ScreenDroplets::Initialise();
 #endif
 			Messages_ClearMessages();
-			CCarCtrl::ClearInterestingVehicleList();
-			CWorld::ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
+			CarCtrl_ClearInterestingVehicleList();
+			World_ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
 			Restart_FindClosestPoliceRestartPoint(&pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat); // rouz edit (ChatGPT)
 			Restart_OverridePoliceStationLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
 			Restart_OverrideHospitalLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
-			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
-			SortOutStreamingAndMemory(pPlayerInfo.GetPos());
+			GameLogic_RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
+			GameLogic_SortOutStreamingAndMemory(pPlayerInfo.GetPos());
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
 			References_RemoveReferencesToPlayer();
 			Population_countDownToPedsAtStart = 10; // rouz edit (ChatGPT)
-			CCarCtrl::CountDownToCarsAtStart = 10;
-			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
+			CarCtrl_CountDownToCarsAtStart = 10;
+			CPad::GetPad(World_PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(4.0f, FADE_IN);
 		}
@@ -350,9 +350,9 @@ CGameLogic::Update()
 }
 
 void
-CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed *pPlayerPed, CVector pos, float angle)
+GameLogic_RestorePlayerStuffDuringResurrection(CPlayerPed *pPlayerPed, CVector pos, float angle)
 {
-	ClearShortCut();
+	GameLogic_ClearShortCut();
 	CPlayerInfo* pPlayerInfo = pPlayerPed->GetPlayerInfoForThisPlayerPed();
 	pPlayerPed->m_fHealth = pPlayerInfo->m_nMaxHealth;
 	pPlayerPed->m_fArmour = 0.0f;
@@ -378,83 +378,83 @@ CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed *pPlayerPed, CVector
 	pPlayerPed->bRemoveFromWorld = false;
 	pPlayerPed->ClearWeaponTarget();
 	pPlayerPed->SetInitialState();
-	CCarCtrl::ClearInterestingVehicleList();
+	CarCtrl_ClearInterestingVehicleList();
 	pPlayerPed->Teleport(pos + CVector(0.0f, 0.0f, 1.0f));
 	pPlayerPed->SetMoveSpeed(0.0f, 0.0f, 0.0f);
 	pPlayerPed->m_fRotationCur = DEGTORAD(angle);
 	pPlayerPed->m_fRotationDest = pPlayerPed->m_fRotationCur;
 	pPlayerPed->SetHeading(pPlayerPed->m_fRotationCur);
-	CTheScripts::ClearSpaceForMissionEntity(pos, pPlayerPed);
-	CWorld::ClearExcitingStuffFromArea(pos, 4000.0f, true);
+	TheScripts_ClearSpaceForMissionEntity(pos, pPlayerPed);
+	World_ClearExcitingStuffFromArea(pos, 4000.0f, true);
 	pPlayerPed->RestoreHeadingRate();
-	CGame::currArea = AREA_MAIN_MAP;
-	CStreaming::RemoveBuildingsNotInArea(AREA_MAIN_MAP);
+	Game_currArea = AREA_MAIN_MAP;
+	Streaming_RemoveBuildingsNotInArea(AREA_MAIN_MAP);
 	TheCamera.SetCameraDirectlyInFrontForFollowPed_CamOnAString();
 	TheCamera.Restore();
 	References_RemoveReferencesToPlayer();
-	CGarages::PlayerArrestedOrDied();
+	Garages_PlayerArrestedOrDied();
 	Stats_CheckPointReachedUnsuccessfully();
-	CWorld::Remove(pPlayerPed);
-	CWorld::Add(pPlayerPed);
-	CHud::ResetWastedText();
-	CStreaming::StreamZoneModels(pos);
+	World_Remove(pPlayerPed);
+	World_Add(pPlayerPed);
+	Hud_ResetWastedText();
+	Streaming_StreamZoneModels(pos);
 	clearWaterDrop = true;
 }
 
 void
-CGameLogic::ClearShortCut()
+GameLogic_ClearShortCut()
 {
-	if (pShortCutTaxi) {
-		if (pShortCutTaxi->VehicleCreatedBy == MISSION_VEHICLE) {
-			pShortCutTaxi->VehicleCreatedBy = RANDOM_VEHICLE;
-			--CCarCtrl::NumMissionCars;
-			++CCarCtrl::NumRandomCars;
+	if (GameLogic_pShortCutTaxi) {
+		if (GameLogic_pShortCutTaxi->VehicleCreatedBy == MISSION_VEHICLE) {
+			GameLogic_pShortCutTaxi->VehicleCreatedBy = RANDOM_VEHICLE;
+			--CarCtrl_NumMissionCars;
+			++CarCtrl_NumRandomCars;
 		}
 				// Access raw storage through the C store or pool API
-		CRadar::ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), pShortCutTaxi));
-				pShortCutTaxi = nil;
+		Radar_ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(Pools_GetVehiclePool(), GameLogic_pShortCutTaxi));
+				GameLogic_pShortCutTaxi = nil;
 	}
 	CPad::GetPad(0)->SetEnablePlayerControls(PLAYERCONTROL_SHORTCUT_TAXI);
 }
 
 void
-CGameLogic::SetUpShortCut(CVector vStartPos, float fStartAngle, CVector vEndPos, float fEndAngle)
+GameLogic_SetUpShortCut(CVector vStartPos, float fStartAngle, CVector vEndPos, float fEndAngle)
 {
-	ClearShortCut();
-	ShortCutState = SHORTCUT_INIT;
-	ShortCutStart = vStartPos;
-	ShortCutStartOrientation = fStartAngle;
-	ShortCutDestination = vEndPos;
-	ShortCutDestinationOrientation = fEndAngle;
+	GameLogic_ClearShortCut();
+	GameLogic_ShortCutState = SHORTCUT_INIT;
+	GameLogic_ShortCutStart = vStartPos;
+	GameLogic_ShortCutStartOrientation = fStartAngle;
+	GameLogic_ShortCutDestination = vEndPos;
+	GameLogic_ShortCutDestinationOrientation = fEndAngle;
 	Streaming_RequestModel(MI_KAUFMAN, 0); // rouz edit (ChatGPT)
 }
 
 void
-CGameLogic::AbandonShortCutIfTaxiHasBeenMessedWith()
+GameLogic_AbandonShortCutIfTaxiHasBeenMessedWith()
 {
-	if (!pShortCutTaxi)
+	if (!GameLogic_pShortCutTaxi)
 		return;
 	// Decide in C, the driver tests are only valid with a driver
-	CPed *driver = pShortCutTaxi->pDriver;
+	CPed *driver = GameLogic_pShortCutTaxi->pDriver;
 	if (GameLogic_TaxiHasBeenMessedWith(driver != nil, driver && driver->DyingOrDead(),
 		driver && driver->GetPedState() == PED_DRAG_FROM_CAR, driver && driver->GetPedState() == PED_ON_FIRE,
-		driver && driver->m_objective == OBJECTIVE_LEAVE_CAR_AND_DIE, pShortCutTaxi->m_fHealth, pShortCutTaxi->bRenderScorched))
-		ClearShortCut();
+		driver && driver->m_objective == OBJECTIVE_LEAVE_CAR_AND_DIE, GameLogic_pShortCutTaxi->m_fHealth, GameLogic_pShortCutTaxi->bRenderScorched))
+		GameLogic_ClearShortCut();
 }
 
 void
-CGameLogic::AbandonShortCutIfPlayerMilesAway()
+GameLogic_AbandonShortCutIfPlayerMilesAway()
 {
-	if (!pShortCutTaxi)
+	if (!GameLogic_pShortCutTaxi)
 		return;
-	if ((FindPlayerCoors() - pShortCutTaxi->GetPosition()).Magnitude() > 120.0f)
-		ClearShortCut();
+	if ((FindPlayerCoors() - GameLogic_pShortCutTaxi->GetPosition()).Magnitude() > 120.0f)
+		GameLogic_ClearShortCut();
 }
 
 void
-CGameLogic::UpdateShortCut()
+GameLogic_UpdateShortCut()
 {
-	switch (ShortCutState) {
+	switch (GameLogic_ShortCutState) {
 	case SHORTCUT_INIT:
 		if (!Streaming_HasModelLoaded(MI_KAUFMAN)) { // rouz edit (ChatGPT)
 			Streaming_RequestModel(MI_KAUFMAN, 0); // rouz edit (ChatGPT)
@@ -462,176 +462,176 @@ CGameLogic::UpdateShortCut()
 		}
 		// Allocate the shortcut taxi without invoking C++ new.
 				// Access raw storage through the C store or pool API
-		pShortCutTaxi = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-				if (pShortCutTaxi)
-			std::allocator<CAutomobile>().construct(pShortCutTaxi, MI_KAUFMAN, RANDOM_VEHICLE);
-		if (!pShortCutTaxi)
+		GameLogic_pShortCutTaxi = (CAutomobile*)((CVehicle*)CPool_New(Pools_GetVehiclePool()));
+				if (GameLogic_pShortCutTaxi)
+			std::allocator<CAutomobile>().construct(GameLogic_pShortCutTaxi, MI_KAUFMAN, RANDOM_VEHICLE);
+		if (!GameLogic_pShortCutTaxi)
 			return;
-		pShortCutTaxi->SetPosition(ShortCutStart);
-		pShortCutTaxi->SetHeading(DEGTORAD(ShortCutStartOrientation));
-		pShortCutTaxi->PlaceOnRoadProperly();
-		pShortCutTaxi->SetStatus(STATUS_PHYSICS);
-		pShortCutTaxi->AutoPilot.m_nCarMission = MISSION_STOP_FOREVER;
-		pShortCutTaxi->AutoPilot.m_nCruiseSpeed = 0;
-		pShortCutTaxi->SetUpDriver();
-		pShortCutTaxi->VehicleCreatedBy = MISSION_VEHICLE;
-		++CCarCtrl::NumMissionCars;
-		--CCarCtrl::NumRandomCars;
-		CTheScripts::ClearSpaceForMissionEntity(ShortCutStart, pShortCutTaxi);
-		CWorld::Add(pShortCutTaxi);
+		GameLogic_pShortCutTaxi->SetPosition(GameLogic_ShortCutStart);
+		GameLogic_pShortCutTaxi->SetHeading(DEGTORAD(GameLogic_ShortCutStartOrientation));
+		GameLogic_pShortCutTaxi->PlaceOnRoadProperly();
+		GameLogic_pShortCutTaxi->SetStatus(STATUS_PHYSICS);
+		GameLogic_pShortCutTaxi->AutoPilot.m_nCarMission = MISSION_STOP_FOREVER;
+		GameLogic_pShortCutTaxi->AutoPilot.m_nCruiseSpeed = 0;
+		GameLogic_pShortCutTaxi->SetUpDriver();
+		GameLogic_pShortCutTaxi->VehicleCreatedBy = MISSION_VEHICLE;
+		++CarCtrl_NumMissionCars;
+		--CarCtrl_NumRandomCars;
+		TheScripts_ClearSpaceForMissionEntity(GameLogic_ShortCutStart, GameLogic_pShortCutTaxi);
+		World_Add(GameLogic_pShortCutTaxi);
 				// Access raw storage through the C store or pool API
-		CRadar::SetEntityBlip(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), pShortCutTaxi), 0, BLIP_DISPLAY_MARKER_ONLY);
-				ShortCutState = SHORTCUT_IDLE;
+		Radar_SetEntityBlip(BLIP_CAR, CPool_GetIndex(Pools_GetVehiclePool(), GameLogic_pShortCutTaxi), 0, BLIP_DISPLAY_MARKER_ONLY);
+				GameLogic_ShortCutState = SHORTCUT_IDLE;
 		break;
 	case SHORTCUT_IDLE:
-		if (FindPlayerPed()->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && FindPlayerPed()->m_carInObjective == pShortCutTaxi) {
+		if (FindPlayerPed()->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && FindPlayerPed()->m_carInObjective == GameLogic_pShortCutTaxi) {
 			CPad::GetPad(0)->SetDisablePlayerControls(PLAYERCONTROL_SHORTCUT_TAXI);
-			FindPlayerPed()->SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, pShortCutTaxi);
-			ShortCutState = SHORTCUT_GETTING_IN;
+			FindPlayerPed()->SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, GameLogic_pShortCutTaxi);
+			GameLogic_ShortCutState = SHORTCUT_GETTING_IN;
 		}
-		AbandonShortCutIfTaxiHasBeenMessedWith();
-		AbandonShortCutIfPlayerMilesAway();
+		GameLogic_AbandonShortCutIfTaxiHasBeenMessedWith();
+		GameLogic_AbandonShortCutIfPlayerMilesAway();
 		break;
 	case SHORTCUT_GETTING_IN:
-		if (pShortCutTaxi->pPassengers[0] == FindPlayerPed() ||
-			pShortCutTaxi->pPassengers[1] == FindPlayerPed() ||
-			pShortCutTaxi->pPassengers[2] == FindPlayerPed()) {
-			pShortCutTaxi->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-			pShortCutTaxi->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 2500;
+		if (GameLogic_pShortCutTaxi->pPassengers[0] == FindPlayerPed() ||
+			GameLogic_pShortCutTaxi->pPassengers[1] == FindPlayerPed() ||
+			GameLogic_pShortCutTaxi->pPassengers[2] == FindPlayerPed()) {
+			GameLogic_pShortCutTaxi->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
+			GameLogic_pShortCutTaxi->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 2500;
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(2.5f, FADE_OUT);
-			ShortCutState = SHORTCUT_TRANSITION;
-			ShortCutTimer = (*Timer_GetTimeInMilliseconds()) + 3000;
+			GameLogic_ShortCutState = SHORTCUT_TRANSITION;
+			GameLogic_ShortCutTimer = (*Timer_GetTimeInMilliseconds()) + 3000;
 			Messages_AddBigMessage(Text_Get(&TheText,"TAXI"), 4500, 1);
 		}
-		AbandonShortCutIfTaxiHasBeenMessedWith();
+		GameLogic_AbandonShortCutIfTaxiHasBeenMessedWith();
 		break;
 	case SHORTCUT_TRANSITION:
-		if ((*Timer_GetTimeInMilliseconds()) > ShortCutTimer) {
+		if ((*Timer_GetTimeInMilliseconds()) > GameLogic_ShortCutTimer) {
 			Timer_Suspend();
-			CColStore::RequestCollision(ShortCutDestination);
-			CStreaming::LoadSceneCollision(ShortCutDestination);
-			CStreaming::LoadScene(ShortCutDestination);
-			CTheScripts::ClearSpaceForMissionEntity(ShortCutDestination, pShortCutTaxi);
-			pShortCutTaxi->Teleport(ShortCutDestination);
-			pShortCutTaxi->SetHeading(DEGTORAD(ShortCutDestinationOrientation));
-			pShortCutTaxi->PlaceOnRoadProperly();
-			pShortCutTaxi->SetMoveSpeed(pShortCutTaxi->GetForward() * 0.4f);
-			ShortCutTimer = (*Timer_GetTimeInMilliseconds()) + 1500;
+			ColStore_RequestCollision(GameLogic_ShortCutDestination);
+			Streaming_LoadSceneCollision(GameLogic_ShortCutDestination);
+			Streaming_LoadScene(GameLogic_ShortCutDestination);
+			TheScripts_ClearSpaceForMissionEntity(GameLogic_ShortCutDestination, GameLogic_pShortCutTaxi);
+			GameLogic_pShortCutTaxi->Teleport(GameLogic_ShortCutDestination);
+			GameLogic_pShortCutTaxi->SetHeading(DEGTORAD(GameLogic_ShortCutDestinationOrientation));
+			GameLogic_pShortCutTaxi->PlaceOnRoadProperly();
+			GameLogic_pShortCutTaxi->SetMoveSpeed(GameLogic_pShortCutTaxi->GetForward() * 0.4f);
+			GameLogic_ShortCutTimer = (*Timer_GetTimeInMilliseconds()) + 1500;
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(1.0f, FADE_IN);
-			ShortCutState = SHORTCUT_ARRIVING;
+			GameLogic_ShortCutState = SHORTCUT_ARRIVING;
 			Timer_Resume();
 		}
 		break;
 	case SHORTCUT_ARRIVING:
-		if ((*Timer_GetTimeInMilliseconds()) > ShortCutTimer) {
-			CWorld::Players[CWorld::PlayerInFocus].m_nMoney = General_MaxInt(0, CWorld::Players[CWorld::PlayerInFocus].m_nMoney - SHORTCUT_TAXI_COST);
-			FindPlayerPed()->SetObjective(OBJECTIVE_LEAVE_CAR, pShortCutTaxi);
-			FindPlayerPed()->m_carInObjective = pShortCutTaxi;
-			ShortCutState = SHORTCUT_GETTING_OUT;
+		if ((*Timer_GetTimeInMilliseconds()) > GameLogic_ShortCutTimer) {
+			World_Players[World_PlayerInFocus].m_nMoney = General_MaxInt(0, World_Players[World_PlayerInFocus].m_nMoney - SHORTCUT_TAXI_COST);
+			FindPlayerPed()->SetObjective(OBJECTIVE_LEAVE_CAR, GameLogic_pShortCutTaxi);
+			FindPlayerPed()->m_carInObjective = GameLogic_pShortCutTaxi;
+			GameLogic_ShortCutState = SHORTCUT_GETTING_OUT;
 		}
-		AbandonShortCutIfTaxiHasBeenMessedWith();
+		GameLogic_AbandonShortCutIfTaxiHasBeenMessedWith();
 		break;
 	case SHORTCUT_GETTING_OUT:
-		if (pShortCutTaxi->pPassengers[0] != FindPlayerPed() &&
-			pShortCutTaxi->pPassengers[1] != FindPlayerPed() &&
-			pShortCutTaxi->pPassengers[2] != FindPlayerPed()) {
+		if (GameLogic_pShortCutTaxi->pPassengers[0] != FindPlayerPed() &&
+			GameLogic_pShortCutTaxi->pPassengers[1] != FindPlayerPed() &&
+			GameLogic_pShortCutTaxi->pPassengers[2] != FindPlayerPed()) {
 			CPad::GetPad(0)->SetEnablePlayerControls(PLAYERCONTROL_SHORTCUT_TAXI);
-			pShortCutTaxi->AutoPilot.m_nCarMission = MISSION_CRUISE;
-			pShortCutTaxi->AutoPilot.m_nCruiseSpeed = 18;
-			CCarCtrl::JoinCarWithRoadSystem(pShortCutTaxi);
-			pShortCutTaxi->VehicleCreatedBy = RANDOM_VEHICLE;
-			++CCarCtrl::NumRandomCars;
-			--CCarCtrl::NumMissionCars;
+			GameLogic_pShortCutTaxi->AutoPilot.m_nCarMission = MISSION_CRUISE;
+			GameLogic_pShortCutTaxi->AutoPilot.m_nCruiseSpeed = 18;
+			CarCtrl_JoinCarWithRoadSystem(GameLogic_pShortCutTaxi);
+			GameLogic_pShortCutTaxi->VehicleCreatedBy = RANDOM_VEHICLE;
+			++CarCtrl_NumRandomCars;
+			--CarCtrl_NumMissionCars;
 						// Access raw storage through the C store or pool API
-			CRadar::ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), pShortCutTaxi));
-						ShortCutState = SHORTCUT_NONE;
-			pShortCutTaxi = nil;
+			Radar_ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(Pools_GetVehiclePool(), GameLogic_pShortCutTaxi));
+						GameLogic_ShortCutState = SHORTCUT_NONE;
+			GameLogic_pShortCutTaxi = nil;
 		}
-		AbandonShortCutIfTaxiHasBeenMessedWith();
+		GameLogic_AbandonShortCutIfTaxiHasBeenMessedWith();
 		break;
 	}
 }
 
 void
-CGameLogic::AddShortCutPointAfterDeath(CVector point, float angle)
+GameLogic_AddShortCutPointAfterDeath(CVector point, float angle)
 {
-	if (NumAfterDeathStartPoints >= NUM_SHORTCUT_START_POINTS)
+	if (GameLogic_NumAfterDeathStartPoints >= NUM_SHORTCUT_START_POINTS)
 		return;
-	AfterDeathStartPoints[NumAfterDeathStartPoints] = point;
-	AfterDeathStartPointOrientation[NumAfterDeathStartPoints] = angle;
-	NumAfterDeathStartPoints++;
+	GameLogic_AfterDeathStartPoints[GameLogic_NumAfterDeathStartPoints] = point;
+	GameLogic_AfterDeathStartPointOrientation[GameLogic_NumAfterDeathStartPoints] = angle;
+	GameLogic_NumAfterDeathStartPoints++;
 }
 
 void
-CGameLogic::AddShortCutDropOffPointForMission(CVector point, float angle)
+GameLogic_AddShortCutDropOffPointForMission(CVector point, float angle)
 {
-	ShortCutDropOffForMission = point;
-	ShortCutDropOffOrientationForMission = angle;
-	MissionDropOffReadyToBeUsed = true;
+	GameLogic_ShortCutDropOffForMission = point;
+	GameLogic_ShortCutDropOffOrientationForMission = angle;
+	GameLogic_MissionDropOffReadyToBeUsed = true;
 }
 
 void
-CGameLogic::RemoveShortCutDropOffPointForMission()
+GameLogic_RemoveShortCutDropOffPointForMission()
 {
-	MissionDropOffReadyToBeUsed = false;
+	GameLogic_MissionDropOffReadyToBeUsed = false;
 }
 
 void
-CGameLogic::AfterDeathArrestSetUpShortCutTaxi()
+GameLogic_AfterDeathArrestSetUpShortCutTaxi()
 {
-	if (!MissionDropOffReadyToBeUsed)
+	if (!GameLogic_MissionDropOffReadyToBeUsed)
 		return;
 	// Find the nearest start point in C
 	float fDistanceToPoint;
 	CVector playerCoors = FindPlayerCoors();
-	int nClosestPoint = GameLogic_FindClosestPoint((const float*)AfterDeathStartPoints, NUM_SHORTCUT_START_POINTS,
+	int nClosestPoint = GameLogic_FindClosestPoint((const float*)GameLogic_AfterDeathStartPoints, NUM_SHORTCUT_START_POINTS,
 		playerCoors.x, playerCoors.y, playerCoors.z, &fDistanceToPoint);
 	if (fDistanceToPoint < 100.0f)
-		SetUpShortCut(AfterDeathStartPoints[nClosestPoint],
-			AfterDeathStartPointOrientation[nClosestPoint],
-			ShortCutDropOffForMission,
-			ShortCutDropOffOrientationForMission);
-	MissionDropOffReadyToBeUsed = false;
+		GameLogic_SetUpShortCut(GameLogic_AfterDeathStartPoints[nClosestPoint],
+			GameLogic_AfterDeathStartPointOrientation[nClosestPoint],
+			GameLogic_ShortCutDropOffForMission,
+			GameLogic_ShortCutDropOffOrientationForMission);
+	GameLogic_MissionDropOffReadyToBeUsed = false;
 }
 
 void
-CGameLogic::Save(uint8* buf, uint32* size)
+GameLogic_Save(uint8* buf, uint32* size)
 {
 INITSAVEBUF
 		// Transfer save data through the C buffer API with explicit sizes
-	WriteSaveBuf(&buf, &NumAfterDeathStartPoints, sizeof(NumAfterDeathStartPoints));
-		*size += sizeof(NumAfterDeathStartPoints);
+	WriteSaveBuf(&buf, &GameLogic_NumAfterDeathStartPoints, sizeof(GameLogic_NumAfterDeathStartPoints));
+		*size += sizeof(GameLogic_NumAfterDeathStartPoints);
 	for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
 				// Transfer save data through the C buffer API with explicit sizes
-		WriteSaveBuf(&buf, &AfterDeathStartPoints[i].x, sizeof(AfterDeathStartPoints[i].x));
-				*size += sizeof(AfterDeathStartPoints[i].x);
+		WriteSaveBuf(&buf, &GameLogic_AfterDeathStartPoints[i].x, sizeof(GameLogic_AfterDeathStartPoints[i].x));
+				*size += sizeof(GameLogic_AfterDeathStartPoints[i].x);
 				// Transfer save data through the C buffer API with explicit sizes
-		WriteSaveBuf(&buf, &AfterDeathStartPoints[i].y, sizeof(AfterDeathStartPoints[i].y));
-				*size += sizeof(AfterDeathStartPoints[i].y);
+		WriteSaveBuf(&buf, &GameLogic_AfterDeathStartPoints[i].y, sizeof(GameLogic_AfterDeathStartPoints[i].y));
+				*size += sizeof(GameLogic_AfterDeathStartPoints[i].y);
 				// Transfer save data through the C buffer API with explicit sizes
-		WriteSaveBuf(&buf, &AfterDeathStartPoints[i].z, sizeof(AfterDeathStartPoints[i].z));
-				*size += sizeof(AfterDeathStartPoints[i].z);
+		WriteSaveBuf(&buf, &GameLogic_AfterDeathStartPoints[i].z, sizeof(GameLogic_AfterDeathStartPoints[i].z));
+				*size += sizeof(GameLogic_AfterDeathStartPoints[i].z);
 				// Transfer save data through the C buffer API with explicit sizes
-		WriteSaveBuf(&buf, &AfterDeathStartPointOrientation[i], sizeof(AfterDeathStartPointOrientation[i]));
-				*size += sizeof(AfterDeathStartPointOrientation[i]);
+		WriteSaveBuf(&buf, &GameLogic_AfterDeathStartPointOrientation[i], sizeof(GameLogic_AfterDeathStartPointOrientation[i]));
+				*size += sizeof(GameLogic_AfterDeathStartPointOrientation[i]);
 	}
 VALIDATESAVEBUF(*size)
 }
 
 void
-CGameLogic::Load(uint8* buf, uint32 size)
+GameLogic_Load(uint8* buf, uint32 size)
 {
 INITSAVEBUF
 		// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&NumAfterDeathStartPoints, &buf, sizeof(NumAfterDeathStartPoints));
+	ReadSaveBuf(&GameLogic_NumAfterDeathStartPoints, &buf, sizeof(GameLogic_NumAfterDeathStartPoints));
 		for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
 				// Transfer save data through the C buffer API with explicit sizes
-		ReadSaveBuf(&AfterDeathStartPoints[i].x, &buf, sizeof(AfterDeathStartPoints[i].x));
-		ReadSaveBuf(&AfterDeathStartPoints[i].y, &buf, sizeof(AfterDeathStartPoints[i].y));
-		ReadSaveBuf(&AfterDeathStartPoints[i].z, &buf, sizeof(AfterDeathStartPoints[i].z));
-		ReadSaveBuf(&AfterDeathStartPointOrientation[i], &buf, sizeof(AfterDeathStartPointOrientation[i]));
+		ReadSaveBuf(&GameLogic_AfterDeathStartPoints[i].x, &buf, sizeof(GameLogic_AfterDeathStartPoints[i].x));
+		ReadSaveBuf(&GameLogic_AfterDeathStartPoints[i].y, &buf, sizeof(GameLogic_AfterDeathStartPoints[i].y));
+		ReadSaveBuf(&GameLogic_AfterDeathStartPoints[i].z, &buf, sizeof(GameLogic_AfterDeathStartPoints[i].z));
+		ReadSaveBuf(&GameLogic_AfterDeathStartPointOrientation[i], &buf, sizeof(GameLogic_AfterDeathStartPointOrientation[i]));
 			}
 VALIDATESAVEBUF(size)
 }

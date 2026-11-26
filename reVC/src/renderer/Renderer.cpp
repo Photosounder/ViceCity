@@ -81,39 +81,39 @@ typedef CSortedLinkItem EntityInfo;
 CSortedLinkList gSortedVehiclesAndPeds;
 //- rouz edit (ChatGPT)
 
-int32 CRenderer::ms_nNoOfVisibleEntities;
-CEntity *CRenderer::ms_aVisibleEntityPtrs[NUMVISIBLEENTITIES];
-CEntity *CRenderer::ms_aInVisibleEntityPtrs[NUMINVISIBLEENTITIES];
-int32 CRenderer::ms_nNoOfInVisibleEntities;
+int32 Renderer_ms_nNoOfVisibleEntities;
+CEntity *Renderer_ms_aVisibleEntityPtrs[NUMVISIBLEENTITIES];
+CEntity *Renderer_ms_aInVisibleEntityPtrs[NUMINVISIBLEENTITIES];
+int32 Renderer_ms_nNoOfInVisibleEntities;
 #ifdef NEW_RENDERER
-int32 CRenderer::ms_nNoOfVisibleVehicles;
-CEntity *CRenderer::ms_aVisibleVehiclePtrs[NUMVISIBLEENTITIES];
-int32 CRenderer::ms_nNoOfVisibleBuildings;
-CEntity *CRenderer::ms_aVisibleBuildingPtrs[NUMVISIBLEENTITIES];
+int32 Renderer_ms_nNoOfVisibleVehicles;
+CEntity *Renderer_ms_aVisibleVehiclePtrs[NUMVISIBLEENTITIES];
+int32 Renderer_ms_nNoOfVisibleBuildings;
+CEntity *Renderer_ms_aVisibleBuildingPtrs[NUMVISIBLEENTITIES];
 #endif
 
-CVector CRenderer::ms_vecCameraPosition;
-CVehicle *CRenderer::m_pFirstPersonVehicle;
-bool CRenderer::m_loadingPriority;
-float CRenderer::ms_lodDistScale = 1.2f;
+CVector Renderer_ms_vecCameraPosition;
+CVehicle *Renderer_m_pFirstPersonVehicle;
+bool Renderer_m_loadingPriority;
+float Renderer_ms_lodDistScale = 1.2f;
 
 // unused
-BlockedRange CRenderer::aBlockedRanges[16];
-BlockedRange* CRenderer::pFullBlockedRanges;
-BlockedRange* CRenderer::pEmptyBlockedRanges;
+BlockedRange Renderer_aBlockedRanges[16];
+BlockedRange* Renderer_pFullBlockedRanges;
+BlockedRange* Renderer_pEmptyBlockedRanges;
 
 void
-CRenderer::Init(void)
+Renderer_Init(void)
 {
 	// Zero-initialize list nodes here so CITA records the owning subsystem
 	//+ rouz edit (ChatGPT)
 	CSortedLinkList_Init(&gSortedVehiclesAndPeds, (CSortedLink*)calloc(40, sizeof(CSortedLink)), 40);
 	//- rouz edit (ChatGPT)
-	SortBIGBuildings();
+	Renderer_SortBIGBuildings();
 }
 
 void
-CRenderer::Shutdown(void)
+Renderer_Shutdown(void)
 {
 	// Free the subsystem node array and reset its list sentinels
 	//+ rouz edit (ChatGPT)
@@ -123,7 +123,7 @@ CRenderer::Shutdown(void)
 }
 
 void
-CRenderer::PreRender(void)
+Renderer_PreRender(void)
 {
 	int i;
 	// Use the C linked-list functions and node types
@@ -131,16 +131,16 @@ CRenderer::PreRender(void)
 	CSortedLink *node;
 	//- rouz edit (ChatGPT)
 
-	for(i = 0; i < ms_nNoOfVisibleEntities; i++)
-		ms_aVisibleEntityPtrs[i]->PreRender();
+	for(i = 0; i < Renderer_ms_nNoOfVisibleEntities; i++)
+		Renderer_ms_aVisibleEntityPtrs[i]->PreRender();
 
 #ifdef NEW_RENDERER
 	if(gbNewRenderer){
-		for(i = 0; i < ms_nNoOfVisibleVehicles; i++)
-			ms_aVisibleVehiclePtrs[i]->PreRender();
+		for(i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++)
+			Renderer_ms_aVisibleVehiclePtrs[i]->PreRender();
 		// How is this done with cWorldStream?
-		for(i = 0; i < ms_nNoOfVisibleBuildings; i++)
-			ms_aVisibleBuildingPtrs[i]->PreRender();
+		for(i = 0; i < Renderer_ms_nNoOfVisibleBuildings; i++)
+			Renderer_ms_aVisibleBuildingPtrs[i]->PreRender();
 		for(node = CVisibilityPlugins::m_alphaBuildingList.head.next;
 		    node != &CVisibilityPlugins::m_alphaBuildingList.tail;
 		    node = node->next)
@@ -151,11 +151,11 @@ CRenderer::PreRender(void)
 	}
 #endif
 
-	for (i = 0; i < ms_nNoOfInVisibleEntities; i++) {
+	for (i = 0; i < Renderer_ms_nNoOfInVisibleEntities; i++) {
 #ifdef SQUEEZE_PERFORMANCE
-		if (ms_aInVisibleEntityPtrs[i]->IsVehicle() && ((CVehicle*)ms_aInVisibleEntityPtrs[i])->IsHeli())
+		if (Renderer_ms_aInVisibleEntityPtrs[i]->IsVehicle() && ((CVehicle*)Renderer_ms_aInVisibleEntityPtrs[i])->IsHeli())
 #endif
-		ms_aInVisibleEntityPtrs[i]->PreRender();
+		Renderer_ms_aInVisibleEntityPtrs[i]->PreRender();
 	}
 
 	for(node = CVisibilityPlugins::m_alphaEntityList.head.next;
@@ -171,7 +171,7 @@ CRenderer::PreRender(void)
 }
 
 void
-CRenderer::RenderOneRoad(CEntity *e)
+Renderer_RenderOneRoad(CEntity *e)
 {
 #ifndef FINAL
 	if(gbDontRenderBuildings)
@@ -179,7 +179,7 @@ CRenderer::RenderOneRoad(CEntity *e)
 #endif
 #ifndef MASTER
 	if(gbShowCollisionPolys || gbShowCollisionPolysReflections || gbShowCollisionPolysNoShadows)
-		CCollision::DrawColModel_Coloured(e->GetMatrix(), *((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))), e->GetModelIndex()); // rouz edit (ChatGPT)
+		Collision_DrawColModel_Coloured(e->GetMatrix(), *((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))), e->GetModelIndex()); // rouz edit (ChatGPT)
 	else
 #endif
 	{
@@ -203,7 +203,7 @@ static void RenderSoftwareVehicleOccupant(CPed *ped);
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::RenderOneNonRoad(CEntity *e)
+Renderer_RenderOneNonRoad(CEntity *e)
 {
 	CPed *ped;
 	CVehicle *veh;
@@ -213,7 +213,7 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 #ifndef MASTER
 	if(gbShowCollisionPolys || gbShowCollisionPolysReflections || gbShowCollisionPolysNoShadows){
 		if(!e->IsVehicle()){
-			CCollision::DrawColModel_Coloured(e->GetMatrix(), *((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))), e->GetModelIndex()); // rouz edit (ChatGPT)
+			Collision_DrawColModel_Coloured(e->GetMatrix(), *((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))), e->GetModelIndex()); // rouz edit (ChatGPT)
 			return;
 		}
 	}else
@@ -330,9 +330,9 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 }
 
 void
-CRenderer::RenderFirstPersonVehicle(void)
+Renderer_RenderFirstPersonVehicle(void)
 {
-	if(m_pFirstPersonVehicle == nil)
+	if(Renderer_m_pFirstPersonVehicle == nil)
 		return;
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
@@ -340,7 +340,7 @@ CRenderer::RenderFirstPersonVehicle(void)
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RenderOneNonRoad(m_pFirstPersonVehicle);
+	Renderer_RenderOneNonRoad(Renderer_m_pFirstPersonVehicle);
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 }
 
@@ -446,7 +446,7 @@ IsHighAltitudeStaticMapInstanceQueued(CSimpleModelInfo *mi, const CVector &posit
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::RenderRoads(void)
+Renderer_RenderRoads(void)
 {
 	int i;
 	CEntity *e;
@@ -460,10 +460,10 @@ CRenderer::RenderRoads(void)
 	// Use the complete C lighting owner and its borrowed SDK handles
 	Lights_SetAmbientColours();
 
-	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
-		e = ms_aVisibleEntityPtrs[i];
+	for(i = 0; i < Renderer_ms_nNoOfVisibleEntities; i++){
+		e = Renderer_ms_aVisibleEntityPtrs[i];
 		if(IsRoad(e))
-			RenderOneRoad(e);
+			Renderer_RenderOneRoad(e);
 	}
 	POP_RENDERGROUP();
 }
@@ -642,7 +642,7 @@ static bool IsSoftwareVehicleOccupant(CPed *ped)
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::RenderEverythingBarRoads(void)
+Renderer_RenderEverythingBarRoads(void)
 {
 	int i;
 	CEntity *e;
@@ -657,8 +657,8 @@ CRenderer::RenderEverythingBarRoads(void)
 	CSortedLinkList_Clear(&gSortedVehiclesAndPeds);
 	//- rouz edit (ChatGPT)
 
-	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
-		e = ms_aVisibleEntityPtrs[i];
+	for(i = 0; i < Renderer_ms_nNoOfVisibleEntities; i++){
+		e = Renderer_ms_aVisibleEntityPtrs[i];
 
 		if(IsRoad(e))
 			continue;
@@ -682,25 +682,25 @@ CRenderer::RenderEverythingBarRoads(void)
 				//+ rouz edit (ChatGPT)
 				ei.object = e;
 				//- rouz edit (ChatGPT)
-				ei.sort = (ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
+				ei.sort = (Renderer_ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
 				// Use the C linked-list functions and node types
 				//+ rouz edit (ChatGPT)
 				CSortedLinkList_InsertSorted(&gSortedVehiclesAndPeds, &ei);
 				//- rouz edit (ChatGPT)
 			}else{
-				if(!CVisibilityPlugins::InsertEntityIntoSortedList(e, (ms_vecCameraPosition - e->GetPosition()).Magnitude())){
+				if(!CVisibilityPlugins::InsertEntityIntoSortedList(e, (Renderer_ms_vecCameraPosition - e->GetPosition()).Magnitude())){
 					printf("Ran out of space in alpha entity list");
-					RenderOneNonRoad(e);
+					Renderer_RenderOneNonRoad(e);
 				}
 			}
 		}else
-			RenderOneNonRoad(e);
+			Renderer_RenderOneNonRoad(e);
 	}
 	POP_RENDERGROUP();
 }
 
 void
-CRenderer::RenderBoats(void)
+Renderer_RenderBoats(void)
 {
 	// Use the C linked-list functions and node types
 	//+ rouz edit (ChatGPT)
@@ -715,7 +715,7 @@ CRenderer::RenderBoats(void)
 	// Gather reflection-camera boats independently from the main camera visibility list
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
-		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		CVehiclePool *vehiclePool = Pools_GetVehiclePool();
 		if(vehiclePool)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
@@ -748,14 +748,14 @@ CRenderer::RenderBoats(void)
 		CSortedLinkList_Clear(&gSortedVehiclesAndPeds);
 		//- rouz edit (ChatGPT)
 		// not the real thing
-		for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
-			e = ms_aVisibleVehiclePtrs[i];
+		for(i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++){
+			e = Renderer_ms_aVisibleVehiclePtrs[i];
 			if(e->IsVehicle() && PutIntoSortedVehicleList((CVehicle*)e)){
 				// Access the object payload through the C list node
 				//+ rouz edit (ChatGPT)
 				ei.object = e;
 				//- rouz edit (ChatGPT)
-				ei.sort = (ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
+				ei.sort = (Renderer_ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
 				// Use the C linked-list functions and node types
 				//+ rouz edit (ChatGPT)
 				CSortedLinkList_InsertSorted(&gSortedVehiclesAndPeds, &ei);
@@ -777,15 +777,15 @@ CRenderer::RenderBoats(void)
 		// Submit boat clumps through the CPU renderer
 		RenderSoftwareVehicle(v);
 #else
-		RenderOneNonRoad(v);
+		Renderer_RenderOneNonRoad(v);
 #endif
 		//- rouz edit (ChatGPT)
 	}
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 	// Submit translucent boats omitted from the sorted boat list
-	for(int32 i = 0; i < ms_nNoOfVisibleVehicles; i++){
-		CEntity *entity = ms_aVisibleVehiclePtrs[i];
+	for(int32 i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++){
+		CEntity *entity = Renderer_ms_aVisibleVehiclePtrs[i];
 		if(entity && entity->IsVehicle() && entity->m_rwObject && ((CVehicle*)entity)->IsBoat() &&
 		   !PutIntoSortedVehicleList((CVehicle*)entity))
 			RenderSoftwareVehicle((CVehicle*)entity);
@@ -837,7 +837,7 @@ SetStencilState(int state)
 }
 
 void
-CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
+Renderer_RenderOneBuilding(CEntity *ent, float camdist)
 {
 	if(ent->m_rwObject == nil)
 		return;
@@ -945,7 +945,7 @@ static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CV
 		if(!IsVisibleToSoftwareEnvMap(entity) || RwObjectGetType(entity->m_rwObject) != rpATOMIC)
 			continue;
 		if(!entity->bOffscreen &&
-		   (entity->bIsBIGBuilding || entity->m_scanCode == CWorld::GetCurrentScanCode()))
+		   (entity->bIsBIGBuilding || entity->m_scanCode == World_GetCurrentScanCode()))
 			continue;
 		if(!IsAreaVisible(entity->m_area))
 			continue;
@@ -994,7 +994,7 @@ static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CV
 			RpAtomicSetGeometry(atomic, RpAtomicGetGeometry(drawAtomic), rpATOMICSAMEBOUNDINGSPHERE);
 		const bool savedDistanceFade = entity->bDistanceFade;
 		entity->bDistanceFade = false;
-		CRenderer::RenderOneBuilding(entity, distance);
+		Renderer_RenderOneBuilding(entity, distance);
 		entity->bDistanceFade = savedDistanceFade;
 		if(RpAtomicGetGeometry(atomic) != savedGeometry)
 			RpAtomicSetGeometry(atomic, savedGeometry, rpATOMICSAMEBOUNDINGSPHERE);
@@ -1008,14 +1008,14 @@ static void RenderSoftwareReflectionBuildings(int pass)
 	   !CustomPipes::EnvMapCam->getFrame())
 		return;
 	const CVector cameraPosition(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
-	RenderSoftwareReflectionBuildingPool(CPools::GetBuildingPool(), pass, cameraPosition);
-	RenderSoftwareReflectionBuildingPool(CPools::GetTreadablePool(), pass, cameraPosition);
+	RenderSoftwareReflectionBuildingPool(Pools_GetBuildingPool(), pass, cameraPosition);
+	RenderSoftwareReflectionBuildingPool(Pools_GetTreadablePool(), pass, cameraPosition);
 }
 #endif
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::RenderWorld(int pass)
+Renderer_RenderWorld(int pass)
 {
 	int i;
 	CEntity *e;
@@ -1037,10 +1037,10 @@ CRenderer::RenderWorld(int pass)
 		// Roads
 		PUSH_RENDERGROUP("CRenderer::RenderWorld - Roads");
 		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
-		for(i = 0; i < ms_nNoOfVisibleBuildings; i++){
-			e = ms_aVisibleBuildingPtrs[i];
+		for(i = 0; i < Renderer_ms_nNoOfVisibleBuildings; i++){
+			e = Renderer_ms_aVisibleBuildingPtrs[i];
 			if(e->bIsBIGBuilding || IsRoad(e))
-				RenderOneBuilding(e);
+				Renderer_RenderOneBuilding(e);
 		}
 		for(node = CVisibilityPlugins::m_alphaBuildingList.tail.prev;
 		    node != &CVisibilityPlugins::m_alphaBuildingList.head;
@@ -1050,7 +1050,7 @@ CRenderer::RenderWorld(int pass)
 			e = (CEntity*)node->item.object;
 			//- rouz edit (ChatGPT)
 			if(e->bIsBIGBuilding || IsRoad(e))
-				RenderOneBuilding(e, node->item.sort);
+				Renderer_RenderOneBuilding(e, node->item.sort);
 		}
 		// Include reflection-only roads and distant building LODs
 		//+ rouz edit (ChatGPT)
@@ -1064,10 +1064,10 @@ CRenderer::RenderWorld(int pass)
 		// Opaque
 		PUSH_RENDERGROUP("CRenderer::RenderWorld - Opaque");
 		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
-		for(i = 0; i < ms_nNoOfVisibleBuildings; i++){
-			e = ms_aVisibleBuildingPtrs[i];
+		for(i = 0; i < Renderer_ms_nNoOfVisibleBuildings; i++){
+			e = Renderer_ms_aVisibleBuildingPtrs[i];
 			if(!(e->bIsBIGBuilding || IsRoad(e)))
-				RenderOneBuilding(e);
+				Renderer_RenderOneBuilding(e);
 		}
 		for(node = CVisibilityPlugins::m_alphaBuildingList.tail.prev;
 		    node != &CVisibilityPlugins::m_alphaBuildingList.head;
@@ -1077,7 +1077,7 @@ CRenderer::RenderWorld(int pass)
 			e = (CEntity*)node->item.object;
 			//- rouz edit (ChatGPT)
 			if(!(e->bIsBIGBuilding || IsRoad(e)))
-				RenderOneBuilding(e, node->item.sort);
+				Renderer_RenderOneBuilding(e, node->item.sort);
 		}
 		// Include reflection-only opaque building atomics
 		//+ rouz edit (ChatGPT)
@@ -1108,7 +1108,7 @@ CRenderer::RenderWorld(int pass)
 }
 
 void
-CRenderer::RenderPeds(void)
+Renderer_RenderPeds(void)
 {
 	int i;
 	CEntity *e;
@@ -1118,7 +1118,7 @@ CRenderer::RenderPeds(void)
 	// Gather reflection-camera peds independently from the main camera visibility list
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
-		CPedPool *pedPool = CPools::GetPedPool();
+		CPedPool *pedPool = Pools_GetPedPool();
 		if(pedPool)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
@@ -1127,23 +1127,23 @@ CRenderer::RenderPeds(void)
 				CPed *ped = ((CPed*)CPool_GetSlot(pedPool, i));
 			//- rouz edit (ChatGPT)
 				if(IsVisibleToSoftwareEnvMap(ped))
-					RenderOneNonRoad(ped);
+					Renderer_RenderOneNonRoad(ped);
 			}
 		POP_RENDERGROUP();
 		return;
 	}
 #endif
 	//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
-		e = ms_aVisibleVehiclePtrs[i];
+	for(i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++){
+		e = Renderer_ms_aVisibleVehiclePtrs[i];
 		if(e->IsPed())
-			RenderOneNonRoad(e);
+			Renderer_RenderOneNonRoad(e);
 	}
 	POP_RENDERGROUP();
 }
 
 void
-CRenderer::RenderVehicles(void)
+Renderer_RenderVehicles(void)
 {
 	int i;
 	CEntity *e;
@@ -1155,8 +1155,8 @@ CRenderer::RenderVehicles(void)
 
 	PUSH_RENDERGROUP("CRenderer::RenderVehicles");
 	// not the real thing
-	for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
-		e = ms_aVisibleVehiclePtrs[i];
+	for(i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++){
+		e = Renderer_ms_aVisibleVehiclePtrs[i];
 		if(!e->IsVehicle())
 			continue;
 		if(PutIntoSortedVehicleList((CVehicle*)e))
@@ -1165,7 +1165,7 @@ CRenderer::RenderVehicles(void)
 		//+ rouz edit (ChatGPT)
 		ei.object = e;
 		//- rouz edit (ChatGPT)
-		ei.sort = (ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
+		ei.sort = (Renderer_ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
 		// Use the C linked-list functions and node types
 		//+ rouz edit (ChatGPT)
 		CSortedLinkList_InsertSorted(&gSortedVehiclesAndPeds, &ei);
@@ -1177,7 +1177,7 @@ CRenderer::RenderVehicles(void)
 	    node = node->prev)
 		// Access the object payload through the C list node
 		//+ rouz edit (ChatGPT)
-		RenderOneNonRoad((CEntity*)node->item.object);
+		Renderer_RenderOneNonRoad((CEntity*)node->item.object);
 		//- rouz edit (ChatGPT)
 	POP_RENDERGROUP();
 }
@@ -1576,14 +1576,14 @@ static void RenderSoftwareReflectionObject(CObject *object)
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::RenderSoftwareVehicles(void)
+Renderer_RenderSoftwareVehicles(void)
 {
 #ifdef REVC_SOFTWARE_POLYGONS
 	//+ rouz edit (ChatGPT)
 	// Gather reflection-camera vehicles independently from the main camera visibility list
 #if defined(EXTENDED_PIPELINES) && defined(LIBRW)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
-		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		CVehiclePool *vehiclePool = Pools_GetVehiclePool();
 		if(vehiclePool)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
@@ -1599,8 +1599,8 @@ CRenderer::RenderSoftwareVehicles(void)
 #endif
 	//- rouz edit (ChatGPT)
 	// Submit visible vehicle clumps and distant atomic LODs through the CPU path
-	for(int i = 0; i < ms_nNoOfVisibleVehicles; i++){
-		CEntity *entity = ms_aVisibleVehiclePtrs[i];
+	for(int i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++){
+		CEntity *entity = Renderer_ms_aVisibleVehiclePtrs[i];
 		if(!entity || !entity->IsVehicle() || !entity->m_rwObject)
 			continue;
 		// Keep sorted water-touching cars in software reflections while preserving the main-pass split
@@ -1641,22 +1641,22 @@ static void RegisterSoftwareReflectionLightPool(CPool *pool)
 #endif
 
 void
-CRenderer::RegisterSoftwareReflectionLights(void)
+Renderer_RegisterSoftwareReflectionLights(void)
 {
 	// Collect reflection-camera point lights before any geometry is shaded
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
 	if(!CustomPipes::bRenderingEnvMap || !CustomPipes::EnvMapCam)
 		return;
-	RegisterSoftwareReflectionLightPool(CPools::GetBuildingPool());
-	RegisterSoftwareReflectionLightPool(CPools::GetTreadablePool());
-	RegisterSoftwareReflectionLightPool(CPools::GetPedPool());
-	RegisterSoftwareReflectionLightPool(CPools::GetVehiclePool());
-	RegisterSoftwareReflectionLightPool(CPools::GetObjectPool());
+	RegisterSoftwareReflectionLightPool(Pools_GetBuildingPool());
+	RegisterSoftwareReflectionLightPool(Pools_GetTreadablePool());
+	RegisterSoftwareReflectionLightPool(Pools_GetPedPool());
+	RegisterSoftwareReflectionLightPool(Pools_GetVehiclePool());
+	RegisterSoftwareReflectionLightPool(Pools_GetObjectPool());
 #endif
 }
 
 void
-CRenderer::RenderSoftwareReflectionEntities(void)
+Renderer_RenderSoftwareReflectionEntities(void)
 {
 	// Render reflection-camera actors and props in one back-to-front order
 	PUSH_RENDERGROUP("CRenderer::RenderSoftwareReflectionEntities");
@@ -1666,9 +1666,9 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 		int entityCount = 0;
 		const CVector cameraPosition(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
 		const CVector cameraRight(CustomPipes::EnvMapCam->getFrame()->getLTM()->right);
-		CPedPool *pedPool = CPools::GetPedPool();
-		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
-		CObjectPool *objectPool = CPools::GetObjectPool();
+		CPedPool *pedPool = Pools_GetPedPool();
+		CVehiclePool *vehiclePool = Pools_GetVehiclePool();
+		CObjectPool *objectPool = Pools_GetObjectPool();
 		EntityInfo entityInfo;
 		MotionBlurStreak reflectionStreaks[NUMMBLURSTREAKS];
 		int reflectionStreakCount = 0;
@@ -1804,7 +1804,7 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 			else if(entity->IsObject())
 				RenderSoftwareReflectionObject((CObject*)entity);
 			else
-				RenderOneNonRoad(entity);
+				Renderer_RenderOneNonRoad(entity);
 		}
 		// Draw the local reflection-only projectile trails with depth testing and scene fog
 		if(reflectionStreakCount > 0){
@@ -1831,7 +1831,7 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::RenderTransparentWater(void)
+Renderer_RenderTransparentWater(void)
 {
 	int i;
 	CEntity *e;
@@ -1849,7 +1849,7 @@ CRenderer::RenderTransparentWater(void)
 	// Cut reflection water around boats visible only to the environment camera
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
-		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		CVehiclePool *vehiclePool = Pools_GetVehiclePool();
 		if(vehiclePool)
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
@@ -1863,8 +1863,8 @@ CRenderer::RenderTransparentWater(void)
 	}else
 #endif
 	//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
-		e = ms_aVisibleVehiclePtrs[i];
+	for(i = 0; i < Renderer_ms_nNoOfVisibleVehicles; i++){
+		e = Renderer_ms_aVisibleVehiclePtrs[i];
 		if(e->IsVehicle() && ((CVehicle*)e)->IsBoat())
 			((CBoat*)e)->RenderWaterOutPolys();
 	}
@@ -1875,19 +1875,19 @@ CRenderer::RenderTransparentWater(void)
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	SetStencilState(1);
 
-	CWaterLevel::RenderTransparentWater();
+	WaterLevel_RenderTransparentWater();
 
 	SetStencilState(0);
 	POP_RENDERGROUP();
 }
 
 void
-CRenderer::ClearForFrame(void)
+Renderer_ClearForFrame(void)
 {
-	ms_nNoOfVisibleEntities = 0;
-	ms_nNoOfVisibleVehicles = 0;
-	ms_nNoOfVisibleBuildings = 0;
-	ms_nNoOfInVisibleEntities = 0;
+	Renderer_ms_nNoOfVisibleEntities = 0;
+	Renderer_ms_nNoOfVisibleVehicles = 0;
+	Renderer_ms_nNoOfVisibleBuildings = 0;
+	Renderer_ms_nNoOfInVisibleEntities = 0;
 	// Use the C linked-list functions and node types
 	//+ rouz edit (ChatGPT)
 	CSortedLinkList_Clear(&gSortedVehiclesAndPeds);
@@ -1900,7 +1900,7 @@ CRenderer::ClearForFrame(void)
 #endif
 
 void
-CRenderer::RenderFadingInEntities(void)
+Renderer_RenderFadingInEntities(void)
 {
 	PUSH_RENDERGROUP("CRenderer::RenderFadingInEntities");
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
@@ -1915,7 +1915,7 @@ CRenderer::RenderFadingInEntities(void)
 }
 
 void
-CRenderer::RenderFadingInUnderwaterEntities(void)
+Renderer_RenderFadingInUnderwaterEntities(void)
 {
 	PUSH_RENDERGROUP("CRenderer::RenderFadingInUnderwaterEntities");
 	// Use the complete C lighting owner and its borrowed SDK handles
@@ -1927,17 +1927,17 @@ CRenderer::RenderFadingInUnderwaterEntities(void)
 }
 
 void
-CRenderer::RenderCollisionLines(void)
+Renderer_RenderCollisionLines(void)
 {
 	int i;
 
 	// game doesn't draw fading in entities
 	// this should probably be fixed
-	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
-		CEntity *e = ms_aVisibleEntityPtrs[i];
-		if(General_AbsDiffBelow(e->GetPosition().x, ms_vecCameraPosition.x, 100.0f) &&
-		   General_AbsDiffBelow(e->GetPosition().y, ms_vecCameraPosition.y, 100.0f))
-			CCollision::DrawColModel(e->GetMatrix(), *e->GetColModel());
+	for(i = 0; i < Renderer_ms_nNoOfVisibleEntities; i++){
+		CEntity *e = Renderer_ms_aVisibleEntityPtrs[i];
+		if(General_AbsDiffBelow(e->GetPosition().x, Renderer_ms_vecCameraPosition.x, 100.0f) &&
+		   General_AbsDiffBelow(e->GetPosition().y, Renderer_ms_vecCameraPosition.y, 100.0f))
+			Collision_DrawColModel(e->GetMatrix(), *e->GetColModel());
 	}
 }
 
@@ -1958,7 +1958,7 @@ enum Visbility
 #define CANTIMECULL (!OTHERUNAVAILABLE)
 
 int32
-CRenderer::SetupEntityVisibility(CEntity *ent)
+Renderer_SetupEntityVisibility(CEntity *ent)
 {
 	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(ent->m_modelIndex)); // rouz edit (ChatGPT)
 	CTimeModelInfo *ti;
@@ -2006,7 +2006,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 
 				if(direction != LOOKING_BEHIND ||
 				   !veh->IsBoat() || model == MI_REEFER || model == MI_TROPIC || model == MI_PREDATOR || model == MI_SKIMMER){
-					m_pFirstPersonVehicle = (CVehicle*)ent;
+					Renderer_m_pFirstPersonVehicle = (CVehicle*)ent;
 					ent->bNoBrightHeadLights = false;
 					return VIS_OFFSCREEN;
 				}
@@ -2018,7 +2018,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 			if(!ent->GetIsOnScreen() || ent->IsEntityOccluded())
 				return VIS_OFFSCREEN;
 			if(ent->bDrawLast){
-				dist = (ent->GetPosition() - ms_vecCameraPosition).Magnitude();
+				dist = (ent->GetPosition() - Renderer_ms_vecCameraPosition).Magnitude();
 				CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 				ent->bDistanceFade = false;
 				return VIS_INVISIBLE;
@@ -2031,7 +2031,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 			if(!ent->GetIsOnScreen() || ent->IsEntityOccluded())
 				return VIS_OFFSCREEN;
 			if(ent->bDrawLast){
-				dist = (ent->GetPosition() - ms_vecCameraPosition).Magnitude();
+				dist = (ent->GetPosition() - Renderer_ms_vecCameraPosition).Magnitude();
 				CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 				ent->bDistanceFade = false;
 				return VIS_INVISIBLE;
@@ -2045,7 +2045,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(!IsAreaVisible(ent->m_area))
 		return VIS_INVISIBLE;
 
-	dist = (ent->GetPosition() - ms_vecCameraPosition).Magnitude();
+	dist = (ent->GetPosition() - Renderer_ms_vecCameraPosition).Magnitude();
 
 #ifndef FIX_BUGS
 	// Whatever this is supposed to do, it breaks fading for objects
@@ -2146,7 +2146,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 }
 
 int32
-CRenderer::SetupBigBuildingVisibility(CEntity *ent)
+Renderer_SetupBigBuildingVisibility(CEntity *ent)
 {
 	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(ent->m_modelIndex)); // rouz edit (ChatGPT)
 	CTimeModelInfo *ti;
@@ -2176,7 +2176,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	}else if(mi->GetModelType() == MITYPE_VEHICLE)
 		return ent->IsVisible() ? VIS_VISIBLE : VIS_INVISIBLE;
 
-	float dist = (ms_vecCameraPosition-ent->GetPosition()).Magnitude();
+	float dist = (Renderer_ms_vecCameraPosition-ent->GetPosition()).Magnitude();
 	CSimpleModelInfo *nonLOD = (CSimpleModelInfo*)mi->m_atomics[2]; // rouz edit (ChatGPT)
 
 	// rouz edit (ChatGPT)
@@ -2271,37 +2271,37 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 }
 
 void
-CRenderer::ConstructRenderList(void)
+Renderer_ConstructRenderList(void)
 {
-	COcclusion::ProcessBeforeRendering();
+	Occlusion_ProcessBeforeRendering();
 #ifdef NEW_RENDERER
 	if(!gbNewRenderer)
 #endif
 {
-	ms_nNoOfVisibleEntities = 0;
-	ms_nNoOfInVisibleEntities = 0;
+	Renderer_ms_nNoOfVisibleEntities = 0;
+	Renderer_ms_nNoOfInVisibleEntities = 0;
 }
-	ms_vecCameraPosition = TheCamera.GetPosition();
+	Renderer_ms_vecCameraPosition = TheCamera.GetPosition();
 	//+ rouz edit (ChatGPT)
 	gNumHighAltitudeStaticMapInstances = 0;
 	gbUseHighAltitudeStaticMapDistance = false;
 	//- rouz edit (ChatGPT)
 
 	// unused
-	pFullBlockedRanges = nil;
-	pEmptyBlockedRanges = aBlockedRanges;
+	Renderer_pFullBlockedRanges = nil;
+	Renderer_pEmptyBlockedRanges = Renderer_aBlockedRanges;
 	for(int i = 0; i < 16; i++){
-		aBlockedRanges[i].prev = &aBlockedRanges[i-1];
-		aBlockedRanges[i].next = &aBlockedRanges[i+1];
+		Renderer_aBlockedRanges[i].prev = &Renderer_aBlockedRanges[i-1];
+		Renderer_aBlockedRanges[i].next = &Renderer_aBlockedRanges[i+1];
 	}
-	aBlockedRanges[0].prev = nil;
-	aBlockedRanges[15].next = nil;
+	Renderer_aBlockedRanges[0].prev = nil;
+	Renderer_aBlockedRanges[15].next = nil;
 
 	// unused
 	TestCloseThings = 0;
 	TestBigThings = 0;
 
-	ScanWorld();
+	Renderer_ScanWorld();
 }
 
 void
@@ -2336,8 +2336,8 @@ enum Corners
 static void
 SetSectorPolyPoint(RwV2d &point, const CVector &coors)
 {
-	point.x = CWorld::GetSectorX(coors.x);
-	point.y = CWorld::GetSectorY(coors.y);
+	point.x = World_GetSectorX(coors.x);
+	point.y = World_GetSectorY(coors.y);
 }
 
 static void
@@ -2350,13 +2350,13 @@ ScanSectorFrustum(CVector *vectors, int32 firstCorner, void (*scanfunc)(CPtrList
 	for(i = 0; i < 4; i++){
 		SetSectorPolyPoint(poly[1], vectors[firstCorner + i]);
 		SetSectorPolyPoint(poly[2], vectors[firstCorner + ((i + 1) & 3)]);
-		CRenderer::ScanSectorPoly(poly, 3, scanfunc);
+		Renderer_ScanSectorPoly(poly, 3, scanfunc);
 	}
 }
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::ScanWorld(void)
+Renderer_ScanWorld(void)
 {
 	float f = RwCameraGetFarClipPlane(TheCamera.m_pRwCamera);
 	RwV2d vw = *RwCameraGetViewWindow(TheCamera.m_pRwCamera);
@@ -2379,9 +2379,9 @@ CRenderer::ScanWorld(void)
 
 	cammatrix = RwFrameGetMatrix(RwCameraGetFrame(TheCamera.m_pRwCamera));
 
-	m_pFirstPersonVehicle = nil;
+	Renderer_m_pFirstPersonVehicle = nil;
 	CVisibilityPlugins::InitAlphaEntityList();
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 
 	// unused
 	static CVector prevPos;
@@ -2406,7 +2406,7 @@ CRenderer::ScanWorld(void)
 	RwV3dTransformPoints(vectors, vectors, ARRAY_SIZE(vectors), cammatrix);
 	//- rouz edit (ChatGPT)
 
-	m_loadingPriority = false;
+	Renderer_m_loadingPriority = false;
 	if(TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOPDOWN ||
 #ifdef FIX_BUGS
 	   TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_GTACLASSIC ||
@@ -2436,52 +2436,52 @@ CRenderer::ScanWorld(void)
 		World_SectorRange(rect.left, rect.top, rect.right, rect.bottom, &x1, &y1, &x2, &y2);
 		for(; x1 <= x2; x1++)
 			for(int y = y1; y <= y2; y++)
-				ScanSectorList(CWorld::GetSector(x1, y)->m_lists);
+				Renderer_ScanSectorList(World_GetSector(x1, y)->m_lists);
 	}else{
 #ifdef GTA_TRAIN
 		CVehicle *train = FindPlayerTrain();
 		if(train && train->GetPosition().z < 0.0f){
 			// rouz edit (ChatGPT)
-			ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList_Subway);
+			ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, Renderer_ScanSectorList_Subway);
 		}else
 #endif
 		{
 			//+ rouz edit (ChatGPT)
 			if(f > LOD_DISTANCE){
 				// priority
-				ScanSectorFrustum(vectors, CORNER_PRIO_TOPLEFT, ScanSectorList_Priority);
+				ScanSectorFrustum(vectors, CORNER_PRIO_TOPLEFT, Renderer_ScanSectorList_Priority);
 
 				// below LOD
-				ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList);
+				ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, Renderer_ScanSectorList);
 
 				// rouz edit (ChatGPT)
 				if(ShouldScanFarStaticMapEntities())
-					ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList_FarStaticMapEntities);
+					ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, Renderer_ScanSectorList_FarStaticMapEntities);
 			}else{
-				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList);
+				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, Renderer_ScanSectorList);
 			}
 			//- rouz edit (ChatGPT)
 			
 #ifdef NO_ISLAND_LOADING
 			if (FrontEndMenuManager.m_PrefsIslandLoading == CMenuManager::ISLAND_LOADING_HIGH) {
-				ScanBigBuildingList(CWorld::GetBigBuildingList(LEVEL_BEACH));
-				ScanBigBuildingList(CWorld::GetBigBuildingList(LEVEL_MAINLAND));
+				Renderer_ScanBigBuildingList(World_GetBigBuildingList(LEVEL_BEACH));
+				Renderer_ScanBigBuildingList(World_GetBigBuildingList(LEVEL_MAINLAND));
 			} else 
 #endif
 			{
 #ifdef FIX_BUGS
-			if(CCollision::ms_collisionInMemory != LEVEL_GENERIC)
+			if(Collision_ms_collisionInMemory != LEVEL_GENERIC)
 #endif
-				ScanBigBuildingList(CWorld::GetBigBuildingList(CGame::currLevel));
+				Renderer_ScanBigBuildingList(World_GetBigBuildingList(Game_currLevel));
 			}
-			ScanBigBuildingList(CWorld::GetBigBuildingList(LEVEL_GENERIC));
+			Renderer_ScanBigBuildingList(World_GetBigBuildingList(LEVEL_GENERIC));
 		}
 	}
-	ScanFarAwayVehicles(); // rouz edit (ChatGPT)
+	Renderer_ScanFarAwayVehicles(); // rouz edit (ChatGPT)
 }
 
 void
-CRenderer::RequestObjectsInFrustum(void)
+Renderer_RequestObjectsInFrustum(void)
 {
 	float f = RwCameraGetFarClipPlane(TheCamera.m_pRwCamera);
 	RwV2d vw = *RwCameraGetViewWindow(TheCamera.m_pRwCamera);
@@ -2504,8 +2504,8 @@ CRenderer::RequestObjectsInFrustum(void)
 
 	cammatrix = RwFrameGetMatrix(RwCameraGetFrame(TheCamera.m_pRwCamera));
 
-	CWorld::AdvanceCurrentScanCode();
-	ms_vecCameraPosition = TheCamera.GetPosition();
+	World_AdvanceCurrentScanCode();
+	Renderer_ms_vecCameraPosition = TheCamera.GetPosition();
 
 	//+ rouz edit (ChatGPT)
 	vectors[CORNER_LOD_TOPLEFT] = vectors[CORNER_FAR_TOPLEFT] * LOD_DISTANCE/f;
@@ -2550,19 +2550,19 @@ CRenderer::RequestObjectsInFrustum(void)
 		World_SectorRange(rect.left, rect.top, rect.right, rect.bottom, &x1, &y1, &x2, &y2);
 		for(; x1 <= x2; x1++)
 			for(int y = y1; y <= y2; y++)
-				ScanSectorList_RequestModels(CWorld::GetSector(x1, y)->m_lists);
+				Renderer_ScanSectorList_RequestModels(World_GetSector(x1, y)->m_lists);
 	}else{
 		//+ rouz edit (ChatGPT)
 		if(f > LOD_DISTANCE){
-			ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList_RequestModels);
+			ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, Renderer_ScanSectorList_RequestModels);
 			if(ShouldScanFarStaticMapEntities())
-				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList_RequestFarStaticMapEntityModels);
+				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, Renderer_ScanSectorList_RequestFarStaticMapEntityModels);
 		}else{
-			ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList_RequestModels);
+			ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, Renderer_ScanSectorList_RequestModels);
 		}
 		//- rouz edit (ChatGPT)
 	}
-	ScanFarAwayVehicleModels(); // rouz edit (ChatGPT)
+	Renderer_ScanFarAwayVehicleModels(); // rouz edit (ChatGPT)
 }
 
 bool
@@ -2610,7 +2610,7 @@ void
 CPed::RemoveLighting(bool reset)
 {
 	if (!bRenderScorched) {
-		CRenderer::RemoveVehiclePedLights(this, reset);
+		Renderer_RemoveVehiclePedLights(this, reset);
 		if (reset)
 			// Use the complete C lighting owner and its borrowed SDK handles
 			Lights_ReSetAmbientAndDirectionalColours();
@@ -2639,11 +2639,11 @@ struct ScanSectorContext { void (*scanfunc)(CPtrList *); };
 static void
 ScanSectorCallback(int32 x, int32 y, void *context)
 {
-	((ScanSectorContext*)context)->scanfunc(CWorld::GetSector(x, y)->m_lists);
+	((ScanSectorContext*)context)->scanfunc(World_GetSector(x, y)->m_lists);
 }
 
 void
-CRenderer::ScanSectorPoly(RwV2d *poly, int32 numVertices, void (*scanfunc)(CPtrList *))
+Renderer_ScanSectorPoly(RwV2d *poly, int32 numVertices, void (*scanfunc)(CPtrList *))
 {
 	// Delegate the scan conversion of the polygon to the C implementation
 	ScanSectorContext context = { scanfunc };
@@ -2651,7 +2651,7 @@ CRenderer::ScanSectorPoly(RwV2d *poly, int32 numVertices, void (*scanfunc)(CPtrL
 }
 
 void
-CRenderer::InsertEntityIntoList(CEntity *ent)
+Renderer_InsertEntityIntoList(CEntity *ent)
 {
 #ifdef FIX_BUGS
 	if (!ent->m_rwObject) return;
@@ -2661,25 +2661,25 @@ CRenderer::InsertEntityIntoList(CEntity *ent)
 	// TODO: there are more flags being checked here
 	//+ rouz edit (ChatGPT)
 	if(gbNewRenderer && (ent->IsVehicle() || ent->IsPed())){
-		if(ms_nNoOfVisibleVehicles >= NUMVISIBLEENTITIES)
+		if(Renderer_ms_nNoOfVisibleVehicles >= NUMVISIBLEENTITIES)
 			return;
-		ms_aVisibleVehiclePtrs[ms_nNoOfVisibleVehicles++] = ent;
+		Renderer_ms_aVisibleVehiclePtrs[Renderer_ms_nNoOfVisibleVehicles++] = ent;
 	}else if(gbNewRenderer && ent->IsBuilding()){
-		if(ms_nNoOfVisibleBuildings >= NUMVISIBLEENTITIES)
+		if(Renderer_ms_nNoOfVisibleBuildings >= NUMVISIBLEENTITIES)
 			return;
-		ms_aVisibleBuildingPtrs[ms_nNoOfVisibleBuildings++] = ent;
+		Renderer_ms_aVisibleBuildingPtrs[Renderer_ms_nNoOfVisibleBuildings++] = ent;
 	}else
 #endif
 	{
-		if(ms_nNoOfVisibleEntities >= NUMVISIBLEENTITIES)
+		if(Renderer_ms_nNoOfVisibleEntities >= NUMVISIBLEENTITIES)
 			return;
-		ms_aVisibleEntityPtrs[ms_nNoOfVisibleEntities++] = ent;
+		Renderer_ms_aVisibleEntityPtrs[Renderer_ms_nNoOfVisibleEntities++] = ent;
 	}
 	//- rouz edit (ChatGPT)
 }
 
 void
-CRenderer::ScanBigBuildingList(CPtrList &list)
+Renderer_ScanBigBuildingList(CPtrList &list)
 {
 	CPtrNode *node;
 	CEntity *ent;
@@ -2690,16 +2690,16 @@ CRenderer::ScanBigBuildingList(CPtrList &list)
 		ent = (CEntity*)node->item;
 		if(ent->bOffscreen || (ent->m_randomSeed&3) != f){
 			ent->bOffscreen = true;
-			vis = SetupBigBuildingVisibility(ent);
+			vis = Renderer_SetupBigBuildingVisibility(ent);
 		}else
 			vis = VIS_VISIBLE;
 		switch(vis){
 		case VIS_VISIBLE:
-			InsertEntityIntoList(ent);
+			Renderer_InsertEntityIntoList(ent);
 			ent->bOffscreen = false;
 			break;
 		case VIS_STREAMME:
-			if(!CStreaming::ms_disableStreaming)
+			if(!Streaming_ms_disableStreaming)
 				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			break;
 		}
@@ -2708,9 +2708,9 @@ CRenderer::ScanBigBuildingList(CPtrList &list)
 
 //+ rouz edit (ChatGPT)
 void
-CRenderer::ScanFarAwayVehicles(void)
+Renderer_ScanFarAwayVehicles(void)
 {
-	CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+	CVehiclePool *vehiclePool = Pools_GetVehiclePool();
 	CEntity *ent;
 	int vis;
 
@@ -2725,18 +2725,18 @@ CRenderer::ScanFarAwayVehicles(void)
 	//- rouz edit (ChatGPT)
 		if(ent == nil ||
 		   !ent->bDrawFarAway ||
-		   ent->m_scanCode == CWorld::GetCurrentScanCode())
+		   ent->m_scanCode == World_GetCurrentScanCode())
 			continue;
 
-		ent->m_scanCode = CWorld::GetCurrentScanCode();
-		vis = SetupBigBuildingVisibility(ent);
+		ent->m_scanCode = World_GetCurrentScanCode();
+		vis = Renderer_SetupBigBuildingVisibility(ent);
 		switch(vis){
 		case VIS_VISIBLE:
-			InsertEntityIntoList(ent);
+			Renderer_InsertEntityIntoList(ent);
 			ent->bOffscreen = false;
 			break;
 		case VIS_STREAMME:
-			if(!CStreaming::ms_disableStreaming)
+			if(!Streaming_ms_disableStreaming)
 				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			break;
 		}
@@ -2745,7 +2745,7 @@ CRenderer::ScanFarAwayVehicles(void)
 //- rouz edit (ChatGPT)
 
 void
-CRenderer::ScanSectorList(CPtrList *lists)
+Renderer_ScanSectorList(CPtrList *lists)
 {
 	CPtrNode *node;
 	CPtrList *list;
@@ -2757,14 +2757,14 @@ CRenderer::ScanSectorList(CPtrList *lists)
 		list = &lists[i];
 		for(node = list->first; node; node = node->next){
 			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+			if(ent->m_scanCode == World_GetCurrentScanCode())
 				continue;	// already seen
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			ent->m_scanCode = World_GetCurrentScanCode();
 			ent->bOffscreen = false;
 
-			switch(SetupEntityVisibility(ent)){
+			switch(Renderer_SetupEntityVisibility(ent)){
 			case VIS_VISIBLE:
-				InsertEntityIntoList(ent);
+				Renderer_InsertEntityIntoList(ent);
 				break;
 			case VIS_INVISIBLE:
 				if(!IsGlass(ent->GetModelIndex()))
@@ -2772,16 +2772,16 @@ CRenderer::ScanSectorList(CPtrList *lists)
 				// fall through
 			case VIS_OFFSCREEN:
 				ent->bOffscreen = true;
-				dx = ms_vecCameraPosition.x - ent->GetPosition().x;
-				dy = ms_vecCameraPosition.y - ent->GetPosition().y;
+				dx = Renderer_ms_vecCameraPosition.x - ent->GetPosition().x;
+				dy = Renderer_ms_vecCameraPosition.y - ent->GetPosition().y;
 				if(dx > -30.0f && dx < 30.0f &&
 				   dy > -30.0f && dy < 30.0f &&
-				   ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
-					ms_aInVisibleEntityPtrs[ms_nNoOfInVisibleEntities++] = ent;
+				   Renderer_ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
+					Renderer_ms_aInVisibleEntityPtrs[Renderer_ms_nNoOfInVisibleEntities++] = ent;
 				break;
 			case VIS_STREAMME:
-				if(!CStreaming::ms_disableStreaming)
-					if(!m_loadingPriority || Streaming_numModelsRequested < 10) // rouz edit (ChatGPT)
+				if(!Streaming_ms_disableStreaming)
+					if(!Renderer_m_loadingPriority || Streaming_numModelsRequested < 10) // rouz edit (ChatGPT)
 						Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 				break;
 			}
@@ -2790,7 +2790,7 @@ CRenderer::ScanSectorList(CPtrList *lists)
 }
 
 void
-CRenderer::ScanSectorList_Priority(CPtrList *lists)
+Renderer_ScanSectorList_Priority(CPtrList *lists)
 {
 	CPtrNode *node;
 	CPtrList *list;
@@ -2802,14 +2802,14 @@ CRenderer::ScanSectorList_Priority(CPtrList *lists)
 		list = &lists[i];
 		for(node = list->first; node; node = node->next){
 			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+			if(ent->m_scanCode == World_GetCurrentScanCode())
 				continue;	// already seen
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			ent->m_scanCode = World_GetCurrentScanCode();
 			ent->bOffscreen = false;
 
-			switch(SetupEntityVisibility(ent)){
+			switch(Renderer_SetupEntityVisibility(ent)){
 			case VIS_VISIBLE:
-				InsertEntityIntoList(ent);
+				Renderer_InsertEntityIntoList(ent);
 				break;
 			case VIS_INVISIBLE:
 				if(!IsGlass(ent->GetModelIndex()))
@@ -2817,18 +2817,18 @@ CRenderer::ScanSectorList_Priority(CPtrList *lists)
 				// fall through
 			case VIS_OFFSCREEN:
 				ent->bOffscreen = true;
-				dx = ms_vecCameraPosition.x - ent->GetPosition().x;
-				dy = ms_vecCameraPosition.y - ent->GetPosition().y;
+				dx = Renderer_ms_vecCameraPosition.x - ent->GetPosition().x;
+				dy = Renderer_ms_vecCameraPosition.y - ent->GetPosition().y;
 				if(dx > -30.0f && dx < 30.0f &&
 				   dy > -30.0f && dy < 30.0f &&
-				   ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
-					ms_aInVisibleEntityPtrs[ms_nNoOfInVisibleEntities++] = ent;
+				   Renderer_ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
+					Renderer_ms_aInVisibleEntityPtrs[Renderer_ms_nNoOfInVisibleEntities++] = ent;
 				break;
 			case VIS_STREAMME:
-				if(!CStreaming::ms_disableStreaming){
+				if(!Streaming_ms_disableStreaming){
 					Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 					if(Streaming_modelInfo[ent->GetModelIndex()].m_loadState != STREAMSTATE_LOADED) // rouz edit (ChatGPT)
-						m_loadingPriority = true;
+						Renderer_m_loadingPriority = true;
 				}
 				break;
 			}
@@ -2838,7 +2838,7 @@ CRenderer::ScanSectorList_Priority(CPtrList *lists)
 
 //+ rouz edit (ChatGPT)
 void
-CRenderer::ScanSectorList_FarStaticMapEntities(CPtrList *lists)
+Renderer_ScanSectorList_FarStaticMapEntities(CPtrList *lists)
 {
 	CPtrNode *node;
 	CPtrList *list;
@@ -2858,18 +2858,18 @@ CRenderer::ScanSectorList_FarStaticMapEntities(CPtrList *lists)
 		list = &lists[listIDs[i]];
 		for(node = list->first; node; node = node->next){
 			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+			if(ent->m_scanCode == World_GetCurrentScanCode())
 				continue;	// already seen
 			if(!ShouldForceHighAltitudeStaticMapEntity(ent))
 				continue;
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			ent->m_scanCode = World_GetCurrentScanCode();
 			ent->bOffscreen = false;
 
 			gbUseHighAltitudeStaticMapDistance = true;
-			switch(SetupEntityVisibility(ent)){
+			switch(Renderer_SetupEntityVisibility(ent)){
 			case VIS_VISIBLE:
 				MarkHighAltitudeStaticMapInstance(ent);
-				InsertEntityIntoList(ent);
+				Renderer_InsertEntityIntoList(ent);
 				break;
 			case VIS_INVISIBLE:
 				if(!IsGlass(ent->GetModelIndex()))
@@ -2877,16 +2877,16 @@ CRenderer::ScanSectorList_FarStaticMapEntities(CPtrList *lists)
 				// fall through
 			case VIS_OFFSCREEN:
 				ent->bOffscreen = true;
-				dx = ms_vecCameraPosition.x - ent->GetPosition().x;
-				dy = ms_vecCameraPosition.y - ent->GetPosition().y;
+				dx = Renderer_ms_vecCameraPosition.x - ent->GetPosition().x;
+				dy = Renderer_ms_vecCameraPosition.y - ent->GetPosition().y;
 				if(dx > -30.0f && dx < 30.0f &&
 				   dy > -30.0f && dy < 30.0f &&
-				   ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
-					ms_aInVisibleEntityPtrs[ms_nNoOfInVisibleEntities++] = ent;
+				   Renderer_ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
+					Renderer_ms_aInVisibleEntityPtrs[Renderer_ms_nNoOfInVisibleEntities++] = ent;
 				break;
 			case VIS_STREAMME:
-				if(!CStreaming::ms_disableStreaming)
-					if(!m_loadingPriority || Streaming_numModelsRequested < 10) // rouz edit (ChatGPT)
+				if(!Streaming_ms_disableStreaming)
+					if(!Renderer_m_loadingPriority || Streaming_numModelsRequested < 10) // rouz edit (ChatGPT)
 						Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 				break;
 			}
@@ -2898,7 +2898,7 @@ CRenderer::ScanSectorList_FarStaticMapEntities(CPtrList *lists)
 
 #ifdef GTA_TRAIN
 void
-CRenderer::ScanSectorList_Subway(CPtrList *lists)
+Renderer_ScanSectorList_Subway(CPtrList *lists)
 {
 	CPtrNode *node;
 	CPtrList *list;
@@ -2910,22 +2910,22 @@ CRenderer::ScanSectorList_Subway(CPtrList *lists)
 		list = &lists[i];
 		for(node = list->first; node; node = node->next){
 			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+			if(ent->m_scanCode == World_GetCurrentScanCode())
 				continue;	// already seen
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			ent->m_scanCode = World_GetCurrentScanCode();
 			ent->bOffscreen = false;
-			switch(SetupEntityVisibility(ent)){
+			switch(Renderer_SetupEntityVisibility(ent)){
 			case VIS_VISIBLE:
-				InsertEntityIntoList(ent);
+				Renderer_InsertEntityIntoList(ent);
 				break;
 			case VIS_OFFSCREEN:
 				ent->bOffscreen = true;
-				dx = ms_vecCameraPosition.x - ent->GetPosition().x;
-				dy = ms_vecCameraPosition.y - ent->GetPosition().y;
+				dx = Renderer_ms_vecCameraPosition.x - ent->GetPosition().x;
+				dy = Renderer_ms_vecCameraPosition.y - ent->GetPosition().y;
 				if(dx > -30.0f && dx < 30.0f &&
 				   dy > -30.0f && dy < 30.0f &&
-				   ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
-					ms_aInVisibleEntityPtrs[ms_nNoOfInVisibleEntities++] = ent;
+				   Renderer_ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
+					Renderer_ms_aInVisibleEntityPtrs[Renderer_ms_nNoOfInVisibleEntities++] = ent;
 				break;
 			}
 		}
@@ -2934,7 +2934,7 @@ CRenderer::ScanSectorList_Subway(CPtrList *lists)
 #endif
 
 void
-CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
+Renderer_ScanSectorList_RequestModels(CPtrList *lists)
 {
 	CPtrNode *node;
 	CPtrList *list;
@@ -2945,10 +2945,10 @@ CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
 		list = &lists[i];
 		for(node = list->first; node; node = node->next){
 			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+			if(ent->m_scanCode == World_GetCurrentScanCode())
 				continue;	// already seen
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
-			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+			ent->m_scanCode = World_GetCurrentScanCode();
+			if(Renderer_ShouldModelBeStreamed(ent, Renderer_ms_vecCameraPosition))
 				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 		}
 	}
@@ -2956,9 +2956,9 @@ CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
 
 //+ rouz edit (ChatGPT)
 void
-CRenderer::ScanFarAwayVehicleModels(void)
+Renderer_ScanFarAwayVehicleModels(void)
 {
-	CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+	CVehiclePool *vehiclePool = Pools_GetVehiclePool();
 	CEntity *ent;
 
 	if(vehiclePool == nil)
@@ -2972,11 +2972,11 @@ CRenderer::ScanFarAwayVehicleModels(void)
 	//- rouz edit (ChatGPT)
 		if(ent == nil ||
 		   !ent->bDrawFarAway ||
-		   ent->m_scanCode == CWorld::GetCurrentScanCode())
+		   ent->m_scanCode == World_GetCurrentScanCode())
 			continue;
 
-		ent->m_scanCode = CWorld::GetCurrentScanCode();
-		if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+		ent->m_scanCode = World_GetCurrentScanCode();
+		if(Renderer_ShouldModelBeStreamed(ent, Renderer_ms_vecCameraPosition))
 			Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 	}
 }
@@ -2984,7 +2984,7 @@ CRenderer::ScanFarAwayVehicleModels(void)
 
 //+ rouz edit (ChatGPT)
 void
-CRenderer::ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists)
+Renderer_ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists)
 {
 	CPtrNode *node;
 	CPtrList *list;
@@ -3003,14 +3003,14 @@ CRenderer::ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists)
 		list = &lists[listIDs[i]];
 		for(node = list->first; node; node = node->next){
 			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+			if(ent->m_scanCode == World_GetCurrentScanCode())
 				continue;	// already seen
 			if(!ShouldForceHighAltitudeStaticMapEntity(ent))
 				continue;
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			ent->m_scanCode = World_GetCurrentScanCode();
 
 			gbUseHighAltitudeStaticMapDistance = true;
-			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+			if(Renderer_ShouldModelBeStreamed(ent, Renderer_ms_vecCameraPosition))
 				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			gbUseHighAltitudeStaticMapDistance = false;
 		}
@@ -3021,18 +3021,18 @@ CRenderer::ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists)
 // Put big buildings in front
 // This seems pointless because the sector lists shouldn't have big buildings in the first place
 void
-CRenderer::SortBIGBuildings(void)
+Renderer_SortBIGBuildings(void)
 {
 	int x, y;
 	for(y = 0; y < NUMSECTORS_Y; y++)
 		for(x = 0; x < NUMSECTORS_X; x++){
-			SortBIGBuildingsForSectorList(&CWorld::GetSector(x, y)->m_lists[ENTITYLIST_BUILDINGS]);
-			SortBIGBuildingsForSectorList(&CWorld::GetSector(x, y)->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
+			Renderer_SortBIGBuildingsForSectorList(&World_GetSector(x, y)->m_lists[ENTITYLIST_BUILDINGS]);
+			Renderer_SortBIGBuildingsForSectorList(&World_GetSector(x, y)->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
 		}
 }
 
 void
-CRenderer::SortBIGBuildingsForSectorList(CPtrList *list)
+Renderer_SortBIGBuildingsForSectorList(CPtrList *list)
 {
 	CPtrNode *node;
 	CEntity *ent;
@@ -3047,7 +3047,7 @@ CRenderer::SortBIGBuildingsForSectorList(CPtrList *list)
 }
 
 bool
-CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
+Renderer_ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 {
 	if(!IsAreaVisible(ent->m_area))
 		return false;
@@ -3068,7 +3068,7 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 }
 
 void
-CRenderer::RemoveVehiclePedLights(CEntity *ent, bool reset)
+Renderer_RemoveVehiclePedLights(CEntity *ent, bool reset)
 {
 	if(!ent->bRenderScorched){
 		// Enter the C point-light algorithm with the original owner expressions

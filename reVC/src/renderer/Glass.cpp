@@ -27,9 +27,9 @@
 #endif
 
 
-uint32 CGlass::NumGlassEntities;
-CEntity *CGlass::apEntitiesToBeRendered[NUM_GLASSENTITIES];
-CFallingGlassPane CGlass::aGlassPanes[NUM_GLASSPANES];
+uint32 Glass_NumGlassEntities;
+CEntity *Glass_apEntitiesToBeRendered[NUM_GLASSENTITIES];
+CFallingGlassPane Glass_aGlassPanes[NUM_GLASSPANES];
 
 static CVector
 GetGlassRenderCameraPosition(void)
@@ -182,13 +182,13 @@ CFallingGlassPane::Render(void)
 
 	CVector fwdNorm = GetForward();
 	fwdNorm.Normalise();
-	uint8 alpha = CGlass::CalcAlphaWithNormal(&fwdNorm);
+	uint8 alpha = Glass_CalcAlphaWithNormal(&fwdNorm);
 
 // Delegate to the C implementation
 uint8 color = Glass_HiLightColor(alpha, (*Timer_GetTimeInMilliseconds()), m_nTimer, m_bCarGlass);
 
 	if ( TempBufferIndicesStoredHiLight >= TEMPBUFFERINDEXHILIGHTSIZE-7 || TempBufferVerticesStoredHiLight >= TEMPBUFFERVERTHILIGHTSIZE-4 )
-		CGlass::RenderHiLightPolys();
+		Glass_RenderHiLightPolys();
 
 	// HiLight Polys
 	
@@ -231,7 +231,7 @@ uint8 color = Glass_HiLightColor(alpha, (*Timer_GetTimeInMilliseconds()), m_nTim
 	if ( m_bShattered )
 	{
 		if ( TempBufferIndicesStoredShattered >= TEMPBUFFERINDEXSHATTEREDSIZE-7 || TempBufferVerticesStoredShattered >= TEMPBUFFERVERTSHATTEREDSIZE-4 )
-			CGlass::RenderShatteredPolys();
+			Glass_RenderShatteredPolys();
 
 		// Delegate to the C implementation
 		uint8 shatteredColor = Glass_ShatteredColor(distToCamera);
@@ -264,27 +264,27 @@ uint8 color = Glass_HiLightColor(alpha, (*Timer_GetTimeInMilliseconds()), m_nTim
 }
 
 void
-CGlass::Init(void)
+Glass_Init(void)
 {
 	for ( int32 i = 0; i < NUM_GLASSPANES; i++ )
-		aGlassPanes[i].m_bActive = false;
+		Glass_aGlassPanes[i].m_bActive = false;
 
 	for ( int32 i = 0; i < NUM_GLASSTRIANGLES; i++  )
 		CentersWithTriangle[i] = (CoorsWithTriangle[i][0] + CoorsWithTriangle[i][1] + CoorsWithTriangle[i][2]) / 3;
 }
 
 void
-CGlass::Update(void)
+Glass_Update(void)
 {
 	for ( int32 i = 0; i < NUM_GLASSPANES; i++ )
 	{
-		if ( aGlassPanes[i].m_bActive )
-			aGlassPanes[i].Update();
+		if ( Glass_aGlassPanes[i].m_bActive )
+			Glass_aGlassPanes[i].Update();
 	}
 }
 
 void
-CGlass::Render(void)
+Glass_Render(void)
 {
 	TempBufferVerticesStoredHiLight    = 0;
 	TempBufferIndicesStoredHiLight     = 0;
@@ -307,20 +307,20 @@ CGlass::Render(void)
 
 	for ( int32 i = 0; i < NUM_GLASSPANES; i++ )
 	{
-		if ( aGlassPanes[i].m_bActive )
-			aGlassPanes[i].Render();
+		if ( Glass_aGlassPanes[i].m_bActive )
+			Glass_aGlassPanes[i].Render();
 	}
 
-	for ( uint32 i = 0; i < NumGlassEntities; i++ )
-		RenderEntityInGlass(apEntitiesToBeRendered[i]);
+	for ( uint32 i = 0; i < Glass_NumGlassEntities; i++ )
+		Glass_RenderEntityInGlass(Glass_apEntitiesToBeRendered[i]);
 
 	POP_RENDERGROUP();
 
-	NumGlassEntities = 0;
+	Glass_NumGlassEntities = 0;
 
-	RenderHiLightPolys();
-	RenderShatteredPolys();
-	RenderReflectionPolys();
+	Glass_RenderHiLightPolys();
+	Glass_RenderShatteredPolys();
+	Glass_RenderReflectionPolys();
 
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void *)TRUE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE,  (void *)TRUE);
@@ -330,19 +330,19 @@ CGlass::Render(void)
 }
 
 CFallingGlassPane *
-CGlass::FindFreePane(void)
+Glass_FindFreePane(void)
 {
 	for ( int32 i = 0; i < NUM_GLASSPANES; i++ )
 	{
-		if ( !aGlassPanes[i].m_bActive )
-			return &aGlassPanes[i];
+		if ( !Glass_aGlassPanes[i].m_bActive )
+			return &Glass_aGlassPanes[i];
 	}
 
 	return nil;
 }
 
 void
-CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector right, CVector speed, CVector center,
+Glass_GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector right, CVector speed, CVector center,
 								float moveSpeed, bool cracked, bool explosion, int32 stepmul, bool carGlass)
 {
 	float upLen    = up.Magnitude();
@@ -356,7 +356,7 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 	float rightScl = rightLen / float(xsteps);
 
 	bool bZFound;
-	float groundZ = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &bZFound);
+	float groundZ = World_FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &bZFound);
 	if ( !bZFound ) groundZ = pos.z - 2.0f;
 
 	for ( uint32 y = 0; y < ysteps; y++  )
@@ -368,7 +368,7 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 
 			for ( int32 i = 0; i < NUM_GLASSTRIANGLES; i++ )
 			{
-				CFallingGlassPane *pane = FindFreePane();
+				CFallingGlassPane *pane = Glass_FindFreePane();
 				if ( pane )
 				{
 					pane->m_nTriIndex = i;
@@ -403,20 +403,20 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 }
 
 void
-CGlass::AskForObjectToBeRenderedInGlass(CEntity *entity)
+Glass_AskForObjectToBeRenderedInGlass(CEntity *entity)
 {
 #ifdef FIX_BUGS
-	if ( NumGlassEntities < NUM_GLASSENTITIES )
+	if ( Glass_NumGlassEntities < NUM_GLASSENTITIES )
 #else
-	if ( NumGlassEntities < NUM_GLASSENTITIES-1 )
+	if ( Glass_NumGlassEntities < NUM_GLASSENTITIES-1 )
 #endif
 	{
-		apEntitiesToBeRendered[NumGlassEntities++] = entity;
+		Glass_apEntitiesToBeRendered[Glass_NumGlassEntities++] = entity;
 	}
 }
 
 void
-CGlass::RenderEntityInGlass(CEntity *entity)
+Glass_RenderEntityInGlass(CEntity *entity)
 {
 	ASSERT(entity!=nil);
 	CObject *object = (CObject *)entity;
@@ -434,7 +434,7 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 
 	CVector fwdNorm = object->GetForward();
 	fwdNorm.Normalise();
-	uint8 alpha = CalcAlphaWithNormal(&fwdNorm);
+	uint8 alpha = Glass_CalcAlphaWithNormal(&fwdNorm);
 
 	CColModel *col = object->GetColModel();
 	ASSERT(col!=nil);
@@ -460,7 +460,7 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 				color = int32((1.0f - (distToCamera - 30.0f) * 4.0f / 40.0f) * 255);
 
 			if ( TempBufferIndicesStoredShattered >= TEMPBUFFERINDEXSHATTEREDSIZE-13 || TempBufferVerticesStoredShattered >= TEMPBUFFERVERTSHATTEREDSIZE-5 )
-				RenderShatteredPolys();
+				Glass_RenderShatteredPolys();
 
 			RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredShattered + 0], color, color, color, color);
 			RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredShattered + 1], color, color, color, color);
@@ -499,7 +499,7 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 		}
 
 		if ( TempBufferIndicesStoredReflection >= TEMPBUFFERINDEXREFLECTIONSIZE-13 || TempBufferVerticesStoredReflection >= TEMPBUFFERVERTREFLECTIONSIZE-5 )
-			RenderReflectionPolys();
+			Glass_RenderReflectionPolys();
 
 		uint8 color = 100;
 		if ( distToCamera > 30.0f )
@@ -551,7 +551,7 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 }
 
 int32
-CGlass::CalcAlphaWithNormal(CVector *normal)
+Glass_CalcAlphaWithNormal(CVector *normal)
 {
 	ASSERT(normal!=nil);
 	//+ rouz edit (ChatGPT)
@@ -559,11 +559,11 @@ CGlass::CalcAlphaWithNormal(CVector *normal)
 	CVector cameraForward = GetGlassRenderCameraForward();
 	//- rouz edit (ChatGPT)
 	// Delegate to the C implementation
-	return Glass_CalcAlphaWithNormal(*(VectorMath3*)normal, *(VectorMath3*)&cameraForward);
+	return GlassLogic_CalcAlphaWithNormal(*(VectorMath3*)normal, *(VectorMath3*)&cameraForward);
 }
 
 void
-CGlass::RenderHiLightPolys(void)
+Glass_RenderHiLightPolys(void)
 {
 	if ( TempBufferVerticesStoredHiLight != TEMPBUFFERVERTHILIGHTOFFSET )
 	{
@@ -585,7 +585,7 @@ CGlass::RenderHiLightPolys(void)
 }
 
 void
-CGlass::RenderShatteredPolys(void)
+Glass_RenderShatteredPolys(void)
 {
 	if ( TempBufferVerticesStoredShattered != TEMPBUFFERVERTSHATTEREDOFFSET )
 	{
@@ -607,7 +607,7 @@ CGlass::RenderShatteredPolys(void)
 }
 
 void
-CGlass::RenderReflectionPolys(void)
+Glass_RenderReflectionPolys(void)
 {
 	if ( TempBufferVerticesStoredReflection != TEMPBUFFERVERTREFLECTIONOFFSET )
 	{
@@ -629,7 +629,7 @@ CGlass::RenderReflectionPolys(void)
 }
 
 void
-CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, CVector point, bool explosion)
+Glass_WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, CVector point, bool explosion)
 {
 	ASSERT(entity!=nil);
 	
@@ -675,7 +675,7 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 				PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_L, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 			}
 	
-			GeneratePanesForWindow(0,
+			Glass_GeneratePanesForWindow(0,
 				pa,
 				CVector(0.0f,      0.0f,      maxz-minz),
 				pb - pa,
@@ -689,7 +689,7 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 				PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_S, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 			}
 	
-			GeneratePanesForWindow(1,
+			Glass_GeneratePanesForWindow(1,
 				pa,
 				CVector(0.0f,      0.0f,      maxz-minz),
 				pb - pa,
@@ -703,7 +703,7 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 }
 
 void
-CGlass::WindowRespondsToSoftCollision(CEntity *entity, float amount)
+Glass_WindowRespondsToSoftCollision(CEntity *entity, float amount)
 {
 	ASSERT(entity!=nil);
 	
@@ -721,7 +721,7 @@ CGlass::WindowRespondsToSoftCollision(CEntity *entity, float amount)
 }
 
 void
-CGlass::WasGlassHitByBullet(CEntity *entity, CVector point)
+Glass_WasGlassHitByBullet(CEntity *entity, CVector point)
 {
 	ASSERT(entity!=nil);
 	
@@ -743,14 +743,14 @@ CGlass::WasGlassHitByBullet(CEntity *entity, CVector point)
 			else
 			{
 				if ( (General_GetRandomNumber() & 3) == 2 )
-					WindowRespondsToCollision(object, 0.0f, CVector(0.0f, 0.0f, 0.0f), point, false);
+					Glass_WindowRespondsToCollision(object, 0.0f, CVector(0.0f, 0.0f, 0.0f), point, false);
 			}
 		}
 	}
 }
 
 void
-CGlass::WindowRespondsToExplosion(CEntity *entity, CVector point)
+Glass_WindowRespondsToExplosion(CEntity *entity, CVector point)
 {
 	ASSERT(entity!=nil);
 	
@@ -767,7 +767,7 @@ CGlass::WindowRespondsToExplosion(CEntity *entity, CVector point)
 			// Normalise to the length of the push in the C implementation
 			VectorMath3 push = Glass_ExplosionPush(*(VectorMath3*)&distToGlass, fDistToGlass);
 			distToGlass = CVector(push.x, push.y, push.z);
-			WindowRespondsToCollision(object, 10000.0f, distToGlass, object->GetPosition(), true);
+			Glass_WindowRespondsToCollision(object, 10000.0f, distToGlass, object->GetPosition(), true);
 		}
 		else
 		{
@@ -779,7 +779,7 @@ CGlass::WindowRespondsToExplosion(CEntity *entity, CVector point)
 
 
 void
-CGlass::CarWindscreenShatters(CVehicle *vehicle, bool unk)
+Glass_CarWindscreenShatters(CVehicle *vehicle, bool unk)
 {
 	ASSERT(vehicle!=nil);
 	
@@ -812,7 +812,7 @@ CGlass::CarWindscreenShatters(CVehicle *vehicle, bool unk)
 	if ( trib == nil )
 		return;
 	
-	CCollision::CalculateTrianglePlanes(col);
+	Collision_CalculateTrianglePlanes(col);
 	
 	CColTrianglePlane *triPlanes = col->trianglePlanes;
 	
@@ -909,32 +909,32 @@ CGlass::CarWindscreenShatters(CVehicle *vehicle, bool unk)
 	CVector up    = bound1 * vec1;
 	CVector pos   = v[originIndex];
 	
-	GeneratePanesForWindow(2, pos, up, right, speed, center, 0.1f, false, false, 2, true);
+	Glass_GeneratePanesForWindow(2, pos, up, right, speed, center, 0.1f, false, false, 2, true);
 }
 
 bool
-CGlass::HasGlassBeenShatteredAtCoors(float x, float y, float z)
+Glass_HasGlassBeenShatteredAtCoors(float x, float y, float z)
 {
 	CEntity *entity = nil;
 	float dist = 20.0f;
 	  
 	// Delegate the range of sectors to the C implementation
 	int nStartX, nStartY, nEndX, nEndY;
-	World_ClampSectorRange(CWorld::GetSectorIndexX(x - 30.0f), CWorld::GetSectorIndexX(x + 30.0f), NUMSECTORS_X, &nStartX, &nEndX);
-	World_ClampSectorRange(CWorld::GetSectorIndexY(y - 30.0f), CWorld::GetSectorIndexY(y + 30.0f), NUMSECTORS_Y, &nStartY, &nEndY);
+	World_ClampSectorRange(World_GetSectorIndexX(x - 30.0f), World_GetSectorIndexX(x + 30.0f), NUMSECTORS_X, &nStartX, &nEndX);
+	World_ClampSectorRange(World_GetSectorIndexY(y - 30.0f), World_GetSectorIndexY(y + 30.0f), NUMSECTORS_Y, &nStartY, &nEndY);
 
-	CWorld::AdvanceCurrentScanCode();
+	World_AdvanceCurrentScanCode();
 	
 	for ( int32 ys = nStartY; ys <= nEndY; ys++ )
 	{
 		for ( int32 xs = nStartX; xs <= nEndX; xs++ )
 		{
-			CSector *sector = CWorld::GetSector(xs, ys);
+			CSector *sector = World_GetSector(xs, ys);
 
 			ASSERT(sector != nil);
 			
-			FindWindowSectorList(sector->m_lists[ENTITYLIST_OBJECTS], &dist, &entity, x, y, z);
-			FindWindowSectorList(sector->m_lists[ENTITYLIST_DUMMIES], &dist, &entity, x, y, z);
+			Glass_FindWindowSectorList(sector->m_lists[ENTITYLIST_OBJECTS], &dist, &entity, x, y, z);
+			Glass_FindWindowSectorList(sector->m_lists[ENTITYLIST_DUMMIES], &dist, &entity, x, y, z);
 		}
 	}
 	
@@ -950,7 +950,7 @@ CGlass::HasGlassBeenShatteredAtCoors(float x, float y, float z)
 }
 
 void
-CGlass::FindWindowSectorList(CPtrList &list, float *dist, CEntity **entity, float x, float y, float z)
+Glass_FindWindowSectorList(CPtrList &list, float *dist, CEntity **entity, float x, float y, float z)
 {
 	ASSERT(dist!=nil);
 	ASSERT(entity!=nil);
@@ -967,9 +967,9 @@ CGlass::FindWindowSectorList(CPtrList &list, float *dist, CEntity **entity, floa
 		
 		if ( IsGlass(ent->GetModelIndex()) )
 		{
-			if ( scanCode != CWorld::GetCurrentScanCode() )
+			if ( scanCode != World_GetCurrentScanCode() )
 			{
-				ent->m_scanCode = CWorld::GetCurrentScanCode();
+				ent->m_scanCode = World_GetCurrentScanCode();
 				
 				float dst = (CVector(x,y,z) - ent->GetPosition()).Magnitude();
 				
@@ -984,7 +984,7 @@ CGlass::FindWindowSectorList(CPtrList &list, float *dist, CEntity **entity, floa
 }
 
 void
-CGlass::BreakGlassPhysically(CVector pos, float radius)
+Glass_BreakGlassPhysically(CVector pos, float radius)
 {
 	static uint32 breakTime = 0;
 	
@@ -998,12 +998,12 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 	
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
-	for ( int32 i = CPool_GetSize(CPools::GetObjectPool()) - 1; i >= 0; i-- )
+	for ( int32 i = CPool_GetSize(Pools_GetObjectPool()) - 1; i >= 0; i-- )
 	//- rouz edit (ChatGPT)
 	{
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
-		CObject *object = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		CObject *object = ((CObject*)CPool_GetSlot(Pools_GetObjectPool(), i));
 		//- rouz edit (ChatGPT)
 		if (object)
 		{
@@ -1025,11 +1025,11 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 					sphere.bounds.center.y = DotProduct(dist, object->GetForward());
 					sphere.bounds.center.z = DotProduct(dist, object->GetUp());
 					
-					CCollision::CalculateTrianglePlanes(col);
+					Collision_CalculateTrianglePlanes(col);
 					
 					for ( int32 j = 0; j < col->numTriangles; j++ )
 					{
-						if ( CCollision::TestSphereTriangle(sphere,
+						if ( Collision_TestSphereTriangle(sphere,
 							col->vertices, col->triangles[j], col->trianglePlanes[j]) )
 						{
 							hit = true;
@@ -1070,7 +1070,7 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 								PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_S, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 							}
 
-							GeneratePanesForWindow(1,
+							Glass_GeneratePanesForWindow(1,
 								pa,
 								CVector(0.0f, 0.0f, maxz-minz),
 								pb - pa,

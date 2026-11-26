@@ -16,7 +16,7 @@ int16_t * WaterCreatures_BackendTempCount(void)
 CPool * WaterCreatures_BackendObjectPool(void)
 {
     // Preserve the actual typed owner operation and original borrowed-field access
-    return CPools::GetObjectPool();
+    return Pools_GetObjectPool();
 }
 int8_t WaterCreatures_BackendCreatedBy(CObject *object)
 {
@@ -36,12 +36,12 @@ void WaterCreatures_BackendDestroy(CObject *object)
 void WaterCreatures_BackendWorldRemove(CObject *object)
 {
     // Preserve the actual typed owner operation and original borrowed-field access
-    CWorld::Remove(object);
+    World_Remove(object);
 }
 void WaterCreatures_BackendWorldAdd(CObject *object)
 {
     // Preserve the actual typed owner operation and original borrowed-field access
-    CWorld::Add(object);
+    World_Add(object);
 }
 void WaterCreatures_BackendSetPosition(CObject *object,const WaterCreaturePosition *position)
 {
@@ -126,7 +126,7 @@ bool WaterCreatures_BackendVisible(WaterCreaturePosition *position,float radius)
 bool WaterCreatures_BackendDepth(const WaterCreaturePosition *position,float *depth,float *level,float *ground)
 {
     // Preserve the actual typed owner operation and original borrowed-field access
-    return CWaterLevel::GetWaterDepth(*position,depth,level,ground);
+    return WaterLevel_GetWaterDepth(*position,depth,level,ground);
 }
 void WaterCreatures_BackendSetZ(WaterCreaturePosition *position,float value)
 {

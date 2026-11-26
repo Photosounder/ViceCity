@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include "VectorFwd.h" // rouz edit (Claude)
 #include <stdbool.h>
 #include <stdint.h>
 #include "VectorMath.h"
@@ -82,7 +83,7 @@ unsigned char Automobile_WaterSplashChannel(float directional, float ambient);
 // Size of the splash a wheel makes in the water from its speed on the ground
 float Automobile_WheelSplashSize(float speed);
 // Speed a component that flies off a car starts with from the speed of the car, the height of its up vector and whether the component is a bonnet, a boot or a windscreen
-void Automobile_FlyingComponentSpeed(const float moveSpeed[3], float upZ, bool isBonnetBootOrWindscreen, float out[3]);
+void Automobile_FlyingComponentSpeed(const CVector *moveSpeed, float upZ, bool isBonnetBootOrWindscreen, CVector *out);
 // Number of sparks a burst wheel throws from the squared speed of the car and the surface (eSurfaceType) it grinds on, none on soft ground or water
 int Automobile_BurstWheelSparkCount(float speedSqr, int surface);
 // Kinds of emergency vehicles with a siren
@@ -107,11 +108,11 @@ float Automobile_HeliDustAmount(float rotorSpeed, float timeStep);
 // Alpha of the rotors of a helicopter from the speed they turn with: the sharp ones fade out and the blurred ones fade in as they speed up
 void Automobile_HeliRotorAlpha(float rotorSpeed, int *rotorAlpha, int *blurAlpha);
 // Direction of the water cannon of a fire truck relative to the car from the angle sideways and the angle up
-void Automobile_CannonDirection(float angleLR, float angleUD, float dir[3]);
+void Automobile_CannonDirection(float angleLR, float angleUD, CVector *dir);
 // Turret angle of a tank kept between 0 and a full turn
 float Automobile_TankTurretAngle(float angle);
 // Where the end of the gun of a tank is relative to the car after the turret turned by the angle, from the vector from the base of the turret to the end of the gun and the base
-void Automobile_TankGunEnd(float angle, const float baseToEnd[3], const float turretBase[3], float out[3]);
+void Automobile_TankGunEnd(float angle, const CVector *baseToEnd, const CVector *turretBase, CVector *out);
 // Improved grip for the cars that ram or block the player at a high wanted level, and for the RC bandit that is not remote controlled: from whether the player drives another vehicle, the wanted level, the mission of the car (eCarMission), the speed of the player, the speed of the car and the distance to the player
 void Automobile_StrongGrip(bool playerDrivesOtherVehicle, int wantedLevel, int carMission, float playerSpeed, float ownSpeed, float distToPlayer, bool isRCBandit, bool notRemoteControlled, bool *strongGrip1, bool *strongGrip2);
 // Height of the centre of mass of a car that drives on two wheels, returns false when it should be left as it is: from the time on two wheels, the stick, the height of the box of the car, the vertical part of its up and right vectors and whether it is a heli or a plane
@@ -145,9 +146,9 @@ void Automobile_SteerForward(float steerAngle, float forward[2]);
 // Adhesion of a wheel of a car, from the adhesive limit of the surface scaled by the traction, whether the player drives it and the wet multiplier of the surface (only used for the player)
 float Automobile_WheelAdhesion(float adhesiveLimit, float traction, bool isPlayer, float wetMultiplier);
 // Forward and right directions of a steered front wheel along the surface it stands on, from the forward vector of the car, the normal of the surface and the sine and cosine of the steering angle
-void Automobile_SteeredWheelAxes(const float forward[3], const float normal[3], float s, float c, float wheelFwd[3], float wheelRight[3]);
+void Automobile_SteeredWheelAxes(const CVector *forward, const CVector *normal, float s, float c, CVector *wheelFwd, CVector *wheelRight);
 // Forward and right directions of a wheel along the surface it stands on: the forward vector is made to lie on the surface and the right vector is perpendicular to it and to the normal, both normalised
-void Automobile_SurfaceWheelAxes(const float forward[3], const float normal[3], float wheelFwd[3], float wheelRight[3]);
+void Automobile_SurfaceWheelAxes(const CVector *forward, const CVector *normal, CVector *wheelFwd, CVector *wheelRight);
 // Whether the blades of a helicopter should be checked for the rotor sound: the camera is within 20 units (squared distance) and the propeller is more than 30 degrees away from the blade rotation
 bool Automobile_RotorSoundCheck(float distSq, float propellerRotation, float bladeRotation);
 // Whether a blade is in line with the camera for the rotor sound, from the dot product of the direction to the camera and the blade direction and the limit
@@ -159,7 +160,7 @@ void Automobile_SirenPosition(const float pos1[3], const float pos2[3], int i, f
 // How much behind a car the camera is, from the dot product of the direction to the car and its forward vector: clamped to -1..1 (1 if directly behind, -1 if in front), and the matching angle from 0 (behind) to PI (in front)
 float Automobile_Behindness(float dot, float *angle);
 // Orientation and position of a car lined up with the road under its front and rear points: the right, forward and up vectors and the position, from the x and y of the front and rear points, their heights, the length between them and the height of the car above the road
-void Automobile_RoadAlignedMatrix(const float front[2], const float rear[2], float frontZ, float rearZ, float len, float heightAboveRoad, float right[3], float forward[3], float up[3], float pos[3]);
+void Automobile_RoadAlignedMatrix(const float front[2], const float rear[2], float frontZ, float rearZ, float len, float heightAboveRoad, CVector *right, CVector *forward, CVector *up, CVector *pos);
 // Whether the absolute value of a speed is above a limit
 bool Automobile_SpeedAbove(float speed, float limit);
 // Whether the absolute value of a speed is below a limit
@@ -169,7 +170,7 @@ bool Automobile_LineDeltaExceeds(float posZ, float lineZ, float maxDelta);
 // Upward force a car applies to another that touches its wheel: 50 times the mass times a factor, at most 50
 float Automobile_WheelNudgeForce(float mass, float factor);
 // How far ahead a rocket of a Hunter starts: the forward speed of the vehicle (never negative) along its forward vector over the time step
-void Automobile_RocketLead(float forwardSpeed, const float forward[3], float timeStep, float lead[3]);
+void Automobile_RocketLead(float forwardSpeed, const CVector *forward, float timeStep, CVector *lead);
 // Distance used to normalise the direction to the camera: the square root of the squared distance but at least 0.01
 float Automobile_SafeDistance(float distSq);
 // Upward push of the exhaust smoke of a slow car, from its speed: stronger when it is slower, never below 0
